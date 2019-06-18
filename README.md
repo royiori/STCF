@@ -1,2 +1,6 @@
 # STCF
 STCF
+
+1. RICH
+
+2. DIRC
