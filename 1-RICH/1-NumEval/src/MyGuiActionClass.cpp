@@ -1,11 +1,11 @@
 #include "MyMainFrameGui.h"
-#include "MyNumEvalClass.h"
+#include "MyGuiActionClass.h"
 
-MyNumEvalClass *gMyNumEvalClass = (MyNumEvalClass *)0;
+MyGuiActionClass *gMyGuiActionClass = (MyGuiActionClass *)0;
 
 //______________________________________________________________________________
 //
-MyNumEvalClass::MyNumEvalClass()
+MyGuiActionClass::MyGuiActionClass()
 {
     env = new TEnv(gSystem->WorkingDirectory() + TString("/.env"));
     env->SaveLevel(kEnvLocal);
@@ -15,7 +15,6 @@ MyNumEvalClass::MyNumEvalClass()
     gMyStyle->SetColorPattern(MATHEMATIC_STYLE);
 
     gMyCommonRICH = new MyCommonRICH();
-
     gMyDatabaseClass = new MyDatabaseClass();
 
     // pages
@@ -26,12 +25,14 @@ MyNumEvalClass::MyNumEvalClass()
     sTabPage[3] = TString("Mis");
 
     // page 0
-    nButton[0] = 4;
-    iButton[0] = DrawRICH;
-    sButton[0].push_back("Draw selected C-Ring");
-    sButton[0].push_back("Draw mu/pi/K/p C-Rings");
-    sButton[0].push_back("Save mu/pi/K/p C-Rings");
-    sButton[0].push_back("Load mu/pi/K/p C-Rings");
+    nButton[0] = 6;
+    iButton[0] = LoadDetFile;
+    sButton[0].push_back("Load");
+    sButton[0].push_back("Save");
+    sButton[0].push_back("Show the spec RICH");
+    sButton[0].push_back("Show multi-Particles RICH");
+    sButton[0].push_back("Generate the XY-hitmap for SCAN");
+    sButton[0].push_back("Scan the Rec-RICH");
 
     // page1
     nButton[1] = gMyDatabaseClass->GetNMaterial();
@@ -62,14 +63,14 @@ MyNumEvalClass::MyNumEvalClass()
     for (int i = 0; i < nTransLayer; i++)
     {
         sTransLayer.push_back(env->GetValue(Form("sTrans%d", i), (i == 0) ? "Ar" : "CH4"));
-        pTransLayer.push_back(env->GetValue(Form("tTrans%d", i), 50));
+        pTransLayer.push_back(env->GetValue(Form("pTrans%d", i), 50));
     }
 
     nImpurities = env->GetValue("nImpurities", 2);
     for (int i = 0; i < nImpurities; i++)
     {
         sImpurities.push_back(env->GetValue(Form("sImp%d", i), (i == 0) ? "H2O" : "O2"));
-        pImpurities.push_back(env->GetValue(Form("tImp%d", i), 1));
+        pImpurities.push_back(env->GetValue(Form("pImp%d", i), 1));
     }
 
     PCDetector = env->GetValue("PCDetector", "CsI");
@@ -79,9 +80,10 @@ MyNumEvalClass::MyNumEvalClass()
     lambdaMin = env->GetValue("lambdaMin", 160);
     lambdaMax = env->GetValue("lambdaMax", 220);
 
-    particle = env->GetValue("particle", "pion");
+    particle = env->GetValue("particle", "pi");
     momentum = env->GetValue("momentum", 2.);
-    theta0 = env->GetValue("theta0", 0.);
+    Theta0 = env->GetValue("Theta0", 0.);
+    mass = gMyCommonRICH->GetMass(particle);
 
     XBinMin = env->GetValue("XBinMin", -200);
     XBinMax = env->GetValue("XBinMax", 200);
@@ -94,6 +96,19 @@ MyNumEvalClass::MyNumEvalClass()
     trkStep = env->GetValue("trkStep", 1e-1);
     nphi = env->GetValue("nphi", 360);
 
+    np = env->GetValue("np", 10);
+    pMin = env->GetValue("pMin", 0.1);
+    pMax = env->GetValue("pMax", 4.0);
+
+    nthe0 = env->GetValue("nthe0", 10);
+    The0Min = env->GetValue("The0Min", 0);
+    The0Max = env->GetValue("The0Max", 90);
+
+    for (int i = 0; i < 5; i++)
+        pList.push_back(env->GetValue(Form("pList%d", i), i * 0.4 + 0.2));
+    for (int i = 0; i < 5; i++)
+        thList.push_back(env->GetValue(Form("thList%d", i), i * 10));
+
     nSelectedMat = env->GetValue("nSelectedMat", 2);
     for (int i = 0; i < nSelectedMat; i++)
         selectedMat.push_back(env->GetValue(Form("selectedMat%d", i), (i == 0) ? "Quartz" : "MgF2"));
@@ -103,14 +118,80 @@ MyNumEvalClass::MyNumEvalClass()
         selectedDet.push_back(env->GetValue(Form("selectedDet%d", i), (i == 0) ? "CsI" : "APD"));
 };
 
-MyNumEvalClass::~MyNumEvalClass()
+MyGuiActionClass::~MyGuiActionClass()
 {
     // Destructor.
+    // Store env
+    
+    env->SetValue("nRadLayer", nRadLayer);
+    for (int i = 0; i < nRadLayer; i++)
+    {
+        env->SetValue(Form("sRad%d", i), sRadLayer[i].c_str());
+        env->SetValue(Form("tRad%d", i), tRadLayer[i]);
+    }
+
+
+    env->SetValue("tTransLayer", tTransLayer);
+    env->SetValue("nTransLayer", nTransLayer);
+    for (int i = 0; i < nTransLayer; i++)
+    {
+        env->SetValue(Form("sTrans%d", i), sTransLayer[i].c_str());
+        env->SetValue(Form("pTrans%d", i), pTransLayer[i]);
+    }
+
+    env->SetValue("nImpurities", nImpurities);
+    for (int i = 0; i < nImpurities; i++)
+    {
+        env->SetValue(Form("sImp%d", i), sImpurities[i].c_str());
+        env->SetValue(Form("pImp%d", i), pImpurities[i]);
+    }
+
+    env->SetValue("PCDetector", PCDetector.c_str());
+    env->SetValue("pixel", pixel);
+
+    env->SetValue("nLambda", nLambda);
+    env->SetValue("lambdaMin", lambdaMin);
+    env->SetValue("lambdaMax", lambdaMax);
+
+    env->SetValue("particle", particle);
+    env->SetValue("momentum", momentum);
+    env->SetValue("Theta0", Theta0);
+
+    env->SetValue("XBinMin", XBinMin);
+    env->SetValue("XBinMax", XBinMax);
+    env->SetValue("YBinMin", YBinMin);
+    env->SetValue("YBinMax", YBinMax);
+
+    env->SetValue("epsilon", epsilon);
+    env->SetValue("trkStep", trkStep);
+    env->SetValue("nphi", nphi);
+
+    env->SetValue("np", np);
+    env->SetValue("pMin", pMin);
+    env->SetValue("pMax", pMax);
+
+    env->SetValue("nthe0", nthe0);
+    env->SetValue("The0Min", The0Min);
+    env->SetValue("The0Max", The0Max);
+
+    for (int i = 0; i < 5; i++)
+        env->SetValue(Form("pList%d", i), pList[i]);
+    for (int i = 0; i < 5; i++)
+        env->SetValue(Form("thList%d", i), thList[i]);
+
+    env->SetValue("nSelectedMat", nSelectedMat);
+    for (int i = 0; i < nSelectedMat; i++)
+        env->SetValue(Form("selectedMat%d", i), selectedMat[i]);
+
+    env->SetValue("nSelectedDet", nSelectedDet);
+    for (int i = 0; i < nSelectedDet; i++)
+        env->SetValue(Form("selectedDet%d", i), selectedDet[i]);
+    env->SaveLevel(kEnvLocal);
 }
 
 //______________________________________________________________________________
 // read / generate settings
-TString MyNumEvalClass::GenerateSettingsText()
+TString MyGuiActionClass::GenerateSettingsText()
 {
     TString settings("");
 
@@ -151,8 +232,18 @@ TString MyNumEvalClass::GenerateSettingsText()
     settings += "\n#    Particle settings";
     settings += "\n#---------------------------";
 
-    settings += "\n\n# Particle (mass[GeV], momentum[GeV], angle[default:rad, or:deg])\n";
-    settings += Form("Particle: %s %.1f %.1f\n", particle.Data(), momentum, theta0);
+    settings += "\n\n# Particle to show (momentum[GeV], angle[degree])\n";
+    settings += Form("Particle: %s %.1f %.1f\n", particle.Data(), momentum, Theta0);
+
+    settings += "\n\n# Particle to scan (N, Min, Max) for momentum[GeV/c])\n";
+    settings += Form("Momentum: %d %.1f %.1f\n", np, pMin, pMax);
+
+    settings += "\n\n# Particle to scan (N, Min, Max) for theta_0[degree])\n";
+    settings += Form("Theta0: %d %.1f %.1f\n", nthe0, The0Min, The0Max);
+
+    settings += "\n\n# Particle to show for momentum[GeV/c] and theta_0[degree])\n";
+    settings += Form("ShowMom: %.1f %.1f %.1f %.1f %.1f\n", pList[0], pList[1], pList[2], pList[3], pList[4]);
+    settings += Form("ShowThe: %.1f %.1f %.1f %.1f %.1f\n", thList[0], thList[1], thList[2], thList[3], thList[4]);
 
     settings += "\n#---------------------------";
     settings += "\n#    Precision settings";
@@ -162,8 +253,8 @@ TString MyNumEvalClass::GenerateSettingsText()
     settings += Form("trkStep: %f\n", trkStep);
 
     settings += "\n# Number of Step for phi [0~2pi] * 360\n";
-    settings += Form("nPhi: %.1f\n", nphi / 360.);
- 
+    settings += Form("nPhi: %d\n", int(nphi / 360.));
+
     settings += "\n# Solver precision\n";
     settings += Form("Precision: %f\n", epsilon);
 
@@ -208,7 +299,7 @@ vector<TString> ReadContent(TString LINE)
     return text;
 }
 
-void MyNumEvalClass::ReadSettingsText()
+void MyGuiActionClass::ReadSettingsText()
 {
     int nline = 0;
     TGLongPosition pos(0, nline);
@@ -240,63 +331,67 @@ void MyNumEvalClass::ReadSettingsText()
                 sRadLayer.push_back(cont[0].Data());
             if (line.BeginsWith("Radiator"))
                 tRadLayer.push_back(cont[1].Atof());
+
             if (line.BeginsWith("TransLayer"))
                 sTransLayer.push_back(cont[0].Data());
             if (line.BeginsWith("TransLayer"))
                 pTransLayer.push_back(cont[1].Atof());
             if (line.BeginsWith("TransThick"))
                 tTransLayer = TString(cont[0].Data()).Atof();
+
             if (line.BeginsWith("Impurities"))
                 sImpurities.push_back(cont[0].Data());
             if (line.BeginsWith("Impurities"))
                 pImpurities.push_back(cont[1].Atof());
-            if (line.BeginsWith("PCDetector"))
-                PCDetector = cont[0].Data();
-            if (line.BeginsWith("PCDetector"))
-                pixel = cont[1].Atof();
-            if (line.BeginsWith("PixelRange"))
-                XBinMin = cont[0].Atof();
-            if (line.BeginsWith("PixelRange"))
-                XBinMax = cont[1].Atof();
-            if (line.BeginsWith("PixelRange"))
-                YBinMin = cont[2].Atof();
-            if (line.BeginsWith("PixelRange"))
-                YBinMax = cont[3].Atof();
-            if (line.BeginsWith("Lambda"))
-                nLambda = cont[0].Atoi();
-            if (line.BeginsWith("Lambda"))
-                lambdaMin = cont[1].Atof();
-            if (line.BeginsWith("Lambda"))
-                lambdaMax = cont[2].Atof();
-            if (line.BeginsWith("trkStep"))
-                trkStep = cont[0].Atof();
-            if (line.BeginsWith("nPhi"))
-                nphi = int(cont[0].Atof() * 360);
-            if (line.BeginsWith("Precision"))
-                epsilon = cont[0].Atof();
 
-            if (line.BeginsWith("SelectedMat"))
-                selectedMat = cont;
-            if (line.BeginsWith("SelectedDet"))
-                selectedDet = cont;
+            PCDetector = (line.BeginsWith("PCDetector")) ? cont[0].Data() : PCDetector;
+            pixel = (line.BeginsWith("PCDetector")) ? cont[1].Atof() : pixel;
 
-            if (line.BeginsWith("Particle"))
-                particle = cont[0];
-            if (line.BeginsWith("Particle"))
-                momentum = cont[1].Atof();
-            if (line.BeginsWith("Particle"))
-            {
-                if (cont[2].Index("deg") > 0)
-                    theta0 = cont[2].Atof() / 180 * TMath::Pi();
-                else
-                    theta0 = cont[2].Atof(); //default is rad
-            }
+            XBinMin = (line.BeginsWith("PixelRange")) ? cont[0].Atof() : XBinMin;
+            XBinMax = (line.BeginsWith("PixelRange")) ? cont[1].Atof() : XBinMax;
+            YBinMin = (line.BeginsWith("PixelRange")) ? cont[2].Atof() : YBinMin;
+            YBinMax = (line.BeginsWith("PixelRange")) ? cont[3].Atof() : YBinMax;
+
+            nLambda = (line.BeginsWith("Lambda")) ? cont[0].Atoi() : nLambda;
+            lambdaMin = (line.BeginsWith("Lambda")) ? cont[1].Atof() : lambdaMin;
+            lambdaMax = (line.BeginsWith("Lambda")) ? cont[2].Atof() : lambdaMax;
+
+            trkStep = (line.BeginsWith("trkStep")) ? cont[0].Atof() : trkStep;
+            nphi = (line.BeginsWith("nPhi")) ? int(cont[0].Atof() * 360) : nphi;
+            epsilon = (line.BeginsWith("Precision")) ? cont[0].Atof() : epsilon;
+
+            selectedMat = (line.BeginsWith("SelectedMat")) ? cont : selectedMat;
+            selectedDet = (line.BeginsWith("SelectedDet")) ? cont : selectedDet;
+
+            particle = (line.BeginsWith("Particle")) ? cont[0] : particle;
+            momentum = (line.BeginsWith("Particle")) ? cont[1].Atof() : momentum;
+            Theta0 = (line.BeginsWith("Particle")) ? cont[2].Atof() : Theta0;
+
+            np = (line.BeginsWith("Momentum")) ? cont[0].Atoi() : np;
+            pMin = (line.BeginsWith("Momentum")) ? cont[1].Atof() : pMin;
+            pMax = (line.BeginsWith("Momentum")) ? cont[2].Atof() : pMax;
+
+            nthe0 = (line.BeginsWith("Theta0")) ? cont[0].Atoi() : nthe0;
+            The0Min = (line.BeginsWith("Theta0")) ? cont[1].Atof() : The0Min;
+            The0Max = (line.BeginsWith("Theta0")) ? cont[2].Atof() : The0Max;
+
+            pList[0] = (line.BeginsWith("ShowMom")) ? cont[0].Atof() : pList[0];
+            pList[1] = (line.BeginsWith("ShowMom")) ? cont[1].Atof() : pList[1];
+            pList[2] = (line.BeginsWith("ShowMom")) ? cont[2].Atof() : pList[2];
+            pList[3] = (line.BeginsWith("ShowMom")) ? cont[3].Atof() : pList[3];
+            pList[4] = (line.BeginsWith("ShowMom")) ? cont[4].Atof() : pList[4];
+            thList[0] = (line.BeginsWith("ShowThe")) ? cont[0].Atof() : thList[0];
+            thList[1] = (line.BeginsWith("ShowThe")) ? cont[1].Atof() : thList[1];
+            thList[2] = (line.BeginsWith("ShowThe")) ? cont[2].Atof() : thList[2];
+            thList[3] = (line.BeginsWith("ShowThe")) ? cont[3].Atof() : thList[3];
+            thList[4] = (line.BeginsWith("ShowThe")) ? cont[4].Atof() : thList[4];
 
             continue;
         }
         pos.fY = (nline++);
     }
 
+    mass = gMyCommonRICH->GetMass(particle);
     nRadLayer = (int)tRadLayer.size();
     nTransLayer = (int)pTransLayer.size();
     nImpurities = (int)pImpurities.size();
@@ -312,10 +407,10 @@ void MyNumEvalClass::ReadSettingsText()
 
 //______________________________________________________________________________
 // basic button actions
-void MyNumEvalClass::ExecButtonClick(Long_t bid, const char *cmdStr)
+void MyGuiActionClass::ExecButtonClick(Long_t bid, const char *cmdStr)
 {
     ReadSettingsText();
-        
+
     if (bid == DrawConfig)
         DoDrawConfig("Show the configurations");
     if (bid == LoadTextBuf)
@@ -324,21 +419,25 @@ void MyNumEvalClass::ExecButtonClick(Long_t bid, const char *cmdStr)
         DoDrawSelectedMat();
     if (bid == DrawSelectedDet)
         DoDrawSelectedDet();
-    if (bid == DrawRICH)
-        DoDrawRICH();
-    if (bid == Draw3Rings)
-        DoDrawRings();
-    if (bid == Save3Rings)
-        DoSaveRings(cmdStr);
-    if (bid == Load3Rings)
-        DoLoadRings(cmdStr);
+    if (bid == LoadDetFile)
+        DoLoadDetFile(cmdStr);
+    if (bid == SaveDetFile)
+        DoSaveDetFile(cmdStr);
+    if (bid == ShowSpecRICH)
+        DoShowSpecRICH(cmdStr);
+    if (bid == ShowMulParRICH)
+        DoShowMulParRICH(cmdStr);
+    if (bid == GenRICHList)
+        DoGenHitMaps(cmdStr);
+    if (bid == RecRICHList)
+        DoRecRings(cmdStr);
     if (MatList <= bid && bid < DetList)
         ShowMaterialInfo(gMyDatabaseClass->GetMaterialName(bid - MatList));
     if (DetList <= bid && bid < AnalysisAction)
         ShowDetectorInfo(gMyDatabaseClass->GetDetectorName(bid - DetList));
 }
 
-void MyNumEvalClass::DoDrawConfig(TString scap)
+void MyGuiActionClass::DoDrawConfig(TString scap)
 {
     double x0 = 0.02, x1 = 0.98;
     double y0 = 0.10, y1 = 0.15, y2 = 0.50, y3 = 0.98;
@@ -414,71 +513,51 @@ void MyNumEvalClass::DoDrawConfig(TString scap)
     gMyMainFrameGui->UpdateCanvas(0);
 }
 
-void MyNumEvalClass::DoLoadTextBuf()
+void MyGuiActionClass::DoLoadTextBuf()
 {
     gMyMainFrameGui->LoadText(GenerateSettingsText());
 }
 
 //______________________________________________________________________________
 // analysis button actions
-void MyNumEvalClass::DoDrawRICH()
+void MyGuiActionClass::DoShowSpecRICH(TString cmdStr)
 {
     SetDetectorParameters();
-    gMyCommonRICH->GenerateRICHRing();
-    TH2F *f2 = gMyCommonRICH->Get2DViewer();
-    TH1D **fl = gMyCommonRICH->Get1DViewer();
+    if (cmdStr == "yes" || gMyCommonRICH->GetDetHitMap()->GetEntries() == 0)
+        gMyCommonRICH->GenerateDetRing();
 
-    gMyMainFrameGui->ClearAllCanvas();
     gMyMainFrameGui->SwitchCanvas(2);
-    fl[0]->Draw("pl");
-    gMyMainFrameGui->SwitchCanvas(3);
-    fl[1]->Draw("pl");
-    gMyMainFrameGui->SwitchCanvas(4);
-    fl[2]->Draw("pl");
-    gMyMainFrameGui->SwitchCanvas(5);
-    fl[3]->Draw("pl");
+    gMyCommonRICH->GetDetWLMap()->Draw();
     gMyMainFrameGui->SwitchCanvas(1);
-    f2->Draw("colz");
-    TPaveText *pt = new TPaveText(XBinMax * 5 / 8, YBinMax * 5 / 8, XBinMax * 9 / 10, YBinMax * 9 / 10);
-    pt->AddText(Form("Nph=%.1f", f2->Integral()));
-    pt->SetFillColor(0);
-    pt->SetBorderSize(0);
-    pt->Draw();
-    gMyMainFrameGui->UpdateCanvas(5);
-    gMyMainFrameGui->UpdateCanvas(4);
-    gMyMainFrameGui->UpdateCanvas(3);
+    gMyCommonRICH->GetDetHitMap()->Draw("colz");
     gMyMainFrameGui->UpdateCanvas(2);
     gMyMainFrameGui->UpdateCanvas(1);
 }
 
-void MyNumEvalClass::DoDrawRings()
+void MyGuiActionClass::DoShowMulParRICH(TString cmdStr)
 {
     SetDetectorParameters();
-    vector<TString> parlist;
-    parlist.push_back("muon");
-    parlist.push_back("pion");
-    parlist.push_back("kaon");
-    parlist.push_back("proton");
+    if (cmdStr == "yes" || gMyCommonRICH->GetDetListNumber()==0)
+        gMyCommonRICH->GenerateMultiParticleRICHRings();
 
-    gMyCommonRICH->GenerateMultiParticleRICHRings(parlist);
     gMyMainFrameGui->ClearAllCanvas();
     gMyMainFrameGui->SwitchCanvas(2);
-    gMyCommonRICH->Get2DViewer(0)->Draw("colz");
+    gMyCommonRICH->GetDetListHitMap(0)->Draw("colz");
     gMyMainFrameGui->SwitchCanvas(3);
-    gMyCommonRICH->Get2DViewer(1)->Draw("colz");
+    gMyCommonRICH->GetDetListHitMap(1)->Draw("colz");
     gMyMainFrameGui->SwitchCanvas(4);
-    gMyCommonRICH->Get2DViewer(2)->Draw("colz");
+    gMyCommonRICH->GetDetListHitMap(2)->Draw("colz");
     gMyMainFrameGui->SwitchCanvas(5);
-    gMyCommonRICH->Get2DViewer(3)->Draw("colz");
+    gMyCommonRICH->GetDetListHitMap(3)->Draw("colz");
 
     gMyMainFrameGui->SwitchCanvas(1);
     gMyStyle->SetTitle("Cherenkov Rings for mu/pi/K/p");
     gMyStyle->SetXLabel("X[mm]");
     gMyStyle->SetYLabel("Y[mm]");
-    for (int i = 0; i < (int)parlist.size(); i++)
-        gMyStyle->SetLegends(i, Form("%s Nph=%.1f", parlist[i].Data(), gMyCommonRICH->Get2DViewer(i)->Integral()));
+    for (int ihypo = 0; ihypo < gMyCommonRICH->GetDetector()->nhypo; ihypo++)
+        gMyStyle->SetLegends(ihypo, Form("%s Nph=%.1f", gMyCommonRICH->GetDetList(ihypo)->particle.Data(), gMyCommonRICH->GetDetListHitMap(ihypo)->Integral()));
     gMyStyle->SetDrawOption("");
-    gMyStyle->Draw4Histograms(gMyCommonRICH->Get2DViewer(0), gMyCommonRICH->Get2DViewer(1), gMyCommonRICH->Get2DViewer(2), gMyCommonRICH->Get2DViewer(3));
+    gMyStyle->Draw4Histograms(gMyCommonRICH->GetDetListHitMap(0), gMyCommonRICH->GetDetListHitMap(1), gMyCommonRICH->GetDetListHitMap(2), gMyCommonRICH->GetDetListHitMap(3));
     gMyMainFrameGui->UpdateCanvas(5);
     gMyMainFrameGui->UpdateCanvas(4);
     gMyMainFrameGui->UpdateCanvas(3);
@@ -486,59 +565,96 @@ void MyNumEvalClass::DoDrawRings()
     gMyMainFrameGui->UpdateCanvas(1);
 }
 
-void MyNumEvalClass::DoSaveRings(const char *fname)
+void MyGuiActionClass::DoGenHitMaps(TString cmdStr)
+{
+    SetDetectorParameters();
+    if (cmdStr == "yes")
+        gMyCommonRICH->GenerateTheScanHitMaps();
+
+    for (int ican = 0; ican < 5; ican++)
+    {
+        MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
+        int imom = (pList[ican] - gDet->pMin) / gDet->pStep;
+        int ithe = (thList[ican] - gDet->The0Min) / gDet->The0Step;
+
+        if(imom >= gDet->np) continue;
+        if(ithe >= gDet->nthe0) continue;
+
+        gMyStyle->SetTitle(Form("Cherenkov Rings for [%.1fGeV/c, %.1f] mu/pi/K/p", gMyCommonRICH->GetDetScan(imom, ithe, 0)->momentum, gMyCommonRICH->GetDetScan(imom, ithe, 0)->Theta0));
+        gMyStyle->SetXLabel("X[mm]");
+        gMyStyle->SetYLabel("Y[mm]");
+        for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
+            gMyStyle->SetLegends(ihypo, Form("%s Nph=%.1f", gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle.Data(), gMyCommonRICH->GetDetScanHitMap(imom, ithe, ihypo)->Integral()));
+        gMyStyle->SetDrawOption("");
+        gMyMainFrameGui->SwitchCanvas(ican + 1);
+        gMyStyle->Draw4Histograms(gMyCommonRICH->GetDetScanHitMap(imom, ithe, 0), gMyCommonRICH->GetDetScanHitMap(imom, ithe, 1), gMyCommonRICH->GetDetScanHitMap(imom, ithe, 2), gMyCommonRICH->GetDetScanHitMap(imom, ithe, 3));
+        gMyMainFrameGui->UpdateCanvas(ican + 1);
+    }
+}
+
+void MyGuiActionClass::DoRecRings(TString cmdStr)
+{
+    SetDetectorParameters();
+    if (cmdStr == "yes")
+        gMyCommonRICH->GenerateTheOffsetAndResolutionMaps();
+    
+    /* 
+    SetDetectorParameters();
+
+    MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
+
+    gMyCommonRICH->ReconstructCerekovAngleDist(gDet);
+    gMyMainFrameGui->ClearAllCanvas();
+    gMyMainFrameGui->SwitchCanvas(2);
+    gMyCommonRICH->Get2DRecRing(0)->Draw("colz");
+    return;
+
+    gMyMainFrameGui->SwitchCanvas(3);
+    gMyCommonRICH->Get2DRing(1)->Draw("colz");
+    gMyMainFrameGui->SwitchCanvas(4);
+    gMyCommonRICH->Get2DRing(2)->Draw("colz");
+    gMyMainFrameGui->SwitchCanvas(5);
+    gMyCommonRICH->Get2DRing(3)->Draw("colz");
+
+    gMyMainFrameGui->SwitchCanvas(1);
+    gMyStyle->SetTitle("Cherenkov Rings for mu/pi/K/p");
+    gMyStyle->SetXLabel("X[mm]");
+    gMyStyle->SetYLabel("Y[mm]");
+    for (int i = 0; i < gDet->nhypo; i++)
+        gMyStyle->SetLegends(i, Form("%s Nph=%.1f", gDet->hypo[i], gMyCommonRICH->Get2DRing(i)->Integral()));
+    gMyStyle->SetDrawOption("");
+    gMyStyle->Draw4Histograms(gMyCommonRICH->Get2DRing(0), gMyCommonRICH->Get2DRing(1), gMyCommonRICH->Get2DRing(2), gMyCommonRICH->Get2DRing(3));
+    gMyMainFrameGui->UpdateCanvas(5);
+    gMyMainFrameGui->UpdateCanvas(4);
+    gMyMainFrameGui->UpdateCanvas(3);
+    gMyMainFrameGui->UpdateCanvas(2);
+    gMyMainFrameGui->UpdateCanvas(1);
+    */
+}
+
+void MyGuiActionClass::DoSaveDetFile(const char *fname)
 {
     if (fname == NULL)
         return;
     gMyCommonRICH->SaveRings(fname);
 }
 
-void MyNumEvalClass::DoLoadRings(const char *fname)
+void MyGuiActionClass::DoLoadDetFile(const char *fname)
 {
     if (fname == NULL)
         return;
     gMyCommonRICH->LoadRings(fname);
-    MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
-    nRadLayer = gDet->nRadLayer;
-    tRadLayer = gDet->tRadLayer;
-    sRadLayer = gDet->sRadLayer;
-
-    tTransLayer = gDet->tTransLayer;
-    nTransLayer = gDet->nTransLayer;
-    pTransLayer = gDet->pTransLayer;
-    sTransLayer = gDet->sTransLayer;
-
-    nImpurities = gDet->nImpurities;
-    pImpurities = gDet->pImpurities;
-    sImpurities = gDet->sImpurities;
-
-    PCDetector = gDet->PCDetector;
-    pixel = gDet->pixel;
-
-    particle = gDet->particle;
-    momentum = gDet->momentum;
-    theta0 = gDet->theta0;
-
-    nLambda = gDet->nLambda;
-    lambdaMin = gDet->lambdaMin;
-    lambdaMax = gDet->lambdaMax;
-
-    XBinMin = gDet->XBinMin;
-    XBinMax = gDet->XBinMax;
-    YBinMin = gDet->YBinMin;
-    YBinMax = gDet->YBinMax;
-
-    epsilon = gDet->epsilon;
-    trkStep = gDet->trkStep;
-    nphi = gDet->nphi;
+    GetDetectorParameters();
 
     DoLoadTextBuf();
-    DoDrawConfig("");
+    DoDrawConfig("Show the configurations");
 }
+
+
 
 //______________________________________________________________________________
 // show infor button actions
-void MyNumEvalClass::ShowMaterialInfo(TString matName)
+void MyGuiActionClass::ShowMaterialInfo(TString matName)
 {
     if (nLambda == 0 || lambdaMin >= lambdaMax)
         return;
@@ -559,14 +675,14 @@ void MyNumEvalClass::ShowMaterialInfo(TString matName)
     gMyMainFrameGui->UpdateCanvas(1);
 }
 
-void MyNumEvalClass::ShowDetectorInfo(TString detName)
+void MyGuiActionClass::ShowDetectorInfo(TString detName)
 {
     gMyMainFrameGui->ClearCanvas(1);
     gMyStyle->Draw1Graph(gMyDatabaseClass->GetDetQEGraph(detName, nLambda, lambdaMin, lambdaMax));
     gMyMainFrameGui->UpdateCanvas(1);
 }
 
-void MyNumEvalClass::DoDrawSelectedMat()
+void MyGuiActionClass::DoDrawSelectedMat()
 {
     vector<TGraph *> tmp1;
     vector<TGraph *> tmp2;
@@ -595,7 +711,7 @@ void MyNumEvalClass::DoDrawSelectedMat()
     gMyMainFrameGui->UpdateCanvas(2);
 }
 
-void MyNumEvalClass::DoDrawSelectedDet()
+void MyGuiActionClass::DoDrawSelectedDet()
 {
     vector<TGraph *> tmp1;
 
@@ -616,22 +732,69 @@ void MyNumEvalClass::DoDrawSelectedDet()
 
 //______________________________________________________________________________
 // private func
-void MyNumEvalClass::SetDetectorParameters(int id)
+void MyGuiActionClass::SetDetectorParameters()
 {
     gMyCommonRICH->SetPrecision(epsilon);
-    gMyCommonRICH->SetTrackStepSize(trkStep);
-    gMyCommonRICH->SetNumberOfPhiStep(nphi);
     gMyCommonRICH->SetDatabase(gMyDatabaseClass);
 
-    MyRICHDetector *gDet = gMyCommonRICH->GetDetector(id);
+    MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
+
     gDet->SetRadiator(nRadLayer, tRadLayer, sRadLayer);
     gDet->SetTransLayer(tTransLayer, nTransLayer, pTransLayer, sTransLayer);
     gDet->SetImpurities(nImpurities, pImpurities, sImpurities);
     gDet->SetDetector(PCDetector, pixel);
 
-    gDet->SetParticleGun(particle, gMyCommonRICH->GetMass(particle), momentum, theta0);
+    gDet->SetParticleGun(particle, mass);
+    gDet->SetParticleGun(momentum, Theta0);
     gDet->SetLambdaRange(nLambda, lambdaMin, lambdaMax);
     gDet->SetDetectorViewSize(XBinMin, XBinMax, YBinMin, YBinMax);
 
+    gDet->SetMomentumScanRange(np, pMin, pMax);
+    gDet->SetTheta0ScanRange(nthe0, The0Min, The0Max);
     gDet->SetPrecision(epsilon, trkStep, nphi);
+}
+
+void MyGuiActionClass::GetDetectorParameters()
+{
+    MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
+    nRadLayer = gDet->nRadLayer;
+    tRadLayer = gDet->tRadLayer;
+    sRadLayer = gDet->sRadLayer;
+
+    tTransLayer = gDet->tTransLayer;
+    nTransLayer = gDet->nTransLayer;
+    pTransLayer = gDet->pTransLayer;
+    sTransLayer = gDet->sTransLayer;
+
+    nImpurities = gDet->nImpurities;
+    pImpurities = gDet->pImpurities;
+    sImpurities = gDet->sImpurities;
+
+    PCDetector = gDet->PCDetector;
+    pixel = gDet->pixel;
+
+    particle = gDet->particle;
+    momentum = gDet->momentum;
+    Theta0 = gDet->Theta0;
+    mass = gDet->mass;
+
+    nLambda = gDet->nLambda;
+    lambdaMin = gDet->lambdaMin;
+    lambdaMax = gDet->lambdaMax;
+
+    XBinMin = gDet->XBinMin;
+    XBinMax = gDet->XBinMax;
+    YBinMin = gDet->YBinMin;
+    YBinMax = gDet->YBinMax;
+
+    np = gDet->np;
+    pMin = gDet->pMin;
+    pMax = gDet->pMax;
+    nthe0 = gDet->nthe0;
+    The0Min = gDet->The0Min;
+    The0Max = gDet->The0Max;
+
+    epsilon = gDet->epsilon;
+    trkStep = gDet->trkStep;
+    nphi = gDet->nphi;
 }

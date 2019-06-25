@@ -1,5 +1,5 @@
-#ifndef _MyNumEvalClass_h_
-#define _MyNumEvalClass_h_
+#ifndef _MyGuiActionClass_h_
+#define _MyGuiActionClass_h_
 
 #include <map>
 #include <string>
@@ -36,19 +36,21 @@ enum ButtonAction
     AnalysisAction = 100,
     DrawSelectedMat,
     DrawSelectedDet,
-    DrawRICH,
-    Draw3Rings,
-    Save3Rings,
-    Load3Rings,
+    LoadDetFile,
+    SaveDetFile,
+    ShowSpecRICH,
+    ShowMulParRICH,
+    GenRICHList,
+    RecRICHList,
 };
 
 //-----------------------------------------------------------------------------------------------
 //
-class MyNumEvalClass
+class MyGuiActionClass
 {
 public:
-    MyNumEvalClass();
-    ~MyNumEvalClass();
+    MyGuiActionClass();
+    ~MyGuiActionClass();
 
     int GetNTabPage() { return nTabPage; }
     TString GetTabPageName(int i) { return sTabPage[i]; }
@@ -82,11 +84,13 @@ private:
     void ShowDetectorInfo(TString);
     void DoDrawSelectedMat();
     void DoDrawSelectedDet();
-    void DoDrawRICH();
-    void DoDrawRings();
-    void DoSaveRings(const char *fname);
-    void DoLoadRings(const char *fname);
 
+    void DoSaveDetFile(const char *fname);
+    void DoLoadDetFile(const char *fname);
+    void DoShowSpecRICH(TString cmdStr);
+    void DoShowMulParRICH(TString cmdStr);
+    void DoGenHitMaps(TString cmdStr);
+    void DoRecRings(TString cmdStr);
 
     //定义探测器结构
     int nRadLayer;            //可以有多层传输层
@@ -112,11 +116,22 @@ private:
     double lambdaMin, lambdaMax;
 
     TString particle;
-    double momentum, theta0;
+    double mass, momentum, Theta0;
+    
     int NXBin, NYBin;
     double XBinMin, XBinMax, YBinMin, YBinMax;
 
-    void SetDetectorParameters(int id = -1);
+    //扫描的参数范围
+    int np, nthe0;
+    double pMin, pMax;
+    double The0Min, The0Max;
+
+    void SetDetectorParameters();
+    void GetDetectorParameters();
+
+    //指定显示范围
+    vector<double> pList;
+    vector<double> thList;
 
     //分析精度要求
     double epsilon;
@@ -131,6 +146,6 @@ private:
     MyDatabaseClass *gMyDatabaseClass;
 };
 
-extern MyNumEvalClass *gMyNumEvalClass;
+extern MyGuiActionClass *gMyGuiActionClass;
 
 #endif

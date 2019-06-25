@@ -18,7 +18,7 @@
 #include "TApplication.h"
 #include "Riostream.h"
 
-#include "MyNumEvalClass.h"
+#include "MyGuiActionClass.h"
 
 class MyMainFrameGui : public TGMainFrame
 {

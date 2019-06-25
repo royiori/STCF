@@ -1,4 +1,4 @@
-#include "MyNumEvalClass.h"
+#include "MyGuiActionClass.h"
 #include "MyMainFrameGui.h"
 
 int main(int argc, char **argv)
@@ -11,7 +11,7 @@ int main(int argc, char **argv)
     gStyle->SetOptFit(0);
     gStyle->SetStatFont(42);
 
-    gMyNumEvalClass = new MyNumEvalClass();
+    gMyGuiActionClass = new MyGuiActionClass();
     gMyMainFrameGui = new MyMainFrameGui(gClient->GetRoot(), 1250, 600);
     
     // run ROOT application

@@ -52,16 +52,22 @@ public:
 
     //----------------------------
     /// get detector
-    MyRICHDetector *GetDetector(int id = -1) { return (id == -1) ? gDet : gScanDetList[id]; }
+    MyRICHDetector *GetDetector() { return gDet; }
+    MyRICHDetector *GetDetList(int ihypo) { return gDetList[ihypo]; }
+    MyRICHDetector *GetDetScan(int imom, int itheta0, int ihypo) { return gScanDetList[imom][itheta0][ihypo]; }
 
-    TH2F *Get2DViewer(int id = -1) { return (id == -1) ? gDet->Get2DViewer() : ((0 <= id && id < int(gScanDetList.size())) ? gScanDetList[id]->Get2DViewer() : NULL); }
-    TH1D **Get1DViewer(int id = -1) { return (id == -1) ? gDet->Get1DViewer() : ((0 <= id && id < int(gScanDetList.size())) ? gScanDetList[id]->Get1DViewer() : NULL); }
+    TH1F *GetDetWLMap() { return gDet->GetWaveLengthHist(); }
+    TH1F *GetDetListWLMap() { return gDet->GetWaveLengthHist(); }
+
+    TH2F *GetDetHitMap() { return gDet->GetHitMap(); }
+    TH2F *GetDetListHitMap(int ihypo) { return gDetList[ihypo]->GetHitMap(); }
+    TH2F *GetDetScanHitMap(int imom, int itheta0, int ihypo) { return gScanDetList[imom][itheta0][ihypo]->GetHitMap(); }
+
+    int GetDetListNumber() { return (int)gDetList.size(); }
 
     //----------------------------
     // set functions
     void SetPrecision(double ep) { epsilon = ep; }
-    void SetTrackStepSize(double sp) { trkStep = sp; }
-    void SetNumberOfPhiStep(int _np) { nphi = _np; }
     void SetDatabase(MyDatabaseClass *d) { gDb = d; }
 
     void SaveRings(const char *fname);
@@ -69,17 +75,22 @@ public:
 
     //----------------------------
     // calculations
-    void GenerateRICHRing(MyRICHDetector *det = 0);
-    void GenerateMultiParticleRICHRings(vector<TString> parList);
+    void GenerateDetRing(MyRICHDetector *det = 0);
+    void GenerateMultiParticleRICHRings();
+    void GenerateTheScanHitMaps();
+    void GenerateTheOffsetAndResolutionMaps();
+    
+    // reconstruction
+    vector<double> ReconstructRICHBySolver(MyRICHDetector *det, double xc, double yc);
+    void ReconstructCerekovAngleDist(MyRICHDetector *det);
 
-    void ReconstructRICH(MyRICHDetector *det = 0, TString hypo="pi");
 private:
     double ProjectToPixel(MyRICHDetector *, double xmin, double xmax, double ymin, double ymax, double lambda);
     double ProjectToPixel(MyRICHDetector *, double xmin, double xmax, double ymin, double ymax);
 
-    double PhotonGenFromRad(MyRICHDetector *det, int idet, double lambda, TH2F *fRing, double scal = 1., int AbsFlag = 1);
-    double PhotonGenFromRadWithAbs(MyRICHDetector *det, int idet, double lambda, TH2F *fRing, double scal) { return PhotonGenFromRad(det, idet, lambda, fRing, scal, 1); }
-    double PhotonGenFromRadWithOutAbs(MyRICHDetector *det, int idet, double lambda, TH2F *fRing, double scal) { return PhotonGenFromRad(det, idet, lambda, fRing, scal, 0); }
+    double PhotonGenFromRad(MyRICHDetector *det, int idet, int AbsFlag = 1);
+    double PhotonGenFromRadWithAbs(MyRICHDetector *det, int idet) { return PhotonGenFromRad(det, idet, 1); }
+    double PhotonGenFromRadWithOutAbs(MyRICHDetector *det, int idet) { return PhotonGenFromRad(det, idet, 0); }
 
     //----------------------------
     // support function
@@ -89,22 +100,20 @@ private:
 
     // variables
     double epsilon;
-    double trkStep;
-    int nphi;
 
     TF1 *fRhoFcn;
+    MyDatabaseClass *gDb;                                  //
+    MyRICHDetector *gDet;                                  //id=0, 用来保存/读取探测器设置
+    vector<MyRICHDetector *> gDetList;                     //id=1~NHYPO,[粒子种类]
+    vector<vector<vector<MyRICHDetector *>>> gScanDetList; //id=10.....,[动量][角度][粒子种类]
 
-    MyRICHDetector *gDet;
-    MyDatabaseClass *gDb;
-    vector<MyRICHDetector *> gScanDetList;
-
-    // for calculation
-    double fun(double l0);
     void ClearScanList()
     {
         for (int i = 0; i < (int)gScanDetList.size(); i++)
-            if (gScanDetList[i] != 0)
-                delete gScanDetList[i];
+            for (int j = 0; j < (int)gScanDetList[i].size(); j++)
+                for (int k = 0; k < (int)gScanDetList[i][j].size(); k++)
+                    if (gScanDetList[i][j][k] != 0)
+                        delete gScanDetList[i][j][k];
         gScanDetList.clear();
     }
 };

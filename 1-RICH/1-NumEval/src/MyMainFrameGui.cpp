@@ -37,7 +37,7 @@ MyMainFrameGui::MyMainFrameGui(const TGWindow *p, int w, int h) : TGMainFrame(p,
     //1. Setting Text
     {
         fSettingText = new TGTextEdit(fVFrame1, 400, 580);
-        fSettingText->LoadBuffer(gMyNumEvalClass->GenerateSettingsText());
+        fSettingText->LoadBuffer(gMyGuiActionClass->GenerateSettingsText());
         fSettingText->SetFont(myfont->GetFontStruct());
         fVFrame1->AddFrame(fSettingText, LayoutXY);
 
@@ -61,14 +61,14 @@ MyMainFrameGui::MyMainFrameGui(const TGWindow *p, int w, int h) : TGMainFrame(p,
         fVFrame2->AddFrame(fTab0, LayoutXY);
 
         // 2.1 page0
-        for (int i = 0; i < gMyNumEvalClass->GetNTabPage(); i++)
+        for (int i = 0; i < gMyGuiActionClass->GetNTabPage(); i++)
         {
-            TGCompositeFrame *fTabPage = fTab0->AddTab(gMyNumEvalClass->GetTabPageName(i));
+            TGCompositeFrame *fTabPage = fTab0->AddTab(gMyGuiActionClass->GetTabPageName(i));
             fTabPage->SetLayoutManager(new TGVerticalLayout(fTabPage));
 
-            for (int j = 0; j < gMyNumEvalClass->GetNPageButton(i); j++)
+            for (int j = 0; j < gMyGuiActionClass->GetNPageButton(i); j++)
             {
-                TGTextButton *fButtonTmp = new TGTextButton(fTabPage, gMyNumEvalClass->GetPageButtonName(i, j), gMyNumEvalClass->GetIndexButton(i) + j);
+                TGTextButton *fButtonTmp = new TGTextButton(fTabPage, gMyGuiActionClass->GetPageButtonName(i, j), gMyGuiActionClass->GetIndexButton(i) + j);
                 fButtonTmp->Associate(this);
                 fTabPage->AddFrame(fButtonTmp, LayoutX);
             }
@@ -82,7 +82,7 @@ MyMainFrameGui::MyMainFrameGui(const TGWindow *p, int w, int h) : TGMainFrame(p,
 
         for (int i = 0; i < NPage1; i++)
         {
-            TGCompositeFrame *fTabPage = fCTab->AddTab((i==0)?"Config":Form("Res%d", i));
+            TGCompositeFrame *fTabPage = fCTab->AddTab((i == 0) ? "Config" : Form("Res%d", i));
             TRootEmbeddedCanvas *fEmbeddedCanvas = new TRootEmbeddedCanvas(0, fTabPage, 580, 360);
             fTabPage->AddFrame(fEmbeddedCanvas, LayoutXY);
             fCA[i] = fEmbeddedCanvas->GetCanvas();
@@ -110,6 +110,7 @@ MyMainFrameGui::~MyMainFrameGui()
 void MyMainFrameGui::CloseWindow()
 {
     // Destructor.
+    delete gMyGuiActionClass;
     DeleteWindow();
     gApplication->Terminate(0);
 }
@@ -122,6 +123,7 @@ Bool_t MyMainFrameGui::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
     switch (GET_MSG(msg))
     {
     case kC_COMMAND:
+
         switch (GET_SUBMSG(msg))
         {
 
@@ -132,19 +134,27 @@ Bool_t MyMainFrameGui::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
             fi.fFilename = NULL;
             fi.fFileTypes = filetypes;
             fi.fIniDir = StrDup(dir);
-            TString fname;
+            TString cmdStr;
 
-            if (parm1 == Save3Rings || parm1 == Load3Rings)
+            if (parm1 == SaveDetFile || parm1 == LoadDetFile)
             {
                 new TGFileDialog(gClient->GetRoot(), this, kFDOpen, &fi);
                 if (fi.fFilename == NULL)
                     return kTRUE;
-                fname = fi.fFilename;
-                if (!fname.EndsWith("root"))
-                    fname += ".root";
+                cmdStr = fi.fFilename;
+                if (!cmdStr.EndsWith("root"))
+                    cmdStr += ".root";
             }
 
-            gMyNumEvalClass->ExecButtonClick(parm1, fname.Data());
+            if (parm1 == ShowSpecRICH || parm1 == ShowMulParRICH || parm1 == GenRICHList || parm1 == RecRICHList)
+            {
+                int retval;
+                new TGMsgBox(gClient->GetRoot(), this, "Message-RICH", "Do you want RE-generate the histograms?",
+                             kMBIconExclamation, kMBYes | kMBNo, &retval);
+                cmdStr = (retval == 1) ? "yes" : "no";
+            }
+
+            gMyGuiActionClass->ExecButtonClick(parm1, cmdStr.Data());
             break;
         }
         break;
