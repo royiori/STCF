@@ -78,7 +78,7 @@ MyMainFrameGui::MyMainFrameGui(const TGWindow *p, int w, int h) : TGMainFrame(p,
     //3.
     {
         fCTab = new TGTab(fVFrame3, 580, 580);
-        const int NPage1 = 6;
+        const int NPage1 = 10;
 
         for (int i = 0; i < NPage1; i++)
         {
@@ -146,7 +146,8 @@ Bool_t MyMainFrameGui::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
                     cmdStr += ".root";
             }
 
-            if (parm1 == ShowSpecRICH || parm1 == ShowMulParRICH || parm1 == GenRICHList || parm1 == RecRICHList)
+
+            if (parm1 == GenSpecRICH || parm1 == GenMulParRICH || parm1 == GenScanRICHList || parm1 == GenRecRICHList)
             {
                 int retval;
                 new TGMsgBox(gClient->GetRoot(), this, "Message-RICH", "Do you want RE-generate the histograms?",

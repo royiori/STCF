@@ -6,8 +6,6 @@ include $(ROOTETC)
 CXXFLAGS  += -Wall
 CXXFLAGS  += -I. -I./inc
 
-LDFLAGS += -lGui
-
 #------------------------------------------------------------------------------
 
 SRCS = $(wildcard src/*.cpp)
@@ -24,6 +22,7 @@ LibOut = lib/libRICHDict.so
 #------------------------------------------------------------------------------
 MAIN = RICH
 all: $(MAIN)
+lib: $(LibOut)
 
 
 $(OBJS) : obj/%.o:src/%.cpp inc/%.h
@@ -37,7 +36,7 @@ $(LibOut): $(LibObj)
 
 
 $(MAIN): %:%.o ${OBJS} ${LibObj}
-		$(LD) $(LDFLAGS) -o $@ $^ $(LIBS)
+		$(LD) $(LDFLAGS) -o $@ $^ $(LIBS) -lGui
 		@cp ./lib/RICHDict_rdict.pcm ./
 		@echo "----> $@ done!"
 
@@ -49,7 +48,9 @@ clean:
 		@rm -f $(OBJS)
 		@rm -f RICHDict*
 		@rm -f ./src/RICHDict*
+		@rm -f ./lib/*
 		@rm -f *.o 
+		@rm -f ./obj/*.o
 #
 #%.o:%.C
 #`		$(CXX) $(CXXFLAGS) -c $< -o $@

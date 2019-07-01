@@ -18,9 +18,9 @@ public:
         Init(tid);
     }
 
-    MyRICHDetector(const MyRICHDetector &det, int tid = -9999)
+    MyRICHDetector(const MyRICHDetector &det, int tid = -1, int copyFlag = 0)
     {
-        ((MyRICHDetector &)det).MyCopy(*this, tid);
+        ((MyRICHDetector &)det).MyCopy(*this, tid, copyFlag);
     }
 
     ~MyRICHDetector()
@@ -30,8 +30,11 @@ public:
         if (fHitMap != 0)
             delete fHitMap;
         for (int i = 0; i < (int)fHitMapEachRad.size(); i++)
-            if (fHitMapEachRad[i] != 0)
-                delete fHitMapEachRad[i];
+            delete fHitMapEachRad[i];
+        if (fRecMap != 0)
+            delete fRecMap;
+        for (int i = 0; i < (int)fRecMapEachRad.size(); i++)
+            delete fRecMapEachRad[i];
     };
 
     //---------------
@@ -117,13 +120,15 @@ public:
     double lambdaMin, lambdaMax, lambdaStep;
     void SetLambdaRange(int n, double min, double max)
     {
+        if (n <= 0)
+            return;
         nLambda = n;
         lambdaMin = min;
         lambdaMax = max;
-        lambdaStep = (max - min) / n;
+        lambdaStep = (n > 1) ? (max - min) / (n - 1) : 0;
     }
 
-    TString particle;
+    TString particle, Particle;
     double mass, momentum, Theta0, theta0;
     void SetParticleGun(TString par, double m)
     {
@@ -168,17 +173,21 @@ public:
 
     void SetMomentumScanRange(int n, double min, double max)
     {
+        if (n < 0)
+            return;
         np = n;
         pMin = min;
         pMax = max;
-        pStep = (n > 0 && max != min) ? (max - min) / n : 0;
+        pStep = (n > 0) ? (max - min) / (n - 1) : 0;
     }
     void SetTheta0ScanRange(int n, double min, double max)
     {
+        if (n < 0)
+            return;
         nthe0 = n;
         The0Min = min;
         The0Max = max;
-        The0Step = (n > 0 && The0Max != The0Min) ? (The0Max - The0Min) / nthe0 : 0;
+        The0Step = (n > 0) ? (The0Max - The0Min) / (n - 1) : 0;
 
         the0Min = min * 3.1415927 / 180.;
         the0Max = max * 3.1415927 / 180.;
@@ -220,14 +229,13 @@ public:
         return fHitMap;
     }
 
-    //-- 从每个辐射体出射的光子数在阳极上的分布，[nRad]
+    //   -- 从每个辐射体出射的光子数在阳极上的分布，[nRad]
     vector<TH2F *> fHitMapEachRad;
-    TH2F *GetDetHitMap(int id) { return fHitMapEachRad[id]; }
+    TH2F *GetDetHitMap(int id) { return (0 <= id && id < nRadLayer) ? fHitMapEachRad[id] : NULL; }
     void Gen2DRingListForEachRad()
     {
         for (int i = 0; i < (int)fHitMapEachRad.size(); i++)
-            if (fHitMapEachRad[i] != 0)
-                delete fHitMapEachRad[i];
+            delete fHitMapEachRad[i];
 
         fHitMapEachRad.clear();
         for (int i = 0; i < nRadLayer; i++)
@@ -238,38 +246,47 @@ public:
         }
     }
 
-    //-- 重建后的结果，X轴：光子数，Y轴：事例中的光子平均后的切伦科夫角, [nRad]
-    /* 
+    //3.3-- 重建后的结果，X轴：光子数，Y轴：事例中的光子平均后的切伦科夫角, [nRad]
     int NPhoton = 50;
-    vector<vector<TH2F *>> fRecRingEachRad;
+    TH2F *fRecMap;
+    TH2F *GetRecMap(int flag = 0)
+    {
+        if (flag == 0 && fRecMap != 0)
+            return fRecMap;
+
+        if (fRecMap != 0)
+            delete fRecMap;
+        fRecMap = new TH2F(Form("fRecMap%d", id), Form("Reconstructed Cherenkov Ring for %s @ [%.1f GeV/c, %.1f#circ]", particle.Data(), momentum, Theta0), NPhoton, 0, NPhoton, 720, 0, TMath::Pi() / 2);
+        fRecMap->GetXaxis()->SetTitle("Number of photon");
+        fRecMap->GetYaxis()->SetTitle("Reconstructed Theta_c[rad]");
+        return fRecMap;
+    }
+
+    vector<double> fThetaCReal; //thetac的期望值
+    vector<TH2F *> fRecMapEachRad;
     void Gen2DRecRingListForEachRad()
     {
-        for (int i = 0; i < (int)fRecRingEachRad.size(); i++)
-            for (int j = 0; j < (int)fRecRingEachRad[i].size(); j++)
-                delete fRecRingEachRad[i][j];
-        
-        fRecRingEachRad.clear();
-        fRecRingEachRad.resize(nRadLayer);
-        for(int i=0; i<nRadLayer; i++)
+        for (int i = 0; i < (int)fRecMapEachRad.size(); i++)
+            delete fRecMapEachRad[i];
+
+        fThetaCReal.clear();
+        fRecMapEachRad.clear();
+        for (int i = 0; i < nRadLayer; i++)
         {
-            fRecRingEachRad[i].resize(NHYPO);
-            for(int j=0; j<NHYPO; j++)
-            {
-                fRecRingEachRad[i].push_back(new TH2F(Form("fRecRingRad%d_%d_%d", id, i, j), Form("Reconstructed Cherenkov Ring for %s @ %.1f GeV", hypo[i], momentum), NPhoton, 0, NPhoton, 360, 0, TMath::Pi() / 2));
-                fRecRingEachRad[i][j]->GetXaxis()->SetTitle("Number of photon");
-                fRecRingEachRad[i][j]->GetYaxis()->SetTitle("Reconstructed Theta_c[rad]");
-            }
+            fRecMapEachRad.push_back(new TH2F(Form("fRecMapEachRad%d_%d", id, i), Form("Reconstructed Cherenkov Ring for %s @ %.1f GeV", particle.Data(), momentum), NPhoton, 0, NPhoton, 360, 0, TMath::Pi() / 2));
+            fRecMapEachRad[i]->GetXaxis()->SetTitle("Number of photon");
+            fRecMapEachRad[i]->GetYaxis()->SetTitle("Reconstructed Theta_c[rad]");
         }
     }
 
-
+    /* 
     vector<vector<vector<TH1F *>>> fTC; //[nRad][nHypo][nPhoton]
     void Gen1DRecRingListForEachRad()
     {
-        for (int i = 0; i < (int)fRecRingEachRad.size(); i++)
-            for (int j = 0; j < (int)fRecRingEachRad[i].size(); j++)
+        for (int i = 0; i < (int)fRecMapEachRad.size(); i++)
+            for (int j = 0; j < (int)fRecMapEachRad[i].size(); j++)
             {
-                TH2F *ftmp = fRecRingEachRad[i][j];
+                TH2F *ftmp = fRecMapEachRad[i][j];
 
                 for (int k=0; k<NPhoton; k++)
                 {
@@ -315,16 +332,17 @@ public:
     {
         id = tid;
         fHitMap = 0;
+        fRecMap = 0;
         fWaveLengthHist = 0;
     };
 
-    void BuildFrom(MyRICHDetector &det)
+    void BuildFrom(MyRICHDetector &det, int tid = -1, int copyFlag = 0)
     {
-        ((MyRICHDetector &)det).MyCopy(*this);
+        ((MyRICHDetector &)det).MyCopy(*this, tid, copyFlag);
     };
 
 private:
-    void MyCopy(MyRICHDetector &det, int tid = -9999)
+    void MyCopy(MyRICHDetector &det, int tid = -1, int copyFlag = 0)
     {
         det.SetRadiator(nRadLayer, tRadLayer, sRadLayer);
         det.SetTransLayer(tTransLayer, nTransLayer, pTransLayer, sTransLayer);
@@ -338,12 +356,23 @@ private:
         det.SetMomentumScanRange(np, pMin, pMax);
         det.SetTheta0ScanRange(nthe0, The0Min, The0Max);
         det.SetPrecision(epsilon, trkStep, nphi);
-        det.Init((tid == -9999) ? id : tid);
+        det.Init((tid < 0) ? id : tid);
+        if (copyFlag == 0)
+            return;
+
         det.Gen2DRingListForEachRad();
+        det.Gen2DRecRingListForEachRad();
         if (fHitMap != 0)
-            det.fHitMap = (TH2F *)fHitMap->Clone();
+            det.fHitMap = (TH2F *)fHitMap->Clone(Form("fHitMap%d", det.id));
         if (fWaveLengthHist != 0)
-            det.fWaveLengthHist = (TH1F *)fWaveLengthHist->Clone();
+            det.fWaveLengthHist = (TH1F *)fWaveLengthHist->Clone(Form("fwavelength%d", det.id));
+        if (fRecMap != 0)
+            det.fRecMap = (TH2F *)fRecMap->Clone();
+        for (int i = 0; i < (int)fHitMapEachRad.size(); i++)
+            det.fHitMapEachRad[i] = (TH2F *)fHitMapEachRad[i]->Clone(Form("fHitMapEachRad%d_%d", det.id, i));
+        for (int i = 0; i < (int)fRecMapEachRad.size(); i++)
+            det.fRecMapEachRad[i] = (TH2F *)fRecMapEachRad[i]->Clone(Form("fRecMapEachRad%d_%d", det.id, i));
+
         //det.fHitMap->SetDirectory(0);
         //det.fWaveLengthHist->SetDirectory(0);
     }

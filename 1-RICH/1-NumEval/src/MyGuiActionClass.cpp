@@ -18,37 +18,47 @@ MyGuiActionClass::MyGuiActionClass()
     gMyDatabaseClass = new MyDatabaseClass();
 
     // pages
-    nTabPage = 4;
-    sTabPage[0] = TString("Act");
-    sTabPage[1] = TString("Mat");
-    sTabPage[2] = TString("Det");
-    sTabPage[3] = TString("Mis");
+    nTabPage = 5;
+    sTabPage[0] = TString("Show");
+    sTabPage[1] = TString("Generate");
+    sTabPage[2] = TString("Material");
+    sTabPage[3] = TString("Detector");
+    sTabPage[4] = TString("Miscellaneous");
 
     // page 0
-    nButton[0] = 6;
+    nButton[0] = 7;
     iButton[0] = LoadDetFile;
     sButton[0].push_back("Load");
     sButton[0].push_back("Save");
-    sButton[0].push_back("Show the spec RICH");
-    sButton[0].push_back("Show multi-Particles RICH");
-    sButton[0].push_back("Generate the XY-hitmap for SCAN");
-    sButton[0].push_back("Scan the Rec-RICH");
+    sButton[0].push_back("Show the FCN plot");
+    sButton[0].push_back("Show the Specified Particle RICH");
+    sButton[0].push_back("Show Multi-Particles RICH");
+    sButton[0].push_back("Show the SCAN XY-hitmap and N-Photon map");
+    sButton[0].push_back("Show the SCAN Resolution Map");
+
+    // page 1
+    nButton[1] = 4;
+    iButton[1] = GenSpecRICH;
+    sButton[1].push_back("Generate the Specified Particle RICH");
+    sButton[1].push_back("Generate Multi-Particles RICH");
+    sButton[1].push_back("Generate the XY-hitmap for SCAN");
+    sButton[1].push_back("Reconstruct to get the Resolution Map");
 
     // page1
-    nButton[1] = gMyDatabaseClass->GetNMaterial();
-    iButton[1] = MatList;
-    sButton[1] = gMyDatabaseClass->GetMaterialList();
+    nButton[2] = gMyDatabaseClass->GetNMaterial();
+    iButton[2] = MatList;
+    sButton[2] = gMyDatabaseClass->GetMaterialList();
 
     // page 2
-    nButton[2] = gMyDatabaseClass->GetNDetector();
-    iButton[2] = DetList;
-    sButton[2] = gMyDatabaseClass->GetDetectorList();
+    nButton[3] = gMyDatabaseClass->GetNDetector();
+    iButton[3] = DetList;
+    sButton[3] = gMyDatabaseClass->GetDetectorList();
 
     // page 3
-    nButton[3] = 2;
-    iButton[3] = DrawSelectedMat;
-    sButton[3].push_back("Draw Sel-Mat");
-    sButton[3].push_back("Draw Sel-Det");
+    nButton[4] = 2;
+    iButton[4] = DrawSelectedMat;
+    sButton[4].push_back("Draw Sel-Mat");
+    sButton[4].push_back("Draw Sel-Det");
 
     // init parameters
     nRadLayer = env->GetValue("nRadLayer", 2);
@@ -76,7 +86,7 @@ MyGuiActionClass::MyGuiActionClass()
     PCDetector = env->GetValue("PCDetector", "CsI");
     pixel = env->GetValue("pixel", 5);
 
-    nLambda = env->GetValue("nLambda", 60);
+    nLambda = env->GetValue("nLambda", 61);
     lambdaMin = env->GetValue("lambdaMin", 160);
     lambdaMax = env->GetValue("lambdaMax", 220);
 
@@ -96,18 +106,20 @@ MyGuiActionClass::MyGuiActionClass()
     trkStep = env->GetValue("trkStep", 1e-1);
     nphi = env->GetValue("nphi", 360);
 
-    np = env->GetValue("np", 10);
-    pMin = env->GetValue("pMin", 0.1);
+    np = env->GetValue("np", 4);
+    pMin = env->GetValue("pMin", 1.0);
     pMax = env->GetValue("pMax", 4.0);
 
-    nthe0 = env->GetValue("nthe0", 10);
+    nthe0 = env->GetValue("nthe0", 11);
     The0Min = env->GetValue("The0Min", 0);
-    The0Max = env->GetValue("The0Max", 90);
+    The0Max = env->GetValue("The0Max", 10);
 
-    for (int i = 0; i < 5; i++)
-        pList.push_back(env->GetValue(Form("pList%d", i), i * 0.4 + 0.2));
-    for (int i = 0; i < 5; i++)
-        thList.push_back(env->GetValue(Form("thList%d", i), i * 10));
+    iph = env->GetValue("iph", 1);
+    irad1 = env->GetValue("irad1", 0);
+    irad2 = env->GetValue("irad2", 1);
+    pList = env->GetValue("pList", 1.0);
+    thList = env->GetValue("thList", 0);
+    nEvent = env->GetValue("nEvent", 1e4);
 
     nSelectedMat = env->GetValue("nSelectedMat", 2);
     for (int i = 0; i < nSelectedMat; i++)
@@ -122,14 +134,13 @@ MyGuiActionClass::~MyGuiActionClass()
 {
     // Destructor.
     // Store env
-    
+
     env->SetValue("nRadLayer", nRadLayer);
     for (int i = 0; i < nRadLayer; i++)
     {
         env->SetValue(Form("sRad%d", i), sRadLayer[i].c_str());
         env->SetValue(Form("tRad%d", i), tRadLayer[i]);
     }
-
 
     env->SetValue("tTransLayer", tTransLayer);
     env->SetValue("nTransLayer", nTransLayer);
@@ -174,10 +185,12 @@ MyGuiActionClass::~MyGuiActionClass()
     env->SetValue("The0Min", The0Min);
     env->SetValue("The0Max", The0Max);
 
-    for (int i = 0; i < 5; i++)
-        env->SetValue(Form("pList%d", i), pList[i]);
-    for (int i = 0; i < 5; i++)
-        env->SetValue(Form("thList%d", i), thList[i]);
+    env->SetValue("iph", iph);
+    env->SetValue("irad1", irad1);
+    env->SetValue("irad2", irad2);
+    env->SetValue("pList", pList);
+    env->SetValue("thList", thList);
+    env->SetValue("nEvent", nEvent);
 
     env->SetValue("nSelectedMat", nSelectedMat);
     for (int i = 0; i < nSelectedMat; i++)
@@ -229,21 +242,27 @@ TString MyGuiActionClass::GenerateSettingsText()
     settings += Form("Lambda %d %.1f %.1f\n", nLambda, lambdaMin, lambdaMax);
 
     settings += "\n#---------------------------";
-    settings += "\n#    Particle settings";
+    settings += "\n#    (Multi-)Particle settings";
     settings += "\n#---------------------------";
 
-    settings += "\n\n# Particle to show (momentum[GeV], angle[degree])\n";
+    settings += "\n\n# The Specified (Multi-)Particle to show (momentum[GeV], angle[degree])\n";
     settings += Form("Particle: %s %.1f %.1f\n", particle.Data(), momentum, Theta0);
 
-    settings += "\n\n# Particle to scan (N, Min, Max) for momentum[GeV/c])\n";
+    settings += "\n#---------------------------";
+    settings += "\n#    SCAN settings";
+    settings += "\n#---------------------------";
+
+    settings += "\n\n# Particle to SCAN (N, Min, Max) for momentum[GeV/c])\n";
     settings += Form("Momentum: %d %.1f %.1f\n", np, pMin, pMax);
 
-    settings += "\n\n# Particle to scan (N, Min, Max) for theta_0[degree])\n";
+    settings += "\n\n# Particle to SCAN (N, Min, Max) for theta_0[degree])\n";
     settings += Form("Theta0: %d %.1f %.1f\n", nthe0, The0Min, The0Max);
 
-    settings += "\n\n# Particle to show for momentum[GeV/c] and theta_0[degree])\n";
-    settings += Form("ShowMom: %.1f %.1f %.1f %.1f %.1f\n", pList[0], pList[1], pList[2], pList[3], pList[4]);
-    settings += Form("ShowThe: %.1f %.1f %.1f %.1f %.1f\n", thList[0], thList[1], thList[2], thList[3], thList[4]);
+    settings += "\n\n# From ShowMom[GeV/c], ShowThe[degree] and photon from ShowRad\n";
+    settings += Form("ShowMom: %.1f \n", pList);
+    settings += Form("ShowThe: %.1f \n", thList);
+    settings += Form("ShowRad: %d %d\n", irad1, irad2);
+    settings += Form("ShowPhoton: %d\n", iph);
 
     settings += "\n#---------------------------";
     settings += "\n#    Precision settings";
@@ -257,6 +276,9 @@ TString MyGuiActionClass::GenerateSettingsText()
 
     settings += "\n# Solver precision\n";
     settings += Form("Precision: %f\n", epsilon);
+
+    settings += "\n# nEvents for reconstruction the resolution\n";
+    settings += Form("nEvent: %d\n", nEvent);
 
     settings += "\n#---------------------------";
     settings += "\n#    Others";
@@ -359,6 +381,7 @@ void MyGuiActionClass::ReadSettingsText()
             trkStep = (line.BeginsWith("trkStep")) ? cont[0].Atof() : trkStep;
             nphi = (line.BeginsWith("nPhi")) ? int(cont[0].Atof() * 360) : nphi;
             epsilon = (line.BeginsWith("Precision")) ? cont[0].Atof() : epsilon;
+            nEvent = (line.BeginsWith("nEvent")) ? cont[0].Atof() : nEvent;
 
             selectedMat = (line.BeginsWith("SelectedMat")) ? cont : selectedMat;
             selectedDet = (line.BeginsWith("SelectedDet")) ? cont : selectedDet;
@@ -375,16 +398,11 @@ void MyGuiActionClass::ReadSettingsText()
             The0Min = (line.BeginsWith("Theta0")) ? cont[1].Atof() : The0Min;
             The0Max = (line.BeginsWith("Theta0")) ? cont[2].Atof() : The0Max;
 
-            pList[0] = (line.BeginsWith("ShowMom")) ? cont[0].Atof() : pList[0];
-            pList[1] = (line.BeginsWith("ShowMom")) ? cont[1].Atof() : pList[1];
-            pList[2] = (line.BeginsWith("ShowMom")) ? cont[2].Atof() : pList[2];
-            pList[3] = (line.BeginsWith("ShowMom")) ? cont[3].Atof() : pList[3];
-            pList[4] = (line.BeginsWith("ShowMom")) ? cont[4].Atof() : pList[4];
-            thList[0] = (line.BeginsWith("ShowThe")) ? cont[0].Atof() : thList[0];
-            thList[1] = (line.BeginsWith("ShowThe")) ? cont[1].Atof() : thList[1];
-            thList[2] = (line.BeginsWith("ShowThe")) ? cont[2].Atof() : thList[2];
-            thList[3] = (line.BeginsWith("ShowThe")) ? cont[3].Atof() : thList[3];
-            thList[4] = (line.BeginsWith("ShowThe")) ? cont[4].Atof() : thList[4];
+            pList = (line.BeginsWith("ShowMom")) ? cont[0].Atof() : pList;
+            thList = (line.BeginsWith("ShowThe")) ? cont[0].Atof() : thList;
+            irad1 = (line.BeginsWith("ShowRad")) ? cont[0].Atoi() : irad1;
+            irad2 = (line.BeginsWith("ShowRad")) ? cont[1].Atoi() : irad2;
+            iph = (line.BeginsWith("ShowPhoton")) ? cont[0].Atoi() : iph;
 
             continue;
         }
@@ -423,14 +441,27 @@ void MyGuiActionClass::ExecButtonClick(Long_t bid, const char *cmdStr)
         DoLoadDetFile(cmdStr);
     if (bid == SaveDetFile)
         DoSaveDetFile(cmdStr);
+    if (bid == ShowFCN)
+        DoShowFCN();
+
     if (bid == ShowSpecRICH)
-        DoShowSpecRICH(cmdStr);
+        DoShowSpecRICH("no");
     if (bid == ShowMulParRICH)
+        DoShowMulParRICH("no");
+    if (bid == ShowScanRICHList)
+        DoGenHitMaps("no");
+    if (bid == ShowRecRICHList)
+        DoRecRings("no");
+
+    if (bid == GenSpecRICH)
+        DoShowSpecRICH(cmdStr);
+    if (bid == GenMulParRICH)
         DoShowMulParRICH(cmdStr);
-    if (bid == GenRICHList)
+    if (bid == GenScanRICHList)
         DoGenHitMaps(cmdStr);
-    if (bid == RecRICHList)
+    if (bid == GenRecRICHList)
         DoRecRings(cmdStr);
+
     if (MatList <= bid && bid < DetList)
         ShowMaterialInfo(gMyDatabaseClass->GetMaterialName(bid - MatList));
     if (DetList <= bid && bid < AnalysisAction)
@@ -442,7 +473,6 @@ void MyGuiActionClass::DoDrawConfig(TString scap)
     double x0 = 0.02, x1 = 0.98;
     double y0 = 0.10, y1 = 0.15, y2 = 0.50, y3 = 0.98;
 
-    gMyMainFrameGui->ClearCanvas(0);
     gMyMainFrameGui->SwitchCanvas(0);
 
     //detector
@@ -526,110 +556,288 @@ void MyGuiActionClass::DoShowSpecRICH(TString cmdStr)
     if (cmdStr == "yes" || gMyCommonRICH->GetDetHitMap()->GetEntries() == 0)
         gMyCommonRICH->GenerateDetRing();
 
+    gMyMainFrameGui->ClearAllCanvas();
+    //1. 阳极上看到的光子击中
+    gMyMainFrameGui->SwitchCanvas(1);
+    gMyCommonRICH->DrawDetHitMap("colz");
+    gMyMainFrameGui->UpdateCanvas(1);
+    //sleep(1);
+
+    //2. 击中的光子的波长分布，(暂未生成不同辐射体的光子波长分布，只生成了总的)
     gMyMainFrameGui->SwitchCanvas(2);
     gMyCommonRICH->GetDetWLMap()->Draw();
-    gMyMainFrameGui->SwitchCanvas(1);
-    gMyCommonRICH->GetDetHitMap()->Draw("colz");
     gMyMainFrameGui->UpdateCanvas(2);
-    gMyMainFrameGui->UpdateCanvas(1);
+    //sleep(1);
+
+    //3. 投影到X上的分布
+    gMyMainFrameGui->SwitchCanvas(3);
+    gMyCommonRICH->GetDetHitMap()->ProjectionX()->Draw();
+    gMyMainFrameGui->UpdateCanvas(3);
+    //sleep(1);
+
+    //4. 显示哪几个辐射体的光子输出,(当用户输入过少的ShowRad会有bug，后面再改)
+    gMyMainFrameGui->SwitchCanvas(4);
+    gMyCommonRICH->DrawDetHitMap(irad1, "colz");
+    gMyMainFrameGui->UpdateCanvas(4);
+    //sleep(1);
+    gMyMainFrameGui->SwitchCanvas(5);
+    gMyCommonRICH->DrawDetHitMap(irad2, "colz");
+    gMyMainFrameGui->UpdateCanvas(5);
+
+    //sleep(1);
+    gMyMainFrameGui->SwitchCanvas(1);
 }
 
 void MyGuiActionClass::DoShowMulParRICH(TString cmdStr)
 {
     SetDetectorParameters();
-    if (cmdStr == "yes" || gMyCommonRICH->GetDetListNumber()==0)
+    if (cmdStr == "yes" || gMyCommonRICH->GetDetListNumber() != NHYPO)
         gMyCommonRICH->GenerateMultiParticleRICHRings();
 
     gMyMainFrameGui->ClearAllCanvas();
-    gMyMainFrameGui->SwitchCanvas(2);
-    gMyCommonRICH->GetDetListHitMap(0)->Draw("colz");
-    gMyMainFrameGui->SwitchCanvas(3);
-    gMyCommonRICH->GetDetListHitMap(1)->Draw("colz");
-    gMyMainFrameGui->SwitchCanvas(4);
-    gMyCommonRICH->GetDetListHitMap(2)->Draw("colz");
-    gMyMainFrameGui->SwitchCanvas(5);
-    gMyCommonRICH->GetDetListHitMap(3)->Draw("colz");
 
+    //1. 不同粒子的光子击中分布图
     gMyMainFrameGui->SwitchCanvas(1);
-    gMyStyle->SetTitle("Cherenkov Rings for mu/pi/K/p");
+    gMyStyle->SetTitle("Cherenkov Rings for #mu/#pi/K/p");
     gMyStyle->SetXLabel("X[mm]");
     gMyStyle->SetYLabel("Y[mm]");
     for (int ihypo = 0; ihypo < gMyCommonRICH->GetDetector()->nhypo; ihypo++)
         gMyStyle->SetLegends(ihypo, Form("%s Nph=%.1f", gMyCommonRICH->GetDetList(ihypo)->particle.Data(), gMyCommonRICH->GetDetListHitMap(ihypo)->Integral()));
     gMyStyle->SetDrawOption("");
-    gMyStyle->Draw4Histograms(gMyCommonRICH->GetDetListHitMap(0), gMyCommonRICH->GetDetListHitMap(1), gMyCommonRICH->GetDetListHitMap(2), gMyCommonRICH->GetDetListHitMap(3));
-    gMyMainFrameGui->UpdateCanvas(5);
-    gMyMainFrameGui->UpdateCanvas(4);
-    gMyMainFrameGui->UpdateCanvas(3);
-    gMyMainFrameGui->UpdateCanvas(2);
+    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetListHitMap(0), gMyCommonRICH->GetDetListHitMap(1), gMyCommonRICH->GetDetListHitMap(2), gMyCommonRICH->GetDetListHitMap(3));
     gMyMainFrameGui->UpdateCanvas(1);
+    //sleep(1);
+
+    //2. 分别显示四种粒子的击中分布图，要看更详细的就用单个的看
+    gMyMainFrameGui->SwitchCanvas(2);
+    gMyCommonRICH->DrawDetListHitMap(0, "colz");
+    gMyMainFrameGui->UpdateCanvas(2);
+    //sleep(1);
+    gMyMainFrameGui->SwitchCanvas(3);
+    gMyCommonRICH->DrawDetListHitMap(1, "colz");
+    gMyMainFrameGui->UpdateCanvas(3);
+    //sleep(1);
+    gMyMainFrameGui->SwitchCanvas(4);
+    gMyCommonRICH->DrawDetListHitMap(2, "colz");
+    gMyMainFrameGui->UpdateCanvas(4);
+    //sleep(1);
+    gMyMainFrameGui->SwitchCanvas(5);
+    gMyCommonRICH->DrawDetListHitMap(3, "colz");
+    gMyMainFrameGui->UpdateCanvas(5);
+    //sleep(1);
+    gMyMainFrameGui->SwitchCanvas(1);
 }
 
 void MyGuiActionClass::DoGenHitMaps(TString cmdStr)
 {
     SetDetectorParameters();
-    if (cmdStr == "yes")
-        gMyCommonRICH->GenerateTheScanHitMaps();
+    if (cmdStr == "yes" || gMyCommonRICH->GetDetScanNumber() == 0)
+        gMyCommonRICH->GenerateTheScanHitMapsForEachDetector();
+    gMyCommonRICH->GenerateTheNPhotonMap();
+    gMyMainFrameGui->ClearAllCanvas();
 
-    for (int ican = 0; ican < 5; ican++)
+    MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
+    int imom = (pList - gDet->pMin) / gDet->pStep;
+    int ithe = (thList - gDet->The0Min) / gDet->The0Step;
+    imom = (0 <= imom && imom < gDet->np) ? imom : 0;
+    ithe = (0 <= ithe && ithe < gDet->nthe0) ? ithe : 0;
+    double mom = gMyCommonRICH->GetDetScan(imom, ithe, 0)->momentum;
+    double the = gMyCommonRICH->GetDetScan(imom, ithe, 0)->Theta0;
+
+    //1. 用ShowMom和ShowThe指定了动量和入射角度的四种粒子的光子击中分布图
+    gMyStyle->SetTitle(Form("Cherenkov Rings for [%.1fGeV/c, %.1f#circ] #mu/#pi/K/p", mom, the));
+    gMyStyle->SetXLabel("X[mm]");
+    gMyStyle->SetYLabel("Y[mm]");
+    for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
+        gMyStyle->SetLegends(ihypo, Form("%s Nph=%.1f", gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle.Data(), gMyCommonRICH->GetDetScanHitMap(imom, ithe, ihypo)->Integral()));
+    gMyStyle->SetDrawOption("");
+    gMyMainFrameGui->SwitchCanvas(1);
+    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetScanHitMap(imom, ithe, 0), gMyCommonRICH->GetDetScanHitMap(imom, ithe, 1), gMyCommonRICH->GetDetScanHitMap(imom, ithe, 2), gMyCommonRICH->GetDetScanHitMap(imom, ithe, 3));
+    gMyMainFrameGui->UpdateCanvas(1);
+    //sleep(1);
+
+    //2. ShowMom的粒子产生的切伦科夫光子数随不同入射角度的变化
+    gMyMainFrameGui->SwitchCanvas(2);
+    gMyStyle->SetTitle(Form("Number of photon for [%.1fGeV/c] #mu/#pi/K/p", mom));
+    gMyStyle->SetXLabel("#Theta [degree]");
+    gMyStyle->SetYLabel("Number of photon");
+    for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
+        gMyStyle->SetLegends(ihypo, gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle);
+    gMyStyle->SetDrawOption("");
+    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetScanNphMapAtMom(0, mom), -1, -1, gMyCommonRICH->GetDetScanNphMapAtMom(1, mom), gMyCommonRICH->GetDetScanNphMapAtMom(2, mom), gMyCommonRICH->GetDetScanNphMapAtMom(3, mom));
+    gMyMainFrameGui->UpdateCanvas(2);
+    //sleep(1);
+
+    //3. ShowThe的粒子产生的切伦科夫光子数随不同入射动量的变化
+    gMyMainFrameGui->SwitchCanvas(3);
+    gMyStyle->SetTitle(Form("Number of photon for [#theta=%.1f#circ] #mu/#pi/K/p", the));
+    gMyStyle->SetXLabel("momentum [GeV/c]");
+    gMyStyle->SetYLabel("Number of photon");
+    for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
+        gMyStyle->SetLegends(ihypo, gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle);
+    gMyStyle->SetDrawOption("");
+    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetScanNphMapAtTheta(0, the), -1, -1, gMyCommonRICH->GetDetScanNphMapAtTheta(1, the), gMyCommonRICH->GetDetScanNphMapAtTheta(2, the), gMyCommonRICH->GetDetScanNphMapAtTheta(3, the));
+    gMyMainFrameGui->UpdateCanvas(3);
+    //sleep(1);
+
+    //4. 对指定动量和角度的入射粒子产生光子数的二维分布图
+    gMyMainFrameGui->SwitchCanvas(4);
+    gMyCommonRICH->GetDetScanNPhMap(particle)->Draw("colztext");
+    gMyMainFrameGui->UpdateCanvas(4);
+    //sleep(1);
+
+    //5. 对这一指定的粒子，不同辐射体产生的光子数随角度变化
+    gMyMainFrameGui->SwitchCanvas(5);
+    gMyStyle->SetTitle(Form("Number of photon from each radiator for [%.1fGeV/c] %s", mom, particle.Data()));
+    gMyStyle->SetXLabel("#Theta [degree]");
+    gMyStyle->SetYLabel("Number of photon");
+    gMyStyle->ClearPreset1DHist();
+    for (int irad = 0; irad < gDet->nRadLayer; irad++)
     {
-        MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
-        int imom = (pList[ican] - gDet->pMin) / gDet->pStep;
-        int ithe = (thList[ican] - gDet->The0Min) / gDet->The0Step;
-
-        if(imom >= gDet->np) continue;
-        if(ithe >= gDet->nthe0) continue;
-
-        gMyStyle->SetTitle(Form("Cherenkov Rings for [%.1fGeV/c, %.1f] mu/pi/K/p", gMyCommonRICH->GetDetScan(imom, ithe, 0)->momentum, gMyCommonRICH->GetDetScan(imom, ithe, 0)->Theta0));
-        gMyStyle->SetXLabel("X[mm]");
-        gMyStyle->SetYLabel("Y[mm]");
-        for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
-            gMyStyle->SetLegends(ihypo, Form("%s Nph=%.1f", gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle.Data(), gMyCommonRICH->GetDetScanHitMap(imom, ithe, ihypo)->Integral()));
-        gMyStyle->SetDrawOption("");
-        gMyMainFrameGui->SwitchCanvas(ican + 1);
-        gMyStyle->Draw4Histograms(gMyCommonRICH->GetDetScanHitMap(imom, ithe, 0), gMyCommonRICH->GetDetScanHitMap(imom, ithe, 1), gMyCommonRICH->GetDetScanHitMap(imom, ithe, 2), gMyCommonRICH->GetDetScanHitMap(imom, ithe, 3));
-        gMyMainFrameGui->UpdateCanvas(ican + 1);
+        gMyStyle->SetLegends(irad, gDet->sRadLayer[irad].c_str());
+        gMyStyle->SetHistogram(gMyCommonRICH->GetDetScanNphEachRadMapAtMom(particle, mom, irad));
     }
+    gMyStyle->Draw1DHistograms();
+    gMyMainFrameGui->UpdateCanvas(5);
+    //sleep(1);
+
+    //6. 对这一指定的粒子，不同辐射体产生的光子数随动量变化
+    gMyMainFrameGui->SwitchCanvas(6);
+    gMyStyle->SetTitle(Form("Number of photon from each radiator for [#theta=%.1f#circ] %s", the, particle.Data()));
+    gMyStyle->SetXLabel("momentum [GeV/c]");
+    gMyStyle->SetYLabel("Number of photon");
+    gMyStyle->ClearPreset1DHist();
+    for (int irad = 0; irad < gDet->nRadLayer; irad++)
+    {
+        gMyStyle->SetLegends(irad, gDet->sRadLayer[irad].c_str());
+        gMyStyle->SetHistogram(gMyCommonRICH->GetDetScanNphEachRadMapAtTheta(particle, the, irad));
+    }
+    gMyStyle->Draw1DHistograms(0);
+    gMyMainFrameGui->UpdateCanvas(6);
+    //sleep(1);
+
+    gMyMainFrameGui->SwitchCanvas(1);
 }
 
 void MyGuiActionClass::DoRecRings(TString cmdStr)
 {
     SetDetectorParameters();
-    if (cmdStr == "yes")
-        gMyCommonRICH->GenerateTheOffsetAndResolutionMaps();
-    
-    /* 
-    SetDetectorParameters();
+    if (cmdStr == "yes" || gMyCommonRICH->GetDetRectNumber() == 0)
+    {
+        if(gMyCommonRICH->GetDetScanNumber() == 0)
+        {
+            cout<<"Error: Need to run the \"Generate the SCAN XY-hitmap\" first"<<endl;
+            return;
+        }
+        gMyCommonRICH->GenerateRecOffsetSigmaMap();
+    }
+    gMyMainFrameGui->ClearAllCanvas();
 
     MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
+    int irad = irad1;
+    int imom = (pList - gDet->pMin) / gDet->pStep;
+    int ithe = (thList - gDet->The0Min) / gDet->The0Step;
+    imom = (0 <= imom && imom < gDet->np) ? imom : 0;
+    ithe = (0 <= ithe && ithe < gDet->nthe0) ? ithe : 0;
+    double mom = gMyCommonRICH->GetDetScan(imom, ithe, 0)->momentum;
+    double the = gMyCommonRICH->GetDetScan(imom, ithe, 0)->Theta0;
+    TString rad = gDet->sRadLayer[irad];
 
-    gMyCommonRICH->ReconstructCerekovAngleDist(gDet);
-    gMyMainFrameGui->ClearAllCanvas();
+    gMyCommonRICH->GenerateRecHistograms(particle, irad, imom, ithe, iph);
+
+    //-----offset
+    //1. 指定irad辐射体，重建offset随着粒子不同动量和角度的分布
+    gMyMainFrameGui->SwitchCanvas(1);
+    gMyCommonRICH->GetDetRecOffsetMap()->Draw("colz");
+    gMyMainFrameGui->UpdateCanvas(1);
+
+    //2....
+    //gMyStyle->SetTitle(Form("Cherenkov Rings for [%.1fGeV/c, %.1f#circ] #mu/#pi/K/p", mom, the));
+    //gMyStyle->SetXLabel("Number of photon");
+    //gMyStyle->SetYLabel("Reconstruct #theta_c[#circ]");
+    //gMyStyle->SetDrawOption("");
+    //gMyMainFrameGui->SwitchCanvas(2);
+    //gMyStyle->DrawHistograms(gMyCommonRICH->GetDetRecRing(imom, ithe, 0), gMyCommonRICH->GetDetRecRing(imom, ithe, 1), gMyCommonRICH->GetDetRecRing(imom, ithe, 2), gMyCommonRICH->GetDetRecRing(imom, ithe, 3));
+    //gMyMainFrameGui->UpdateCanvas(2);
+
+    //2. 相同动量的粒子重建offset随着不同入射角度的分布
+    gMyStyle->SetTitle(Form("Reconstruct mean #theta_c from %d nPhoton for [%.1fGeV/c] from %s", iph, mom, rad.Data()));
+    gMyStyle->SetXLabel("#theta_0[#circ]");
+    gMyStyle->SetYLabel("Reconstruct #theta_c mean[rad]");
+    gMyStyle->SetDrawOption("");
+    for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
+        gMyStyle->SetLegends(ihypo, gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle);
     gMyMainFrameGui->SwitchCanvas(2);
-    gMyCommonRICH->Get2DRecRing(0)->Draw("colz");
-    return;
+    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetRecOffsetVsThetaPlot(0), -1, -1, gMyCommonRICH->GetDetRecOffsetVsThetaPlot(1), gMyCommonRICH->GetDetRecOffsetVsThetaPlot(2), gMyCommonRICH->GetDetRecOffsetVsThetaPlot(3));
+    gMyMainFrameGui->UpdateCanvas(2);
 
+    //3. 相同入射角度的粒子重建offset随着不同动量的分布
+    gMyStyle->SetTitle(Form("Reconstruct mean #theta_c from %d nPhoton for [%.1f#circ] from %s", iph, the, rad.Data()));
+    gMyStyle->SetXLabel("momentum [GeV/c]");
+    gMyStyle->SetYLabel("Reconstruct #theta_c mean[rad]");
+    gMyStyle->SetDrawOption("");
+    for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
+        gMyStyle->SetLegends(ihypo, gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle);
     gMyMainFrameGui->SwitchCanvas(3);
-    gMyCommonRICH->Get2DRing(1)->Draw("colz");
+    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetRecOffsetVsMomPlot(0), -1, -1, gMyCommonRICH->GetDetRecOffsetVsMomPlot(1), gMyCommonRICH->GetDetRecOffsetVsMomPlot(2), gMyCommonRICH->GetDetRecOffsetVsMomPlot(3));
+    gMyMainFrameGui->UpdateCanvas(3);
+
+    //-----sigma
+    //4. 指定irad辐射体，重建sigma随着粒子不同动量和角度的分布
     gMyMainFrameGui->SwitchCanvas(4);
-    gMyCommonRICH->Get2DRing(2)->Draw("colz");
+    gMyCommonRICH->GetDetRecSigmaMap()->Draw("colz");
+    gMyMainFrameGui->UpdateCanvas(4);
+
+    //5. 相同动量的粒子重建sigma随着不同入射角度的分布
+    gMyStyle->SetTitle(Form("Reconstruct sigma #theta_c from %d nPhoton for [%.1fGeV/c] from %s", iph, mom, rad.Data()));
+    gMyStyle->SetXLabel("#theta_0[#circ]");
+    gMyStyle->SetYLabel("Reconstruct #theta_c sigma[rad]");
+    gMyStyle->SetDrawOption("");
+    for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
+        gMyStyle->SetLegends(ihypo, gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle);
     gMyMainFrameGui->SwitchCanvas(5);
-    gMyCommonRICH->Get2DRing(3)->Draw("colz");
+    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetRecSigmaVsThetaPlot(0), -1, -1, gMyCommonRICH->GetDetRecSigmaVsThetaPlot(1), gMyCommonRICH->GetDetRecSigmaVsThetaPlot(2), gMyCommonRICH->GetDetRecSigmaVsThetaPlot(3));
+    gMyMainFrameGui->UpdateCanvas(5);
+
+    //6. 相同入射角度的粒子重建sigma随着不同动量的分布
+    gMyStyle->SetTitle(Form("Reconstruct sigma #theta_c from %d nPhoton for [%.1f#circ] from %s", iph, the, rad.Data()));
+    gMyStyle->SetXLabel("momentum [GeV/c]");
+    gMyStyle->SetYLabel("Reconstruct #theta_c sigma[rad]");
+    gMyStyle->SetDrawOption("");
+    for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
+        gMyStyle->SetLegends(ihypo, gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle);
+    gMyMainFrameGui->SwitchCanvas(6);
+    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetRecSigmaVsMomPlot(0), -1, -1, gMyCommonRICH->GetDetRecSigmaVsMomPlot(1), gMyCommonRICH->GetDetRecSigmaVsMomPlot(2), gMyCommonRICH->GetDetRecSigmaVsMomPlot(3));
+    gMyMainFrameGui->UpdateCanvas(6);
+
+    //7. 相同动量，相同入射角度的粒子重建offset随着不同光子数的分布
+    gMyStyle->SetTitle(Form("Reconstruct offset #theta_c from %d nPhoton for [%.1fGeV/c, %.1f#circ] from %s", iph, mom, the, rad.Data()));
+    gMyStyle->SetXLabel("Number of photon");
+    gMyStyle->SetYLabel("Reconstruct offset[rad]");
+    gMyStyle->SetDrawOption("ep");
+    for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
+        gMyStyle->SetLegends(ihypo, gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle);
+    gMyMainFrameGui->SwitchCanvas(7);
+    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetRecOffsetVsNphPlot(0), -1, -1, gMyCommonRICH->GetDetRecOffsetVsNphPlot(1), gMyCommonRICH->GetDetRecOffsetVsNphPlot(2), gMyCommonRICH->GetDetRecOffsetVsNphPlot(3));
+    gMyMainFrameGui->UpdateCanvas(7);
+
+    //8. 相同动量，相同入射角度的粒子重建sigma随着不同光子数的分布
+    gMyStyle->SetTitle(Form("Reconstruct sigma #theta_c from %d nPhoton for [%.1fGeV/c, %.1f#circ] from %s", iph, mom, the, rad.Data()));
+    gMyStyle->SetXLabel("Number of photon");
+    gMyStyle->SetYLabel("Reconstruct #theta_c sigma[rad]");
+    gMyStyle->SetDrawOption("ep");
+    for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
+        gMyStyle->SetLegends(ihypo, gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle);
+    gMyMainFrameGui->SwitchCanvas(8);
+    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetRecSigmaVsNphPlot(0), -1, -1, gMyCommonRICH->GetDetRecSigmaVsNphPlot(1), gMyCommonRICH->GetDetRecSigmaVsNphPlot(2), gMyCommonRICH->GetDetRecSigmaVsNphPlot(3));
+    gMyMainFrameGui->UpdateCanvas(8);
+
+    //9. 显示单个的填图及拟合结果
+    gMyMainFrameGui->SwitchCanvas(9);
+    gMyCommonRICH->GetRecMap(particle, irad, imom, ithe, iph)->Fit("gaus");
+    gMyMainFrameGui->UpdateCanvas(9);
 
     gMyMainFrameGui->SwitchCanvas(1);
-    gMyStyle->SetTitle("Cherenkov Rings for mu/pi/K/p");
-    gMyStyle->SetXLabel("X[mm]");
-    gMyStyle->SetYLabel("Y[mm]");
-    for (int i = 0; i < gDet->nhypo; i++)
-        gMyStyle->SetLegends(i, Form("%s Nph=%.1f", gDet->hypo[i], gMyCommonRICH->Get2DRing(i)->Integral()));
-    gMyStyle->SetDrawOption("");
-    gMyStyle->Draw4Histograms(gMyCommonRICH->Get2DRing(0), gMyCommonRICH->Get2DRing(1), gMyCommonRICH->Get2DRing(2), gMyCommonRICH->Get2DRing(3));
-    gMyMainFrameGui->UpdateCanvas(5);
-    gMyMainFrameGui->UpdateCanvas(4);
-    gMyMainFrameGui->UpdateCanvas(3);
-    gMyMainFrameGui->UpdateCanvas(2);
-    gMyMainFrameGui->UpdateCanvas(1);
-    */
 }
 
 void MyGuiActionClass::DoSaveDetFile(const char *fname)
@@ -650,8 +858,6 @@ void MyGuiActionClass::DoLoadDetFile(const char *fname)
     DoDrawConfig("Show the configurations");
 }
 
-
-
 //______________________________________________________________________________
 // show infor button actions
 void MyGuiActionClass::ShowMaterialInfo(TString matName)
@@ -659,74 +865,86 @@ void MyGuiActionClass::ShowMaterialInfo(TString matName)
     if (nLambda == 0 || lambdaMin >= lambdaMax)
         return;
 
+    gMyMainFrameGui->ClearAllCanvas();
     double ppm = mapImpurities[matName.Data()];
 
-    gMyMainFrameGui->ClearCanvas(1);
-    TCanvas *c1 = gMyMainFrameGui->GetCanvas(1);
-    c1->Divide(2, 2);
-    c1->cd(1);
-    gMyDatabaseClass->GetMatAbsGraph(matName, nLambda, lambdaMin, lambdaMax, ppm);
-
-    gMyStyle->Draw1Graph(gMyDatabaseClass->GetMatAbsGraph(matName, nLambda, lambdaMin, lambdaMax, ppm));
-    c1->cd(2);
-    gMyStyle->Draw1Graph(gMyDatabaseClass->GetMatTrsGraph(matName, nLambda, lambdaMin, lambdaMax, ppm));
-    c1->cd(3);
-    gMyStyle->Draw1Graph(gMyDatabaseClass->GetMatRefGraph(matName, nLambda, lambdaMin, lambdaMax));
+    gMyMainFrameGui->SwitchCanvas(1);
+    gMyDatabaseClass->GetMatAbsGraph(matName, nLambda, lambdaMin, lambdaMax, ppm)->Draw();
     gMyMainFrameGui->UpdateCanvas(1);
+    gMyMainFrameGui->SwitchCanvas(2);
+    gMyDatabaseClass->GetMatTrsGraph(matName, nLambda, lambdaMin, lambdaMax, ppm)->Draw();
+    gMyMainFrameGui->UpdateCanvas(2);
+    gMyMainFrameGui->SwitchCanvas(3);
+    gMyDatabaseClass->GetMatRefGraph(matName, nLambda, lambdaMin, lambdaMax)->Draw();
+    gMyMainFrameGui->UpdateCanvas(3);
 }
 
 void MyGuiActionClass::ShowDetectorInfo(TString detName)
 {
-    gMyMainFrameGui->ClearCanvas(1);
-    gMyStyle->Draw1Graph(gMyDatabaseClass->GetDetQEGraph(detName, nLambda, lambdaMin, lambdaMax));
+    gMyMainFrameGui->ClearAllCanvas();
+    gMyMainFrameGui->SwitchCanvas(1);
+    gMyDatabaseClass->GetDetQEGraph(detName, nLambda, lambdaMin, lambdaMax)->Draw();
     gMyMainFrameGui->UpdateCanvas(1);
 }
 
 void MyGuiActionClass::DoDrawSelectedMat()
 {
-    vector<TGraph *> tmp1;
-    vector<TGraph *> tmp2;
-
+    int gid = 0;
+    gMyStyle->ClearPresetGraphs();
     for (int i = 0; i < nSelectedMat; i++)
     {
         TString matName = selectedMat[i];
         double ppm = mapImpurities[matName.Data()];
         TGraph *g1 = gMyDatabaseClass->GetMatTrsGraph(matName, nLambda, lambdaMin, lambdaMax, ppm);
-        TGraph *g2 = gMyDatabaseClass->GetMatRefGraph(matName, nLambda, lambdaMin, lambdaMax);
         if (g1 != NULL)
-            tmp1.push_back(g1);
-        if (g2 != NULL)
-            tmp2.push_back(g2);
-        gMyStyle->SetLegends(i, matName);
+            gMyStyle->SetGraph(gid, g1);
+        gMyStyle->SetLegends(gid++, matName);
     }
 
-    gMyMainFrameGui->ClearCanvas(1);
+    gMyMainFrameGui->ClearAllCanvas();
     gMyMainFrameGui->SwitchCanvas(1);
-    gMyStyle->DrawGraphs(tmp1);
+    gMyStyle->DrawPresetGraph();
     gMyMainFrameGui->UpdateCanvas(1);
 
-    gMyMainFrameGui->ClearCanvas(2);
+    gid = 0;
+    gMyStyle->ClearPresetGraphs();
+    for (int i = 0; i < nSelectedMat; i++)
+    {
+        TString matName = selectedMat[i];
+        TGraph *g2 = gMyDatabaseClass->GetMatRefGraph(matName, nLambda, lambdaMin, lambdaMax);
+        if (g2 != NULL)
+            gMyStyle->SetGraph(gid, g2);
+        gMyStyle->SetLegends(gid++, matName);
+    }
     gMyMainFrameGui->SwitchCanvas(2);
-    gMyStyle->DrawGraphs(tmp2);
+    gMyStyle->DrawPresetGraph();
     gMyMainFrameGui->UpdateCanvas(2);
 }
 
 void MyGuiActionClass::DoDrawSelectedDet()
 {
-    vector<TGraph *> tmp1;
-
+    int gid = 0;
+    gMyStyle->ClearPresetGraphs();
     for (int i = 0; i < nSelectedDet; i++)
     {
         TString detName = selectedDet[i];
         TGraph *g1 = gMyDatabaseClass->GetDetQEGraph(detName, nLambda, lambdaMin, lambdaMax);
         if (g1 != NULL)
-            tmp1.push_back(g1);
-        gMyStyle->SetLegends(i, detName);
+            gMyStyle->SetGraph(gid, g1);
+        gMyStyle->SetLegends(gid++, detName);
     }
 
-    gMyMainFrameGui->ClearCanvas(1);
+    gMyMainFrameGui->ClearAllCanvas();
     gMyMainFrameGui->SwitchCanvas(1);
-    gMyStyle->DrawGraphs(tmp1);
+    gMyStyle->DrawPresetGraph();
+    gMyMainFrameGui->UpdateCanvas(1);
+}
+
+void MyGuiActionClass::DoShowFCN()
+{
+    SetDetectorParameters();
+    gMyMainFrameGui->SwitchCanvas(1);
+    gMyCommonRICH->DrawFCN(0);
     gMyMainFrameGui->UpdateCanvas(1);
 }
 
@@ -734,6 +952,7 @@ void MyGuiActionClass::DoDrawSelectedDet()
 // private func
 void MyGuiActionClass::SetDetectorParameters()
 {
+    gMyCommonRICH->SetNEvent(nEvent);
     gMyCommonRICH->SetPrecision(epsilon);
     gMyCommonRICH->SetDatabase(gMyDatabaseClass);
 

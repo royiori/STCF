@@ -38,10 +38,16 @@ enum ButtonAction
     DrawSelectedDet,
     LoadDetFile,
     SaveDetFile,
+    ShowFCN,
     ShowSpecRICH,
     ShowMulParRICH,
-    GenRICHList,
-    RecRICHList,
+    ShowScanRICHList,
+    ShowRecRICHList,
+
+    GenSpecRICH,
+    GenMulParRICH,
+    GenScanRICHList,
+    GenRecRICHList,
 };
 
 //-----------------------------------------------------------------------------------------------
@@ -85,6 +91,7 @@ private:
     void DoDrawSelectedMat();
     void DoDrawSelectedDet();
 
+    void DoShowFCN();
     void DoSaveDetFile(const char *fname);
     void DoLoadDetFile(const char *fname);
     void DoShowSpecRICH(TString cmdStr);
@@ -129,14 +136,15 @@ private:
     void SetDetectorParameters();
     void GetDetectorParameters();
 
-    //指定显示范围
-    vector<double> pList;
-    vector<double> thList;
-
     //分析精度要求
     double epsilon;
     double trkStep;
     int nphi;
+
+    //以下参数仅仅用于GUI显示，只保存到env，不会保存到root
+    int iph, irad1, irad2; //photon & radiator to show
+    int nEvent;
+    double pList, thList; //指定显示范围
 
     //..
     TEnv *env;
