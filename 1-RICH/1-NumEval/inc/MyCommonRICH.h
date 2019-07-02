@@ -124,9 +124,9 @@ public:
     TH1D *GetRecMap(TString shypo, int irad, int imom, int itheta0, int iph) { return fRecMap[GetHypoID(shypo)][irad][imom][itheta0][iph]; }
     TH1D *GetRecMap(int ihypo, int irad, int imom, int itheta0, int iph) { return fRecMap[ihypo][irad][imom][itheta0][iph]; }
 
-    int GetDetListNumber() { return gDetList.size(); }  //nhypo
+    int GetDetListNumber() { return gDetList.size(); }     //nhypo
     int GetDetScanNumber() { return gScanDetList.size(); } //[动量][角度][粒子种类]
-    int GetDetRectNumber() { return fRecMap.size(); } //[粒子种类][辐射体][动量][角度][光子数]
+    int GetDetRectNumber() { return fRecMap.size(); }      //[粒子种类][辐射体][动量][角度][光子数]
 
     //----------------------------
     // draw histograms
@@ -140,11 +140,29 @@ public:
         if (gDet->GetDetHitMap(irad) != NULL)
             gDet->GetDetHitMap(irad)->Draw(opt);
     }
+
     void DrawDetListHitMap(int ihypo, TString opt)
     {
         if (gDetList[ihypo]->GetHitMap() != NULL)
             gDetList[ihypo]->GetHitMap()->Draw(opt);
     }
+    void DrawDetListHitMap(int ihypo, int irad, TString opt)
+    {
+        if (gDetList[ihypo]->GetHitMap(irad) != NULL)
+            gDetList[ihypo]->GetHitMap(irad)->Draw(opt);
+    }
+
+    void DrawScanDetListHitMap(int imom, int ithe, int ihypo, TString opt)
+    {
+        if (gScanDetList[imom][ithe][ihypo]->GetHitMap() != NULL)
+            gScanDetList[imom][ithe][ihypo]->GetHitMap()->Draw(opt);
+    }
+    void DrawScanDetListHitMap(int imom, int ithe, int ihypo, int irad, TString opt)
+    {
+        if (gScanDetList[imom][ithe][ihypo]->fHitMapEachRad[irad] != NULL)
+            gScanDetList[imom][ithe][ihypo]->fHitMapEachRad[irad]->Draw(opt);
+    }
+    void DrawScanDetListHitMap(TString shypo, int imom, int ithe, int irad, TString opt) { DrawScanDetListHitMap(imom, ithe, GetHypoID(shypo), irad, opt); }
 
     //----------------------------
     // set functions
@@ -170,6 +188,12 @@ public:
     void ReconstructRICHBySolver(MyRICHDetector *det = 0);
     double ReconstructRICHBySolver(MyRICHDetector *det, double irad, double Xc, double Yc);
     double ReconstructRICHByBeta(MyRICHDetector *det, double irad, double Xc, double Yc);
+    double ReconstructRICHByBetaSolver(MyRICHDetector *det, double irad, double Xc, double Yc);
+    double Findz0(MyRICHDetector *det, int irad, double Xc, double Yc);
+    double FindPhi(MyRICHDetector *det, double Xc, double Yc, double X0, double Y0);
+
+    // pid efficiency
+    void CalPIDEfficiency();
 
     void DrawFCN(int irad);
 
@@ -177,9 +201,9 @@ private:
     double ProjectToPixel(MyRICHDetector *, double xmin, double xmax, double ymin, double ymax, double lambda);
     double ProjectToPixel(MyRICHDetector *, double xmin, double xmax, double ymin, double ymax);
 
-    double PhotonGenFromRad(MyRICHDetector *det, int idet, int AbsFlag = 1);
-    double PhotonGenFromRadWithAbs(MyRICHDetector *det, int idet) { return PhotonGenFromRad(det, idet, 1); }
-    double PhotonGenFromRadWithOutAbs(MyRICHDetector *det, int idet) { return PhotonGenFromRad(det, idet, 0); }
+    double PhotonGenFromRad(MyRICHDetector *det, int irad, int AbsFlag = 1);
+    double PhotonGenFromRadWithAbs(MyRICHDetector *det, int irad) { return PhotonGenFromRad(det, irad, 1); }
+    double PhotonGenFromRadWithOutAbs(MyRICHDetector *det, int irad) { return PhotonGenFromRad(det, irad, 0); }
 
     //----------------------------
     // support function
@@ -203,22 +227,19 @@ private:
     vector<TH2F *> fNPhMap;                //X为动量SCAN范围，Y为入射角度SCAN范围，Z为光子数, [粒子种类]
     vector<vector<TH2F *>> fNPhMapEachRad; //[粒子种类][辐射体]
 
-    //vector<vector<vector<TH2F *>>> fOffsetMapEachRad;      //X为动量SCAN范围，Y为入射角度SCAN范围，Z为重建后的offset，[粒子种类][辐射体][光子数]
-    //vector<vector<vector<TH2F *>>> fSigmaMapEachRad;       //X为动量SCAN范围，Y为入射角度SCAN范围，Z为重建后的sigma，[粒子种类][辐射体][光子数]
-    //vector<vector<vector<vector<TH1F *>>>> fOffsetScanMap; //X为光子数， Y为offset, [粒子种类][辐射体][动量][角度]
-    //vector<vector<vector<vector<TH1F *>>>> fSigmaScanMap;  //X为光子数， Y为sigma, [粒子种类][辐射体][动量][角度]
-    vector<vector<vector<vector<vector<TH1D *>>>>> fRecMap;     //为重建的角度填图， 用高斯拟合得offset和sigma, [粒子种类][辐射体][动量][角度][光子数]
-    vector<vector<vector<vector<vector<double>>>>> fRecOffList; //为重建的角度填图， 用高斯拟合得offset和sigma, [粒子种类][辐射体][动量][角度][光子数]
-    vector<vector<vector<vector<vector<double>>>>> fRecSigList; //为重建的角度填图， 用高斯拟合得offset和sigma, [粒子种类][辐射体][动量][角度][光子数]
+    vector<vector<vector<vector<vector<TH1D *>>>>> fRecMap;        //为重建的角度填图， 用高斯拟合得offset和sigma, [粒子种类][辐射体][动量][角度][光子数]
+    vector<vector<vector<vector<vector<double>>>>> fRecOffList;    //为重建的角度填图， 用高斯拟合得offset和sigma, [粒子种类][辐射体][动量][角度][光子数]
+    vector<vector<vector<vector<vector<double>>>>> fRecSigList;    //为重建的角度填图， 用高斯拟合得offset和sigma, [粒子种类][辐射体][动量][角度][光子数]
     vector<vector<vector<vector<vector<double>>>>> fRecOffErrList; //为重建的角度填图， 用高斯拟合得offset和sigma, [粒子种类][辐射体][动量][角度][光子数]
     vector<vector<vector<vector<vector<double>>>>> fRecSigErrList; //为重建的角度填图， 用高斯拟合得offset和sigma, [粒子种类][辐射体][动量][角度][光子数]
+
     TH2F *fOffsetMap, *fSigmaMap;
-    vector<TH1F *>fOffsetVsNphPlot;
-    vector<TH1F *>fOffsetVsMomPlot;
-    vector<TH1F *>fOffsetVsThetaPlot;
-    vector<TH1F *>fSigmaVsNphPlot;
-    vector<TH1F *>fSigmaVsMomPlot;
-    vector<TH1F *>fSigmaVsThetaPlot;
+    vector<TH1F *> fOffsetVsNphPlot;
+    vector<TH1F *> fOffsetVsMomPlot;
+    vector<TH1F *> fOffsetVsThetaPlot;
+    vector<TH1F *> fSigmaVsNphPlot;
+    vector<TH1F *> fSigmaVsMomPlot;
+    vector<TH1F *> fSigmaVsThetaPlot;
 
     void ResizeDetList(int n)
     {

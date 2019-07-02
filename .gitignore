@@ -115,9 +115,12 @@ ENV/
 
 # root
 *.root
+*.gz
+*.pcm
 
 # vi
 *.swp
 
 # vscode
 .vscode/
+

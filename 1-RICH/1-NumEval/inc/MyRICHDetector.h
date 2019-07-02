@@ -209,8 +209,8 @@ public:
         if (fWaveLengthHist != 0)
             delete fWaveLengthHist;
         fWaveLengthHist = new TH1F(Form("fwavelength%d", id), Form("Cherenkov wavelength for %s @ %.1f GeV", particle.Data(), momentum), nLambda, lambdaMin, lambdaMax);
-        fWaveLengthHist->GetXaxis()->SetTitle("X[mm]");
-        fWaveLengthHist->GetYaxis()->SetTitle("Y[mm]");
+        fWaveLengthHist->GetXaxis()->SetTitle("#lambda[nm]");
+        fWaveLengthHist->GetYaxis()->SetTitle("Entries");
         return fWaveLengthHist;
     }
 

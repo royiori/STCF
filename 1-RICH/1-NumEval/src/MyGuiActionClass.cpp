@@ -26,7 +26,7 @@ MyGuiActionClass::MyGuiActionClass()
     sTabPage[4] = TString("Miscellaneous");
 
     // page 0
-    nButton[0] = 7;
+    nButton[0] = 8;
     iButton[0] = LoadDetFile;
     sButton[0].push_back("Load");
     sButton[0].push_back("Save");
@@ -35,14 +35,16 @@ MyGuiActionClass::MyGuiActionClass()
     sButton[0].push_back("Show Multi-Particles RICH");
     sButton[0].push_back("Show the SCAN XY-hitmap and N-Photon map");
     sButton[0].push_back("Show the SCAN Resolution Map");
+    sButton[0].push_back("Show the PID efficiency");
 
     // page 1
-    nButton[1] = 4;
+    nButton[1] = 5;
     iButton[1] = GenSpecRICH;
     sButton[1].push_back("Generate the Specified Particle RICH");
     sButton[1].push_back("Generate Multi-Particles RICH");
     sButton[1].push_back("Generate the XY-hitmap for SCAN");
     sButton[1].push_back("Reconstruct to get the Resolution Map");
+    sButton[1].push_back("Reconstruct to get PID efficiency");
 
     // page1
     nButton[2] = gMyDatabaseClass->GetNMaterial();
@@ -134,6 +136,8 @@ MyGuiActionClass::~MyGuiActionClass()
 {
     // Destructor.
     // Store env
+    ReadSettingsText();
+    SetDetectorParameters();
 
     env->SetValue("nRadLayer", nRadLayer);
     for (int i = 0; i < nRadLayer; i++)
@@ -452,6 +456,8 @@ void MyGuiActionClass::ExecButtonClick(Long_t bid, const char *cmdStr)
         DoGenHitMaps("no");
     if (bid == ShowRecRICHList)
         DoRecRings("no");
+    if (bid == ShowPIDEff)
+        DoPIDEff("no");
 
     if (bid == GenSpecRICH)
         DoShowSpecRICH(cmdStr);
@@ -461,6 +467,8 @@ void MyGuiActionClass::ExecButtonClick(Long_t bid, const char *cmdStr)
         DoGenHitMaps(cmdStr);
     if (bid == GenRecRICHList)
         DoRecRings(cmdStr);
+    if (bid == GenPIDEff)
+        DoPIDEff(cmdStr);
 
     if (MatList <= bid && bid < DetList)
         ShowMaterialInfo(gMyDatabaseClass->GetMaterialName(bid - MatList));
@@ -716,21 +724,33 @@ void MyGuiActionClass::DoGenHitMaps(TString cmdStr)
     gMyMainFrameGui->UpdateCanvas(6);
     //sleep(1);
 
+    //7. 对这一指定的粒子，不同辐射体产生的光子数hitmap
+    gMyMainFrameGui->SwitchCanvas(7);
+    gMyCommonRICH->DrawScanDetListHitMap(particle, imom, ithe, irad1, "colz");
+    gMyMainFrameGui->UpdateCanvas(7);
+    //sleep(1);
+
+    //8. 对这一指定的粒子，不同辐射体产生的光子数hitmap
+    gMyMainFrameGui->SwitchCanvas(8);
+    gMyCommonRICH->DrawScanDetListHitMap(particle, imom, ithe, irad2, "colz");
+    gMyMainFrameGui->UpdateCanvas(8);
+    //sleep(1);
+
     gMyMainFrameGui->SwitchCanvas(1);
 }
 
 void MyGuiActionClass::DoRecRings(TString cmdStr)
 {
     SetDetectorParameters();
-    if (cmdStr == "yes" || gMyCommonRICH->GetDetRectNumber() == 0)
+    if (cmdStr == "yes")
     {
-        if(gMyCommonRICH->GetDetScanNumber() == 0)
-        {
-            cout<<"Error: Need to run the \"Generate the SCAN XY-hitmap\" first"<<endl;
+        if (!gMyCommonRICH->ReconstructForEachDetector())
             return;
-        }
-        gMyCommonRICH->GenerateRecOffsetSigmaMap();
     }
+
+    if (gMyCommonRICH->GetDetRectNumber() == 0)
+        gMyCommonRICH->GenerateRecOffsetSigmaMap();
+
     gMyMainFrameGui->ClearAllCanvas();
 
     MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
@@ -811,7 +831,7 @@ void MyGuiActionClass::DoRecRings(TString cmdStr)
     gMyMainFrameGui->UpdateCanvas(6);
 
     //7. 相同动量，相同入射角度的粒子重建offset随着不同光子数的分布
-    gMyStyle->SetTitle(Form("Reconstruct offset #theta_c from %d nPhoton for [%.1fGeV/c, %.1f#circ] from %s", iph, mom, the, rad.Data()));
+    gMyStyle->SetTitle(Form("Reconstruct offset #theta_c for [%.1fGeV/c, %.1f#circ] from %s", mom, the, rad.Data()));
     gMyStyle->SetXLabel("Number of photon");
     gMyStyle->SetYLabel("Reconstruct offset[rad]");
     gMyStyle->SetDrawOption("ep");
@@ -822,7 +842,7 @@ void MyGuiActionClass::DoRecRings(TString cmdStr)
     gMyMainFrameGui->UpdateCanvas(7);
 
     //8. 相同动量，相同入射角度的粒子重建sigma随着不同光子数的分布
-    gMyStyle->SetTitle(Form("Reconstruct sigma #theta_c from %d nPhoton for [%.1fGeV/c, %.1f#circ] from %s", iph, mom, the, rad.Data()));
+    gMyStyle->SetTitle(Form("Reconstruct sigma #theta_c nPhoton for [%.1fGeV/c, %.1f#circ] from %s", mom, the, rad.Data()));
     gMyStyle->SetXLabel("Number of photon");
     gMyStyle->SetYLabel("Reconstruct #theta_c sigma[rad]");
     gMyStyle->SetDrawOption("ep");
@@ -838,6 +858,16 @@ void MyGuiActionClass::DoRecRings(TString cmdStr)
     gMyMainFrameGui->UpdateCanvas(9);
 
     gMyMainFrameGui->SwitchCanvas(1);
+}
+
+void MyGuiActionClass::DoPIDEff(TString cmdStr)
+{
+    SetDetectorParameters();
+    if (cmdStr == "yes")
+    {
+        gMyCommonRICH->CalPIDEfficiency();
+    }
+    gMyMainFrameGui->ClearAllCanvas();
 }
 
 void MyGuiActionClass::DoSaveDetFile(const char *fname)
@@ -897,8 +927,10 @@ void MyGuiActionClass::DoDrawSelectedMat()
         double ppm = mapImpurities[matName.Data()];
         TGraph *g1 = gMyDatabaseClass->GetMatTrsGraph(matName, nLambda, lambdaMin, lambdaMax, ppm);
         if (g1 != NULL)
-            gMyStyle->SetGraph(gid, g1);
-        gMyStyle->SetLegends(gid++, matName);
+        {
+            gMyStyle->SetGraph(g1);
+            gMyStyle->SetLegends(gid++, matName);
+        }
     }
 
     gMyMainFrameGui->ClearAllCanvas();
@@ -913,8 +945,10 @@ void MyGuiActionClass::DoDrawSelectedMat()
         TString matName = selectedMat[i];
         TGraph *g2 = gMyDatabaseClass->GetMatRefGraph(matName, nLambda, lambdaMin, lambdaMax);
         if (g2 != NULL)
-            gMyStyle->SetGraph(gid, g2);
-        gMyStyle->SetLegends(gid++, matName);
+        {
+            gMyStyle->SetGraph(g2);
+            gMyStyle->SetLegends(gid++, matName);
+        }
     }
     gMyMainFrameGui->SwitchCanvas(2);
     gMyStyle->DrawPresetGraph();
@@ -930,8 +964,10 @@ void MyGuiActionClass::DoDrawSelectedDet()
         TString detName = selectedDet[i];
         TGraph *g1 = gMyDatabaseClass->GetDetQEGraph(detName, nLambda, lambdaMin, lambdaMax);
         if (g1 != NULL)
-            gMyStyle->SetGraph(gid, g1);
-        gMyStyle->SetLegends(gid++, detName);
+        {
+            gMyStyle->SetGraph(g1);
+            gMyStyle->SetLegends(gid++, detName);
+        }
     }
 
     gMyMainFrameGui->ClearAllCanvas();

@@ -20,16 +20,17 @@ MyMainFrameGui::MyMainFrameGui(const TGWindow *p, int w, int h) : TGMainFrame(p,
     for (int i = 0; i < 100; i++)
         fCA[i] = 0;
 
+    TGLayoutHints *LayoutC = new TGLayoutHints(kLHintsLeft | kLHintsTop , 2, 2, 2, 2);
     TGLayoutHints *LayoutX = new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsExpandX, 2, 2, 2, 2);
     TGLayoutHints *LayoutY = new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsExpandY, 2, 2, 2, 2);
     TGLayoutHints *LayoutXY = new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsExpandX | kLHintsExpandY, 2, 2, 2, 2);
 
-    TGHorizontalFrame *fHFrame0 = new TGHorizontalFrame(this, 10, 10, kHorizontalFrame);
+    TGHorizontalFrame *fHFrame0 = new TGHorizontalFrame(this, 10, 10);
     AddFrame(fHFrame0, LayoutXY);
 
-    TGVerticalFrame *fVFrame1 = new TGVerticalFrame(fHFrame0, 10, 10, kVerticalFrame);
-    TGVerticalFrame *fVFrame2 = new TGVerticalFrame(fHFrame0, 10, 10, kVerticalFrame);
-    TGVerticalFrame *fVFrame3 = new TGVerticalFrame(fHFrame0, 10, 10, kVerticalFrame);
+    TGVerticalFrame *fVFrame1 = new TGVerticalFrame(fHFrame0, 10, 10);
+    TGVerticalFrame *fVFrame2 = new TGVerticalFrame(fHFrame0, 10, 10);
+    TGVerticalFrame *fVFrame3 = new TGVerticalFrame(fHFrame0, 10, 10);
     fHFrame0->AddFrame(fVFrame1, LayoutY);
     fHFrame0->AddFrame(fVFrame2, LayoutY);
     fHFrame0->AddFrame(fVFrame3, LayoutXY);
@@ -92,6 +93,16 @@ MyMainFrameGui::MyMainFrameGui(const TGWindow *p, int w, int h) : TGMainFrame(p,
         fCTab->SetTab(0);
         fCTab->Resize(fCTab->GetDefaultSize());
         fVFrame3->AddFrame(fCTab, LayoutXY);
+
+        TGHorizontalFrame *fHFrame31 = new TGHorizontalFrame(fVFrame3, 10, 10);
+        fComboCmd = new TGComboBox(fHFrame31, "", 1);
+        fCommand = fComboCmd->GetTextEntry();
+        fCommandBuf = fCommand->GetBuffer();
+        fCommand->Connect("ReturnPressed()", "MyMainFrameGui", this,  "HandleCommand()");
+        fComboCmd->Resize(200, fCommand->GetDefaultHeight());
+        fHFrame31->AddFrame(new TGLabel(fHFrame31, "Command:"), LayoutC);
+        fHFrame31->AddFrame(fComboCmd, LayoutX);
+        fVFrame3->AddFrame(fHFrame31, LayoutX);
     }
 
     SetWindowName("STCF-RICH");
@@ -146,7 +157,6 @@ Bool_t MyMainFrameGui::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
                     cmdStr += ".root";
             }
 
-
             if (parm1 == GenSpecRICH || parm1 == GenMulParRICH || parm1 == GenScanRICHList || parm1 == GenRecRICHList)
             {
                 int retval;
@@ -162,4 +172,17 @@ Bool_t MyMainFrameGui::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
     }
     parm2 = 0.;
     return kTRUE;
+}
+
+//______________________________________________________________________________
+//
+
+void MyMainFrameGui::HandleCommand()
+{
+   const char *string = fCommandBuf->GetString();
+   if (strlen(string) > 1) {
+      gROOT->ProcessLine(string);
+      fComboCmd->InsertEntry(string, 0, -1);
+      fCommand->Clear();
+   }
 }

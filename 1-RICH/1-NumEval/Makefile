@@ -27,7 +27,7 @@ lib: $(LibOut)
 
 $(OBJS) : obj/%.o:src/%.cpp inc/%.h
 
-$(LibSrc): ./inc/MyRICHDetector.h ./inc/LinkDef.h
+$(LibSrc): ./inc/MyRICHDetector.h ./inc/MyMainFrameGui.h ./inc/LinkDef.h
 		@echo "Generating dictionary $@..."
 		$(ROOTCLING) -f $@ -c $^
 

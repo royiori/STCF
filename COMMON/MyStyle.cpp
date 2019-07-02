@@ -142,16 +142,16 @@ void MyStyle::Draw2DHistVector(vector<TH2 *> hvec)
 void MyStyle::DrawGraphs(TGraph *g1, TGraph *g2, TGraph *g3, TGraph *g4, TGraph *g5, TGraph *g6, TGraph *g7, TGraph *g8, TGraph *g9, TGraph *g10)
 {
     gPresetGph.clear();
-    gPresetGph.push_back(g1);
-    gPresetGph.push_back(g2);
-    gPresetGph.push_back(g3);
-    gPresetGph.push_back(g4);
-    gPresetGph.push_back(g5);
-    gPresetGph.push_back(g6);
-    gPresetGph.push_back(g7);
-    gPresetGph.push_back(g8);
-    gPresetGph.push_back(g9);
-    gPresetGph.push_back(g10);
+    SetGraph(g1);
+    SetGraph(g2);
+    SetGraph(g3);
+    SetGraph(g4);
+    SetGraph(g5);
+    SetGraph(g6);
+    SetGraph(g7);
+    SetGraph(g8);
+    SetGraph(g9);
+    SetGraph(g10);
     DrawPresetGraph();
 }
 
@@ -162,7 +162,7 @@ void MyStyle::DrawPresetGraph()
 
     SetGraphTheme();
 
-    gG = new TGraph(*gPresetGph[0]);
+    gG = (TGraph*)gPresetGph[0]->Clone();
     gGList.push_back(gG);
 
     if (CP == MATHEMATIC_STYLE)
@@ -198,10 +198,10 @@ void MyStyle::DrawPresetGraph()
 
     double min = gG->GetYaxis()->GetXmin();
     double max = gG->GetYaxis()->GetXmax();
-    for (int i = 0; i < __NHIST__; i++)
-        min = (gPresetGph[i] != NULL && min > gPresetGph[i]->GetYaxis()->GetXmin()) ? gPresetGph[i]->GetYaxis()->GetXmin() : min;
-    for (int i = 0; i < __NHIST__; i++)
-        max = (gPresetGph[i] != NULL && max < gPresetGph[i]->GetYaxis()->GetXmax()) ? gPresetGph[i]->GetYaxis()->GetXmax() : max;
+    for (int i = 0; i < (int)gPresetGph.size(); i++)
+        min = (min > gPresetGph[i]->GetYaxis()->GetXmin()) ? gPresetGph[i]->GetYaxis()->GetXmin() : min;
+    for (int i = 0; i < (int)gPresetGph.size(); i++)
+        max = (max < gPresetGph[i]->GetYaxis()->GetXmax()) ? gPresetGph[i]->GetYaxis()->GetXmax() : max;
 
     gG->SetTitle(Title);
     gG->GetXaxis()->SetTitle(Label[0]);
@@ -209,14 +209,14 @@ void MyStyle::DrawPresetGraph()
     gG->GetYaxis()->SetRangeUser(min, max);
     gG->Draw(Option + "a");
 
-    for (int i = 1; i < __NHIST__; i++)
+    for (int i = 1; i < (int)gPresetGph.size(); i++)
         MyDraw(gPresetGph[i], Option + TString("same"));
 
     if (gPresetGph[1] == NULL)
         return;
     TLegend *leg = new TLegend(0.8, 0.7, 1.0, 0.8);
-    for (int i = 0; i < __NHIST__; i++)
-        MyAddLegend(leg, gPresetH1[i], Legends[i], Option + TString("l"));
+    for (int i = 0; i < (int)gPresetGph.size(); i++) 
+        MyAddLegend(leg, gPresetGph[i], Legends[i], Option + TString("l"));
     leg->SetFillColor(0);
     leg->SetBorderSize(0);
     leg->Draw("same");

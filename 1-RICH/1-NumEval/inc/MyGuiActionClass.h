@@ -43,11 +43,13 @@ enum ButtonAction
     ShowMulParRICH,
     ShowScanRICHList,
     ShowRecRICHList,
+    ShowPIDEff,
 
     GenSpecRICH,
     GenMulParRICH,
     GenScanRICHList,
     GenRecRICHList,
+    GenPIDEff,
 };
 
 //-----------------------------------------------------------------------------------------------
@@ -98,6 +100,7 @@ private:
     void DoShowMulParRICH(TString cmdStr);
     void DoGenHitMaps(TString cmdStr);
     void DoRecRings(TString cmdStr);
+    void DoPIDEff(TString cmdStr);
 
     //定义探测器结构
     int nRadLayer;            //可以有多层传输层

@@ -11,6 +11,7 @@
 #include "TRootEmbeddedCanvas.h"
 #include "TCanvas.h"
 #include "TGTextEdit.h"
+#include "TGComboBox.h"
 #include "TGResourcePool.h"
 #include "TStyle.h"
 #include "TStyleManager.h"
@@ -48,6 +49,7 @@ public:
     void LoadText(TString txt) { fSettingText->LoadBuffer(txt); }
     TGText *GetText() { return fSettingText->GetText(); }
 
+    void HandleCommand();
 private:
     TGTextEdit *fSettingText;
     TGTab *fCTab;
@@ -56,7 +58,9 @@ private:
     virtual void CloseWindow();
     virtual Bool_t ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2);
 
-    //ClassDef(MyMainFrameGui, 0)
+    TGComboBox *fComboCmd;
+    TGTextEntry *fCommand;
+    TGTextBuffer *fCommandBuf;
 };
 
 extern MyMainFrameGui *gMyMainFrameGui;

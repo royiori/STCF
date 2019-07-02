@@ -83,8 +83,8 @@ public:
 
    // Graphs
    void DrawGraphs(TGraph *g1, TGraph *g2=NULL, TGraph *g3=NULL, TGraph *g4=NULL, TGraph *g5=NULL, TGraph *g6=NULL, TGraph *g7=NULL, TGraph *g8=NULL, TGraph *g9=NULL, TGraph *g10=NULL);
-   void SetGraph(int id, TGraph *g) { if(0 <= id && id < __NHIST__) gPresetGph[id] = g;}
-   void ClearPresetGraphs() { for (int i = 0; i < __NHIST__; i++) gPresetGph[i] = NULL; }
+   void SetGraph(TGraph *g) { if(g!=NULL) gPresetGph.push_back(g); }
+   void ClearPresetGraphs() { gPresetGph.clear(); }
    void DrawPresetGraph();
 
    void SetGraphTheme(TGraph *g1, TGraph *g2=NULL, TGraph*g3=NULL, TGraph*g4=NULL, TGraph*g5=NULL, TGraph*g6=NULL, TGraph*g7=NULL);
