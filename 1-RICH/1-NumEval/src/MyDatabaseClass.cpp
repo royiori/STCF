@@ -6,6 +6,9 @@ MyDatabaseClass::MyDatabaseClass()
 {
     MaterialList.push_back("C6F14");
     MaterialList.push_back("Quartz");
+    MaterialList.push_back("Quartz311");
+    MaterialList.push_back("Quartz3001");
+    MaterialList.push_back("Quartz3301");
     MaterialList.push_back("MgF2");
     MaterialList.push_back("CaF2");
     MaterialList.push_back("Water");

@@ -1,117 +1,149 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
+##Electron
+### Byte-compiled / optimized / DLL files
+#__pycache__/
+#*.py[cod]
+#*$py.class
+#
+### Distribution / packaging
+#.Python
+#env/
+#build/
+#debug/
+#output/
+#develop-eggs/
+#dist/
+#downloads/
+#eggs/
+#.eggs/
+#lib/
+#lib64/
+#parts/
+#sdist/
+#var/
+#wheels/
+#*.egg-info/
+#.installed.cfg
+#*.egg
+# 
+###Distribution / Electron
+#Electron/node_modules
+#/node_modules
+#/GenG4-darwin-x64
 
-# C extensions
-*.so
-*.out
-*.o
+
+## PyInstaller
+###  Usually these files are written by a python script from a template
+###  before PyInstaller builds the exe, so as to inject date/other infos into it.
+#*.manifest
+#pygeng4/dist
+#pygeng4/build
+#/pygeng4dist
+#
+### Installer logs
+#pip-log.txt
+#pip-delete-this-directory.txt
+#
+### Unit test / coverage reports
+#htmlcov/
+#.tox/
+#.coverage
+#.coverage.*
+#.cache
+#nosetests.xml
+#coverage.xml
+#*.cover
+#.hypothesis/
+#
+### Translations
+#*.mo
+#*.pot
+#
+### Django stuff:
+#*.log
+#local_settings.py
+#
+### Flask stuff:
+#instance/
+#.webassets-cache
+#
+### Scrapy stuff:
+#.scrapy
+#
+### Sphinx documentation
+#docs/_build/
+#
+### PyBuilder
+#target/
+
+## virtualenv
+#.venv
+#venv/
+#ENV/
+#
+## pyenv
+#.python-version
+#
+## Jupyter Notebook
+#.ipynb_checkpoints
+#
+## Spyder project settings
+#.spyderproject
+#.spyproject
+#
+## Rope project settings
+#.ropeproject
+#
+## mkdocs documentation
+#/site
+#
+## mypy
+#.mypy_cache/
+#
+## celery beat schedule file
+#celerybeat-schedule
+#
+## SageMath parsed files
+#*.sage.py
+
+# MacOS
 .DS_Store
 
-# Distribution / packaging
-.Python
-env/
-build/
-debug/
-output/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
+# Prerequisites
+*.d
 
-#Distribution / Electron
-Electron/node_modules
-/node_modules
-/GenG4-darwin-x64
+# Compiled Object files
+*.o
+*.slo
+*.lo
+*.obj
 
-# PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
-*.manifest
-pygeng4/dist
-pygeng4/build
-/pygeng4dist
+# Precompiled Headers
+*.gch
+*.pch
 
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
 
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
+# Fortran module files
+*.mod
+*.smod
 
-# Translations
-*.mo
-*.pot
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
 
-# Django stuff:
-*.log
-local_settings.py
-
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# pyenv
-.python-version
-
-# celery beat schedule file
-celerybeat-schedule
-
-# SageMath parsed files
-*.sage.py
+# Executables
+*.exe
+*.out
+*.app
 
 # dotenv
 .env
 .env.bak
-
-# virtualenv
-.venv
-venv/
-ENV/
-
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
-.mypy_cache/
 
 # root
 *.root
@@ -124,3 +156,9 @@ ENV/
 # vscode
 .vscode/
 
+# User data
+*.pd1
+*.dat
+*.data
+*.mdat
+*.bak

@@ -19,32 +19,34 @@ MyGuiActionClass::MyGuiActionClass()
 
     // pages
     nTabPage = 5;
-    sTabPage[0] = TString("Show");
-    sTabPage[1] = TString("Generate");
+    sTabPage[0] = TString("ShowDet");
+    sTabPage[1] = TString("GenDet");
     sTabPage[2] = TString("Material");
     sTabPage[3] = TString("Detector");
     sTabPage[4] = TString("Miscellaneous");
 
     // page 0
-    nButton[0] = 8;
     iButton[0] = LoadDetFile;
-    sButton[0].push_back("Load");
-    sButton[0].push_back("Save");
+    sButton[0].push_back("Load Hitmap");
+    sButton[0].push_back("Save Hitmap");
     sButton[0].push_back("Show the FCN plot");
     sButton[0].push_back("Show the Specified Particle RICH");
     sButton[0].push_back("Show Multi-Particles RICH");
     sButton[0].push_back("Show the SCAN XY-hitmap and N-Photon map");
     sButton[0].push_back("Show the SCAN Resolution Map");
+    sButton[0].push_back("Load Recon-map");
+    sButton[0].push_back("Save Recon-map");
     sButton[0].push_back("Show the PID efficiency");
+    nButton[0] = (int)sButton[0].size();
 
     // page 1
-    nButton[1] = 5;
     iButton[1] = GenSpecRICH;
     sButton[1].push_back("Generate the Specified Particle RICH");
     sButton[1].push_back("Generate Multi-Particles RICH");
     sButton[1].push_back("Generate the XY-hitmap for SCAN");
     sButton[1].push_back("Reconstruct to get the Resolution Map");
     sButton[1].push_back("Reconstruct to get PID efficiency");
+    nButton[1] = (int)sButton[1].size();
 
     // page1
     nButton[2] = gMyDatabaseClass->GetNMaterial();
@@ -57,10 +59,10 @@ MyGuiActionClass::MyGuiActionClass()
     sButton[3] = gMyDatabaseClass->GetDetectorList();
 
     // page 3
-    nButton[4] = 2;
     iButton[4] = DrawSelectedMat;
     sButton[4].push_back("Draw Sel-Mat");
     sButton[4].push_back("Draw Sel-Det");
+    nButton[4] = (int)sButton[4].size();
 
     // init parameters
     nRadLayer = env->GetValue("nRadLayer", 2);
@@ -456,6 +458,10 @@ void MyGuiActionClass::ExecButtonClick(Long_t bid, const char *cmdStr)
         DoGenHitMaps("no");
     if (bid == ShowRecRICHList)
         DoRecRings("no");
+    if (bid == LoadRecFile)
+        DoLoadRecFile(cmdStr);
+    if (bid == SaveRecFile)
+        DoSaveRecFile(cmdStr);
     if (bid == ShowPIDEff)
         DoPIDEff("no");
 
@@ -645,8 +651,8 @@ void MyGuiActionClass::DoGenHitMaps(TString cmdStr)
     gMyMainFrameGui->ClearAllCanvas();
 
     MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
-    int imom = (pList - gDet->pMin) / gDet->pStep;
-    int ithe = (thList - gDet->The0Min) / gDet->The0Step;
+    int imom = gMyCommonRICH->GetMomID(pList);
+    int ithe = gMyCommonRICH->GetThetaID(thList);
     imom = (0 <= imom && imom < gDet->np) ? imom : 0;
     ithe = (0 <= ithe && ithe < gDet->nthe0) ? ithe : 0;
     double mom = gMyCommonRICH->GetDetScan(imom, ithe, 0)->momentum;
@@ -690,7 +696,7 @@ void MyGuiActionClass::DoGenHitMaps(TString cmdStr)
 
     //4. 对指定动量和角度的入射粒子产生光子数的二维分布图
     gMyMainFrameGui->SwitchCanvas(4);
-    gMyCommonRICH->GetDetScanNPhMap(particle)->Draw("colztext");
+    gMyCommonRICH->GetDetScanNPhMap(particle)->Draw("colz");
     gMyMainFrameGui->UpdateCanvas(4);
     //sleep(1);
 
@@ -755,8 +761,8 @@ void MyGuiActionClass::DoRecRings(TString cmdStr)
 
     MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
     int irad = irad1;
-    int imom = (pList - gDet->pMin) / gDet->pStep;
-    int ithe = (thList - gDet->The0Min) / gDet->The0Step;
+    int imom = gMyCommonRICH->GetMomID(pList);
+    int ithe = gMyCommonRICH->GetThetaID(thList);
     imom = (0 <= imom && imom < gDet->np) ? imom : 0;
     ithe = (0 <= ithe && ithe < gDet->nthe0) ? ithe : 0;
     double mom = gMyCommonRICH->GetDetScan(imom, ithe, 0)->momentum;
@@ -854,7 +860,8 @@ void MyGuiActionClass::DoRecRings(TString cmdStr)
 
     //9. 显示单个的填图及拟合结果
     gMyMainFrameGui->SwitchCanvas(9);
-    gMyCommonRICH->GetRecMap(particle, irad, imom, ithe, iph)->Fit("gaus");
+    if (gMyCommonRICH->GetRecMap(particle, irad, imom, ithe, iph) != NULL)
+        gMyCommonRICH->GetRecMap(particle, irad, imom, ithe, iph)->Draw();
     gMyMainFrameGui->UpdateCanvas(9);
 
     gMyMainFrameGui->SwitchCanvas(1);
@@ -865,9 +872,62 @@ void MyGuiActionClass::DoPIDEff(TString cmdStr)
     SetDetectorParameters();
     if (cmdStr == "yes")
     {
-        gMyCommonRICH->CalPIDEfficiency();
+        if (!gMyCommonRICH->CalPIDEfficiency())
+            return;
     }
+
     gMyMainFrameGui->ClearAllCanvas();
+
+    MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
+    int imom = gMyCommonRICH->GetMomID(pList);
+    int ithe = gMyCommonRICH->GetThetaID(thList);
+    imom = (0 <= imom && imom < gDet->np) ? imom : 0;
+    ithe = (0 <= ithe && ithe < gDet->nthe0) ? ithe : 0;
+    double mom = gMyCommonRICH->GetDetScan(imom, ithe, 0)->momentum;
+    double the = gMyCommonRICH->GetDetScan(imom, ithe, 0)->Theta0;
+
+    gMyCommonRICH->GeneratePIDHistograms(particle, imom, ithe);
+    
+    //-----pid-map
+    gMyMainFrameGui->SwitchCanvas(1);
+    gMyCommonRICH->GetPIDMap(0)->Draw("colz");
+    gMyMainFrameGui->UpdateCanvas(1);
+
+    gMyMainFrameGui->SwitchCanvas(2);
+    gMyCommonRICH->GetPIDMap(1)->Draw("colz");
+    gMyMainFrameGui->UpdateCanvas(2);
+
+    gMyMainFrameGui->SwitchCanvas(3);
+    gMyCommonRICH->GetPIDMap(2)->Draw("colz");
+    gMyMainFrameGui->UpdateCanvas(3);
+
+    gMyMainFrameGui->SwitchCanvas(4);
+    gMyCommonRICH->GetPIDMap(3)->Draw("colz");
+    gMyMainFrameGui->UpdateCanvas(4);
+
+    //-----pid vs. momentum
+    gMyStyle->SetTitle(Form("Reconstruct pid efficienchy for [%.1f#circ] from %s", the, particle.Data()));
+    gMyStyle->SetXLabel("momentum [GeV/c]");
+    gMyStyle->SetYLabel("Reconstruct PID efficiency[%]");
+    gMyStyle->SetDrawOption("ep");
+    for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
+        gMyStyle->SetLegends(ihypo, gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle);
+    gMyMainFrameGui->SwitchCanvas(5);
+    gMyStyle->DrawHistograms(gMyCommonRICH->GetPIDMapVsMom(0), -1, -1, gMyCommonRICH->GetPIDMapVsMom(1), gMyCommonRICH->GetPIDMapVsMom(2), gMyCommonRICH->GetPIDMapVsMom(3));
+    gMyMainFrameGui->UpdateCanvas(5);
+
+    //-----pid vs. theta
+    gMyStyle->SetTitle(Form("Reconstruct pid efficienchy for [%.1fGeV/c] from %s", mom, particle.Data()));
+    gMyStyle->SetXLabel("#theta_0[#circ]");
+    gMyStyle->SetYLabel("Reconstruct PID efficiency[%]");
+    gMyStyle->SetDrawOption("ep");
+    for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
+        gMyStyle->SetLegends(ihypo, gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle);
+    gMyMainFrameGui->SwitchCanvas(6);
+    gMyStyle->DrawHistograms(gMyCommonRICH->GetPIDMapVsTheta(0), -1, -1, gMyCommonRICH->GetPIDMapVsTheta(1), gMyCommonRICH->GetPIDMapVsTheta(2), gMyCommonRICH->GetPIDMapVsTheta(3));
+    gMyMainFrameGui->UpdateCanvas(6);
+
+    gMyMainFrameGui->SwitchCanvas(1);
 }
 
 void MyGuiActionClass::DoSaveDetFile(const char *fname)
@@ -886,6 +946,20 @@ void MyGuiActionClass::DoLoadDetFile(const char *fname)
 
     DoLoadTextBuf();
     DoDrawConfig("Show the configurations");
+}
+
+void MyGuiActionClass::DoSaveRecFile(const char *fname)
+{
+    if (fname == NULL)
+        return;
+    gMyCommonRICH->SaveRecFile(fname);
+}
+
+void MyGuiActionClass::DoLoadRecFile(const char *fname)
+{
+    if (fname == NULL)
+        return;
+    gMyCommonRICH->LoadRecFile(fname);
 }
 
 //______________________________________________________________________________
@@ -932,6 +1006,9 @@ void MyGuiActionClass::DoDrawSelectedMat()
             gMyStyle->SetLegends(gid++, matName);
         }
     }
+    gMyStyle->SetTitle("Transmission of 10mm material");
+    gMyStyle->SetXLabel("Wavelength [nm]");
+    gMyStyle->SetYLabel("Transmission [%]");
 
     gMyMainFrameGui->ClearAllCanvas();
     gMyMainFrameGui->SwitchCanvas(1);
@@ -950,9 +1027,15 @@ void MyGuiActionClass::DoDrawSelectedMat()
             gMyStyle->SetLegends(gid++, matName);
         }
     }
+    gMyStyle->SetTitle("Reflective index");
+    gMyStyle->SetXLabel("Wavelength [nm]");
+    gMyStyle->SetYLabel("Reflective index");
+
     gMyMainFrameGui->SwitchCanvas(2);
     gMyStyle->DrawPresetGraph();
     gMyMainFrameGui->UpdateCanvas(2);
+
+    gMyMainFrameGui->SwitchCanvas(1);
 }
 
 void MyGuiActionClass::DoDrawSelectedDet()

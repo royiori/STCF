@@ -20,7 +20,7 @@ MyMainFrameGui::MyMainFrameGui(const TGWindow *p, int w, int h) : TGMainFrame(p,
     for (int i = 0; i < 100; i++)
         fCA[i] = 0;
 
-    TGLayoutHints *LayoutC = new TGLayoutHints(kLHintsLeft | kLHintsTop , 2, 2, 2, 2);
+    TGLayoutHints *LayoutC = new TGLayoutHints(kLHintsLeft | kLHintsTop, 2, 2, 2, 2);
     TGLayoutHints *LayoutX = new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsExpandX, 2, 2, 2, 2);
     TGLayoutHints *LayoutY = new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsExpandY, 2, 2, 2, 2);
     TGLayoutHints *LayoutXY = new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsExpandX | kLHintsExpandY, 2, 2, 2, 2);
@@ -98,7 +98,7 @@ MyMainFrameGui::MyMainFrameGui(const TGWindow *p, int w, int h) : TGMainFrame(p,
         fComboCmd = new TGComboBox(fHFrame31, "", 1);
         fCommand = fComboCmd->GetTextEntry();
         fCommandBuf = fCommand->GetBuffer();
-        fCommand->Connect("ReturnPressed()", "MyMainFrameGui", this,  "HandleCommand()");
+        fCommand->Connect("ReturnPressed()", "MyMainFrameGui", this, "HandleCommand()");
         fComboCmd->Resize(200, fCommand->GetDefaultHeight());
         fHFrame31->AddFrame(new TGLabel(fHFrame31, "Command:"), LayoutC);
         fHFrame31->AddFrame(fComboCmd, LayoutX);
@@ -147,7 +147,7 @@ Bool_t MyMainFrameGui::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
             fi.fIniDir = StrDup(dir);
             TString cmdStr;
 
-            if (parm1 == SaveDetFile || parm1 == LoadDetFile)
+            if (parm1 == SaveDetFile || parm1 == LoadDetFile || parm1 == SaveRecFile || parm1 == LoadRecFile)
             {
                 new TGFileDialog(gClient->GetRoot(), this, kFDOpen, &fi);
                 if (fi.fFilename == NULL)
@@ -157,7 +157,7 @@ Bool_t MyMainFrameGui::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
                     cmdStr += ".root";
             }
 
-            if (parm1 == GenSpecRICH || parm1 == GenMulParRICH || parm1 == GenScanRICHList || parm1 == GenRecRICHList)
+            if (parm1 == GenSpecRICH || parm1 == GenMulParRICH || parm1 == GenScanRICHList || parm1 == GenRecRICHList || parm1 == GenPIDEff)
             {
                 int retval;
                 new TGMsgBox(gClient->GetRoot(), this, "Message-RICH", "Do you want RE-generate the histograms?",
@@ -179,10 +179,11 @@ Bool_t MyMainFrameGui::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
 
 void MyMainFrameGui::HandleCommand()
 {
-   const char *string = fCommandBuf->GetString();
-   if (strlen(string) > 1) {
-      gROOT->ProcessLine(string);
-      fComboCmd->InsertEntry(string, 0, -1);
-      fCommand->Clear();
-   }
+    const char *string = fCommandBuf->GetString();
+    if (strlen(string) > 1)
+    {
+        gROOT->ProcessLine(string);
+        fComboCmd->InsertEntry(string, 0, -1);
+        fCommand->Clear();
+    }
 }

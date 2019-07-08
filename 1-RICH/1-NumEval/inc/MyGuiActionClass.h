@@ -43,6 +43,8 @@ enum ButtonAction
     ShowMulParRICH,
     ShowScanRICHList,
     ShowRecRICHList,
+    LoadRecFile,
+    SaveRecFile,
     ShowPIDEff,
 
     GenSpecRICH,
@@ -96,6 +98,8 @@ private:
     void DoShowFCN();
     void DoSaveDetFile(const char *fname);
     void DoLoadDetFile(const char *fname);
+    void DoSaveRecFile(const char *fname);
+    void DoLoadRecFile(const char *fname);
     void DoShowSpecRICH(TString cmdStr);
     void DoShowMulParRICH(TString cmdStr);
     void DoGenHitMaps(TString cmdStr);

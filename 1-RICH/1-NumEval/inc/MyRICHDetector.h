@@ -191,7 +191,7 @@ public:
 
         the0Min = min * 3.1415927 / 180.;
         the0Max = max * 3.1415927 / 180.;
-        the0Step = (n > 0 && the0Max != the0Min) ? (the0Max - the0Min) / nthe0 : 0;
+        the0Step = (n > 0 && the0Max != the0Min) ? (the0Max - the0Min) / (n - 1) : 0;
     }
 
     int nhypo;

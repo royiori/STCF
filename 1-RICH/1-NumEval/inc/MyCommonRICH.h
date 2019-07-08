@@ -36,6 +36,8 @@ public:
     //----------------------------
     /// Mass & Beta function
     int GetHypoID(TString p);
+    int GetMomID(double mom);
+    int GetThetaID(double the);
     double GetMass(TString p);
     double Beta(Double_t p, Double_t m); //p in GeV, m in GeV
     double BetaByTheta(Double_t theta, Double_t n);
@@ -61,8 +63,15 @@ public:
     //----------------------------
     /// get detector
     MyRICHDetector *GetDetector() { return gDet; }
-    MyRICHDetector *GetDetList(int ihypo) { return gDetList[ihypo]; }
-    MyRICHDetector *GetDetScan(int imom, int itheta0, int ihypo) { return gScanDetList[imom][itheta0][ihypo]; }
+    MyRICHDetector *GetDetList(int ihypo) { return (0 <= ihypo && ihypo < (int)gDetList.size()) ? gDetList[ihypo] : NULL; }
+    MyRICHDetector *GetDetScan(int imom, int itheta0, int ihypo)
+    {
+        if (0 <= imom && imom < (int)gScanDetList.size())
+            if (0 <= itheta0 && itheta0 < (int)gScanDetList[imom].size())
+                if (0 <= ihypo && ihypo < (int)gScanDetList[imom][itheta0].size())
+                    return gScanDetList[imom][itheta0][ihypo];
+        return NULL;
+    }
 
     //----------------------------
     /// get detector hit map histograms
@@ -72,7 +81,7 @@ public:
     TH2F *GetDetHitMap() { return gDet->GetHitMap(); }
     TH2F *GetDetHitMap(int irad) { return gDet->GetDetHitMap(irad); }
     TH2F *GetDetListHitMap(int ihypo) { return gDetList[ihypo]->GetHitMap(); }
-    TH2F *GetDetScanHitMap(int imom, int itheta0, int ihypo) { return gScanDetList[imom][itheta0][ihypo]->GetHitMap(); }
+    TH2F *GetDetScanHitMap(int imom, int itheta0, int ihypo) { return (GetDetScan(imom, itheta0, ihypo) == NULL) ? NULL : GetDetScan(imom, itheta0, ihypo)->GetHitMap(); }
     TH2F *GetDetScanNPhMap(TString shypo) { return fNPhMap[GetHypoID(shypo)]; }
 
     TH1D *GetDetScanNphMapAtMom(TString shypo, double mom) { return MyProjectY(fNPhMap[GetHypoID(shypo)], mom); }
@@ -120,13 +129,19 @@ public:
     TH1F *GetDetRecSigmaVsMomPlot(int ihypo) { return fSigmaVsMomPlot[ihypo]; }
     TH1F *GetDetRecSigmaVsThetaPlot(int ihypo) { return fSigmaVsThetaPlot[ihypo]; }
 
-    TH2F *GetDetRecRing(int imom, int itheta0, int ihypo) { return gScanDetList[imom][itheta0][ihypo]->GetRecMap(); }
-    TH1D *GetRecMap(TString shypo, int irad, int imom, int itheta0, int iph) { return fRecMap[GetHypoID(shypo)][irad][imom][itheta0][iph]; }
-    TH1D *GetRecMap(int ihypo, int irad, int imom, int itheta0, int iph) { return fRecMap[ihypo][irad][imom][itheta0][iph]; }
+    TH2F *GetDetRecRing(int imom, int itheta0, int ihypo) { return (GetDetScan(imom, itheta0, ihypo) == NULL) ? NULL : GetDetScan(imom, itheta0, ihypo)->GetRecMap(); }
+    TH1D *GetRecMap(TString shypo, int irad, int imom, int itheta0, int iph) { return GenRecMap(GetHypoID(shypo), irad, imom, itheta0, iph); }
+    TH1D *GetRecMap(int ihypo, int irad, int imom, int itheta0, int iph) { return GenRecMap(ihypo, irad, imom, itheta0, iph); }
 
     int GetDetListNumber() { return gDetList.size(); }     //nhypo
     int GetDetScanNumber() { return gScanDetList.size(); } //[动量][角度][粒子种类]
     int GetDetRectNumber() { return fRecMap.size(); }      //[粒子种类][辐射体][动量][角度][光子数]
+
+    //----------------------------
+    /// get detector pid map histograms
+    TH2F *GetPIDMap(int ihypo) { return fPIDMap[ihypo]; }
+    TH1F *GetPIDMapVsMom(int ihypo) { return fPIDVsMomPlot[ihypo];}
+    TH1F *GetPIDMapVsTheta(int ihypo) { return fPIDVsThetaPlot[ihypo];}
 
     //----------------------------
     // draw histograms
@@ -154,13 +169,21 @@ public:
 
     void DrawScanDetListHitMap(int imom, int ithe, int ihypo, TString opt)
     {
-        if (gScanDetList[imom][ithe][ihypo]->GetHitMap() != NULL)
-            gScanDetList[imom][ithe][ihypo]->GetHitMap()->Draw(opt);
+        MyRICHDetector *det = GetDetScan(imom, ithe, ihypo);
+        if (det == NULL)
+            return;
+        if (det->GetHitMap() == NULL)
+            return;
+        det->GetHitMap()->Draw(opt);
     }
     void DrawScanDetListHitMap(int imom, int ithe, int ihypo, int irad, TString opt)
     {
-        if (gScanDetList[imom][ithe][ihypo]->fHitMapEachRad[irad] != NULL)
-            gScanDetList[imom][ithe][ihypo]->fHitMapEachRad[irad]->Draw(opt);
+        MyRICHDetector *det = GetDetScan(imom, ithe, ihypo);
+        if (det == NULL)
+            return;
+        if (det->fHitMapEachRad[irad] == NULL)
+            return;
+        det->fHitMapEachRad[irad]->Draw(opt);
     }
     void DrawScanDetListHitMap(TString shypo, int imom, int ithe, int irad, TString opt) { DrawScanDetListHitMap(imom, ithe, GetHypoID(shypo), irad, opt); }
 
@@ -173,6 +196,9 @@ public:
     void SaveRings(const char *fname);
     void LoadRings(const char *fname);
 
+    void SaveRecFile(const char *fname);
+    void LoadRecFile(const char *fname);
+
     //----------------------------
     // calculations
     void GenerateDetRing(MyRICHDetector *det = 0);
@@ -183,6 +209,7 @@ public:
     bool ReconstructForEachDetector();
     void GenerateRecOffsetSigmaMap();
     void GenerateRecHistograms(TString particle, int irad, int imom, int ithe, int iph);
+    void GeneratePIDHistograms(TString particle, int imom, int ithe);
 
     // reconstruction
     void ReconstructRICHBySolver(MyRICHDetector *det = 0);
@@ -192,8 +219,11 @@ public:
     double Findz0(MyRICHDetector *det, int irad, double Xc, double Yc);
     double FindPhi(MyRICHDetector *det, double Xc, double Yc, double X0, double Y0);
 
-    // pid efficiency
-    void CalPIDEfficiency();
+    // pid efficiency 
+    bool CalPIDEfficiency();
+    int PIDProb(vector<MyRICHDetector *> detlist, vector<pair<double, double>> hit);
+    double CalPIDProb(MyRICHDetector *det, vector<pair<double, double>> hit);
+
 
     void DrawFCN(int irad);
 
@@ -218,6 +248,7 @@ private:
     double epsilon;
 
     TF1 *fRhoFcn;
+    TF1 *fNphFcn;
     MyDatabaseClass *gDb;                                  //
     MyRICHDetector *gDet;                                  //id=0, 用来保存/读取探测器设置
     vector<MyRICHDetector *> gDetList;                     //id=1~NHYPO,[粒子种类]
@@ -233,13 +264,19 @@ private:
     vector<vector<vector<vector<vector<double>>>>> fRecOffErrList; //为重建的角度填图， 用高斯拟合得offset和sigma, [粒子种类][辐射体][动量][角度][光子数]
     vector<vector<vector<vector<vector<double>>>>> fRecSigErrList; //为重建的角度填图， 用高斯拟合得offset和sigma, [粒子种类][辐射体][动量][角度][光子数]
 
+    vector<vector<vector<vector<double>>>> fPidEffList; //[imom][ithe][ihypo][pidhypo]
+
     TH2F *fOffsetMap, *fSigmaMap;
-    vector<TH1F *> fOffsetVsNphPlot;
-    vector<TH1F *> fOffsetVsMomPlot;
-    vector<TH1F *> fOffsetVsThetaPlot;
+    vector<TH1F *> fOffsetVsNphPlot;   //[hypo]
+    vector<TH1F *> fOffsetVsMomPlot;   //[hypo]
+    vector<TH1F *> fOffsetVsThetaPlot; //[hypo]
     vector<TH1F *> fSigmaVsNphPlot;
     vector<TH1F *> fSigmaVsMomPlot;
     vector<TH1F *> fSigmaVsThetaPlot;
+
+    vector<TH2F *> fPIDMap;
+    vector<TH1F *> fPIDVsMomPlot;
+    vector<TH1F *> fPIDVsThetaPlot;
 
     void ResizeDetList(int n)
     {
@@ -296,7 +333,8 @@ private:
                 for (int k = 0; k < (int)fRecMap[i][j].size(); k++)
                     for (int l = 0; l < (int)fRecMap[i][j][k].size(); l++)
                         for (int m = 0; m < (int)fRecMap[i][j][k][l].size(); m++)
-                            delete fRecMap[i][j][k][l][m];
+                            if (fRecMap[i][j][k][l][m] != NULL)
+                                delete fRecMap[i][j][k][l][m];
 
         fRecMap.resize(nhypo);
         fRecOffList.resize(nhypo);
@@ -333,6 +371,43 @@ private:
                         fRecSigErrList[i][j][k][l].resize(nph);
                     }
                 }
+            }
+        }
+    }
+
+    TH1D *GenRecMap(int ihypo, int irad, int imom, int ithe, int iph)
+    {
+        MyRICHDetector *det = GetDetScan(imom, ithe, ihypo);
+        if (det == NULL)
+            return NULL;
+        TH2F *fhitmap = det->fRecMapEachRad[irad];
+        TString particle = det->particle;
+        TString radiator = det->sRadLayer[irad];
+        double momentum = det->momentum;
+        double theta0 = det->Theta0;
+        TString fname = Form("fRecMap%d_%d_%d_%d_%d", ihypo, irad, imom, ithe, iph);
+        if (gDirectory->Get(fname) != NULL)
+            delete (TH1D *)gDirectory->Get(fname);
+        TH1D *fproj = fhitmap->ProjectionY(fname, iph + 1, iph + 1);
+        fproj->SetTitle(Form("Particle: %s [%.1f GeV/c, %.1f#circ]. %d photons from radiator %s", particle.Data(), momentum, theta0, iph, radiator.Data()));
+        if (fproj->Integral() > 0)
+            fproj->Fit("gaus", "Q", "", fproj->GetMean() - 4 * fproj->GetRMS(), fproj->GetMean() + 4 * fproj->GetRMS());
+        return fproj;
+    }
+
+    void ResizePIDEffMap(int nmom, int nthe, int hypo)
+    {
+        fPidEffList.clear();
+
+        fPidEffList.resize(nmom);
+        for (int imom = 0; imom < nmom; imom++)
+        {
+            fPidEffList[imom].resize(nthe);
+            for (int ithe = 0; ithe < nthe; ithe++)
+            {
+                fPidEffList[imom][ithe].resize(hypo);
+                for (int ihypo = 0; ihypo < hypo; ihypo++)
+                    fPidEffList[imom][ithe][ihypo].resize(hypo);
             }
         }
     }
