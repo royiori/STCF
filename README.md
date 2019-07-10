@@ -1,5 +1,4 @@
-# STCF
-STCF
+# STCF PID software
 
 ## RICH
 >1.1-NumEval: 数值计算+重建
