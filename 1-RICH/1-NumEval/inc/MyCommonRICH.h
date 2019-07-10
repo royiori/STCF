@@ -8,8 +8,10 @@
 #include "TGraph.h"
 #include "TGraph2D.h"
 #include "TRandom.h"
+#include "TMath.h"
 #include "MyRICHDetector.h"
 #include "MyStyle.h"
+#include "TThread.h"
 
 using namespace std;
 
@@ -72,6 +74,7 @@ public:
                     return gScanDetList[imom][itheta0][ihypo];
         return NULL;
     }
+    vector<vector<vector<MyRICHDetector *>>> GetScanDetector() { return gScanDetList; }
 
     //----------------------------
     /// get detector hit map histograms
@@ -140,8 +143,8 @@ public:
     //----------------------------
     /// get detector pid map histograms
     TH2F *GetPIDMap(int ihypo) { return fPIDMap[ihypo]; }
-    TH1F *GetPIDMapVsMom(int ihypo) { return fPIDVsMomPlot[ihypo];}
-    TH1F *GetPIDMapVsTheta(int ihypo) { return fPIDVsThetaPlot[ihypo];}
+    TH1F *GetPIDMapVsMom(int ihypo) { return fPIDVsMomPlot[ihypo]; }
+    TH1F *GetPIDMapVsTheta(int ihypo) { return fPIDVsThetaPlot[ihypo]; }
 
     //----------------------------
     // draw histograms
@@ -193,6 +196,10 @@ public:
     void SetPrecision(double ep) { epsilon = ep; }
     void SetDatabase(MyDatabaseClass *d) { gDb = d; }
 
+    int GetNevent() { return nEvent; }
+    double GetPrecision() { return epsilon; }
+    MyDatabaseClass *GetDatabase() { return gDb; }
+
     void SaveRings(const char *fname);
     void LoadRings(const char *fname);
 
@@ -212,18 +219,16 @@ public:
     void GeneratePIDHistograms(TString particle, int imom, int ithe);
 
     // reconstruction
-    void ReconstructRICHBySolver(MyRICHDetector *det = 0);
+    void ReconstructRICHDetector(MyRICHDetector *det = 0);
     double ReconstructRICHBySolver(MyRICHDetector *det, double irad, double Xc, double Yc);
-    double ReconstructRICHByBeta(MyRICHDetector *det, double irad, double Xc, double Yc);
-    double ReconstructRICHByBetaSolver(MyRICHDetector *det, double irad, double Xc, double Yc);
-    double Findz0(MyRICHDetector *det, int irad, double Xc, double Yc);
+    double ReconstructRICHByBeta(MyRICHDetector *det, double irad, double Xc, double Yc, vector<double> thklist, vector<double> reflist, vector<double> abslist);
+    double Findz0(MyRICHDetector *det, int irad, double Xc, double Yc, vector<double> thklist, vector<double> abslist);
     double FindPhi(MyRICHDetector *det, double Xc, double Yc, double X0, double Y0);
 
     // pid efficiency 
     bool CalPIDEfficiency();
     int PIDProb(vector<MyRICHDetector *> detlist, vector<pair<double, double>> hit);
     double CalPIDProb(MyRICHDetector *det, vector<pair<double, double>> hit);
-
 
     void DrawFCN(int irad);
 
@@ -265,7 +270,10 @@ private:
     vector<vector<vector<vector<vector<double>>>>> fRecSigErrList; //为重建的角度填图， 用高斯拟合得offset和sigma, [粒子种类][辐射体][动量][角度][光子数]
 
     vector<vector<vector<vector<double>>>> fPidEffList; //[imom][ithe][ihypo][pidhypo]
+public:
+    void SetPIDEff(int imom, int ithe, int ihypo, int jhypo, double eff) { fPidEffList[imom][ithe][ihypo][jhypo] = eff; }
 
+private:
     TH2F *fOffsetMap, *fSigmaMap;
     vector<TH1F *> fOffsetVsNphPlot;   //[hypo]
     vector<TH1F *> fOffsetVsMomPlot;   //[hypo]
@@ -288,7 +296,7 @@ private:
         gDetList.resize(n);
     }
 
-    void ResizeScanDetList(int i, int j, int k) //[动量][角度][粒子种类]
+    void ResizeScanDetList(int nmom, int nthe, int nhypo) //[动量][角度][粒子种类]
     {
         for (int i = 0; i < (int)gScanDetList.size(); i++)
             for (int j = 0; j < (int)gScanDetList[i].size(); j++)
@@ -298,12 +306,12 @@ private:
                         delete gScanDetList[i][j][k];
                 }
 
-        gScanDetList.resize(i);
-        for (int imom = 0; imom < i; imom++)
+        gScanDetList.resize(nmom);
+        for (int imom = 0; imom < nmom; imom++)
         {
-            gScanDetList[imom].resize(j);
-            for (int ithe = 0; ithe < j; ithe++)
-                gScanDetList[imom][ithe].resize(k);
+            gScanDetList[imom].resize(nthe);
+            for (int ithe = 0; ithe < nthe; ithe++)
+                gScanDetList[imom][ithe].resize(nhypo);
         }
     }
 
@@ -390,8 +398,10 @@ private:
             delete (TH1D *)gDirectory->Get(fname);
         TH1D *fproj = fhitmap->ProjectionY(fname, iph + 1, iph + 1);
         fproj->SetTitle(Form("Particle: %s [%.1f GeV/c, %.1f#circ]. %d photons from radiator %s", particle.Data(), momentum, theta0, iph, radiator.Data()));
+        double rms = fproj->GetRMS();
+        rms = (rms < 0.01) ? 0.01 : rms;
         if (fproj->Integral() > 0)
-            fproj->Fit("gaus", "Q", "", fproj->GetMean() - 4 * fproj->GetRMS(), fproj->GetMean() + 4 * fproj->GetRMS());
+            fproj->Fit("gaus", "Q", "", fproj->GetMean() - 4 * rms, fproj->GetMean() + 4 * rms);
         return fproj;
     }
 
@@ -412,5 +422,7 @@ private:
         }
     }
 };
+
+extern MyCommonRICH *gMyCommonRICH;
 
 #endif

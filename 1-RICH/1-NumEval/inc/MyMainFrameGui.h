@@ -15,6 +15,7 @@
 #include "TGResourcePool.h"
 #include "TStyle.h"
 #include "TStyleManager.h"
+#include "TROOT.h"
 #include "TSystem.h"
 #include "TApplication.h"
 #include "Riostream.h"

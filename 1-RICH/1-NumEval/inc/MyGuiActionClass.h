@@ -157,10 +157,9 @@ private:
     TEnv *env;
     TString filePath;
     MyStyle *gMyStyle;
-    MyCommonRICH *gMyCommonRICH;
     MyDatabaseClass *gMyDatabaseClass;
 };
 
 extern MyGuiActionClass *gMyGuiActionClass;
-
+extern MyCommonRICH *gMyCommonRICH;
 #endif

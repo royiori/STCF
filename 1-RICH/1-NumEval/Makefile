@@ -37,7 +37,7 @@ $(LibOut): $(LibObj)
 
 $(MAIN): %:%.o ${OBJS} ${LibObj}
 		$(LD) $(LDFLAGS) -o $@ $^ $(LIBS) -lGui
-		@cp ./lib/RICHDict_rdict.pcm ./
+		@cp ./lib/*.pcm ./
 		@echo "----> $@ done!"
 
 #RICH: $(RICHO) 
@@ -46,8 +46,8 @@ $(MAIN): %:%.o ${OBJS} ${LibObj}
 
 clean:
 		@rm -f $(OBJS)
-		@rm -f RICHDict*
-		@rm -f ./src/RICHDict*
+		@rm -f *Dict*
+		@rm -f ./src/*Dict*
 		@rm -f ./lib/*
 		@rm -f *.o 
 		@rm -f ./obj/*.o

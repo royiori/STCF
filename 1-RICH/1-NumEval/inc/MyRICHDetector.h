@@ -247,7 +247,7 @@ public:
     }
 
     //3.3-- 重建后的结果，X轴：光子数，Y轴：事例中的光子平均后的切伦科夫角, [nRad]
-    int NPhoton = 50;
+    int NPhoton;
     TH2F *fRecMap;
     TH2F *GetRecMap(int flag = 0)
     {
@@ -333,6 +333,7 @@ public:
         id = tid;
         fHitMap = 0;
         fRecMap = 0;
+        NPhoton = 50;
         fWaveLengthHist = 0;
     };
 
