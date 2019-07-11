@@ -8,6 +8,7 @@
 #include "TGraph.h"
 #include "TGraph2D.h"
 #include "TRandom.h"
+#include "TDirectory.h"
 #include "TMath.h"
 #include "MyRICHDetector.h"
 #include "MyStyle.h"
