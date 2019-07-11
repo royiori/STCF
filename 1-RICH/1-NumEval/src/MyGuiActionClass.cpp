@@ -18,51 +18,59 @@ MyGuiActionClass::MyGuiActionClass()
     gMyDatabaseClass = new MyDatabaseClass();
 
     // pages
-    nTabPage = 5;
-    sTabPage[0] = TString("ShowDet");
-    sTabPage[1] = TString("GenDet");
+    nTabPage = 4;
+    sTabPage[0] = TString("Cosmic");
+    sTabPage[1] = TString("Simulation");
     sTabPage[2] = TString("Material");
     sTabPage[3] = TString("Detector");
-    sTabPage[4] = TString("Miscellaneous");
 
-    // page 0
-    iButton[0] = LoadDetFile;
-    sButton[0].push_back("Load Hitmap");
-    sButton[0].push_back("Save Hitmap");
-    sButton[0].push_back("Show the FCN plot");
-    sButton[0].push_back("Show the Specified Particle RICH");
-    sButton[0].push_back("Show Multi-Particles RICH");
-    sButton[0].push_back("Show the SCAN XY-hitmap and N-Photon map");
-    sButton[0].push_back("Show the SCAN Resolution Map");
-    sButton[0].push_back("Load Recon-map");
-    sButton[0].push_back("Save Recon-map");
-    sButton[0].push_back("Show the PID efficiency");
-    nButton[0] = (int)sButton[0].size();
+    // page
+    int ipage = 0;
+    iButton[ipage] = ReadCosmicData;
+    sButton[ipage].push_back("Read cosmic-ray data file");
+    sButton[ipage].push_back("Analysis cosmic-ray data file");
+    sButton[ipage].push_back("Load the analysis results");
+    sButton[ipage].push_back("Save the analysis results");
+    sButton[ipage].push_back("Show the analysis results");
+    nButton[ipage] = (int)sButton[ipage].size();
 
-    // page 1
-    iButton[1] = GenSpecRICH;
-    sButton[1].push_back("Generate the Specified Particle RICH");
-    sButton[1].push_back("Generate Multi-Particles RICH");
-    sButton[1].push_back("Generate the XY-hitmap for SCAN");
-    sButton[1].push_back("Reconstruct to get the Resolution Map");
-    sButton[1].push_back("Reconstruct to get PID efficiency");
-    nButton[1] = (int)sButton[1].size();
+    // page
+    ipage++;
+    iButton[ipage] = LoadDetFile;
+    sButton[ipage].push_back("Load Hitmap");
+    sButton[ipage].push_back("Save Hitmap");
+    sButton[ipage].push_back("Show the FCN plot");
+    sButton[ipage].push_back("Show the Specified Particle RICH");
+    sButton[ipage].push_back("Show Multi-Particles RICH");
+    sButton[ipage].push_back("Show the SCAN XY-hitmap and N-Photon map");
+    sButton[ipage].push_back("Load Recon-map");
+    sButton[ipage].push_back("Save Recon-map");
+    sButton[ipage].push_back("Show the SCAN Resolution Map");
+    sButton[ipage].push_back("Show the PID efficiency Map");
+    sButton[ipage].push_back("SEP");
+    sButton[ipage].push_back("SEP");
+    sButton[ipage].push_back("Generate the Specified Particle RICH");
+    sButton[ipage].push_back("Generate Multi-Particles RICH");
+    sButton[ipage].push_back("SCAN to generate the XY-hitmap");
+    sButton[ipage].push_back("SCAN to generate the Resolution-Map");
+    sButton[ipage].push_back("SCAN to generate the PID efficiency Map");
+    nButton[ipage] = (int)sButton[ipage].size();
 
-    // page1
-    nButton[2] = gMyDatabaseClass->GetNMaterial();
-    iButton[2] = MatList;
-    sButton[2] = gMyDatabaseClass->GetMaterialList();
+    // page
+    ipage++;
+    iButton[ipage] = MatList;
+    sButton[ipage] = gMyDatabaseClass->GetMaterialList();
+    sButton[ipage].push_back("SEP");
+    sButton[ipage].push_back("Draw Sel-Mat");
+    nButton[ipage] = (int)sButton[ipage].size();
 
-    // page 2
-    nButton[3] = gMyDatabaseClass->GetNDetector();
-    iButton[3] = DetList;
-    sButton[3] = gMyDatabaseClass->GetDetectorList();
-
-    // page 3
-    iButton[4] = DrawSelectedMat;
-    sButton[4].push_back("Draw Sel-Mat");
-    sButton[4].push_back("Draw Sel-Det");
-    nButton[4] = (int)sButton[4].size();
+    // page
+    ipage++;
+    iButton[ipage] = DetList;
+    sButton[ipage] = gMyDatabaseClass->GetDetectorList();
+    sButton[ipage].push_back("SEP");
+    sButton[ipage].push_back("Draw Sel-Det");
+    nButton[ipage] = (int)sButton[ipage].size();
 
     // init parameters
     nRadLayer = env->GetValue("nRadLayer", 2);
@@ -439,10 +447,6 @@ void MyGuiActionClass::ExecButtonClick(Long_t bid, const char *cmdStr)
         DoDrawConfig("Show the configurations");
     if (bid == LoadTextBuf)
         DoLoadTextBuf();
-    if (bid == DrawSelectedMat)
-        DoDrawSelectedMat();
-    if (bid == DrawSelectedDet)
-        DoDrawSelectedDet();
     if (bid == LoadDetFile)
         DoLoadDetFile(cmdStr);
     if (bid == SaveDetFile)
@@ -476,10 +480,27 @@ void MyGuiActionClass::ExecButtonClick(Long_t bid, const char *cmdStr)
     if (bid == GenPIDEff)
         DoPIDEff(cmdStr);
 
+    if (bid == ReadCosmicData)
+        DoReadCosmicData(cmdStr);
+    if (bid == AnalysisCosmicData)
+        DoAnalysisCosmicData(cmdStr);
+    if (bid == ShowCosmicData)
+        DoShowCosmicData();
+
     if (MatList <= bid && bid < DetList)
-        ShowMaterialInfo(gMyDatabaseClass->GetMaterialName(bid - MatList));
+    {
+        if (bid - MatList > gMyDatabaseClass->GetNMaterial())
+            DoDrawSelectedMat();
+        else
+            ShowMaterialInfo(gMyDatabaseClass->GetMaterialName(bid - MatList));
+    }
     if (DetList <= bid && bid < AnalysisAction)
-        ShowDetectorInfo(gMyDatabaseClass->GetDetectorName(bid - DetList));
+    {
+        if (bid - DetList > gMyDatabaseClass->GetNDetector())
+            DoDrawSelectedDet();
+        else
+            ShowDetectorInfo(gMyDatabaseClass->GetDetectorName(bid - DetList));
+    }
 }
 
 void MyGuiActionClass::DoDrawConfig(TString scap)
@@ -563,7 +584,7 @@ void MyGuiActionClass::DoLoadTextBuf()
 }
 
 //______________________________________________________________________________
-// analysis button actions
+// hitmap analysis button actions
 void MyGuiActionClass::DoShowSpecRICH(TString cmdStr)
 {
     SetDetectorParameters();
@@ -745,6 +766,26 @@ void MyGuiActionClass::DoGenHitMaps(TString cmdStr)
     gMyMainFrameGui->SwitchCanvas(1);
 }
 
+void MyGuiActionClass::DoSaveDetFile(const char *fname)
+{
+    if (fname == NULL)
+        return;
+    gMyCommonRICH->SaveRings(fname);
+}
+
+void MyGuiActionClass::DoLoadDetFile(const char *fname)
+{
+    if (fname == NULL)
+        return;
+    gMyCommonRICH->LoadRings(fname);
+    GetDetectorParameters();
+
+    DoLoadTextBuf();
+    DoDrawConfig("Show the configurations");
+}
+
+//______________________________________________________________________________
+// reconstruction / PID efficiency analysis button actions
 void MyGuiActionClass::DoRecRings(TString cmdStr)
 {
     SetDetectorParameters();
@@ -887,7 +928,7 @@ void MyGuiActionClass::DoPIDEff(TString cmdStr)
     double the = gMyCommonRICH->GetDetScan(imom, ithe, 0)->Theta0;
 
     gMyCommonRICH->GeneratePIDHistograms(particle, imom, ithe);
-    
+
     //-----pid-map
     gMyMainFrameGui->SwitchCanvas(1);
     gMyCommonRICH->GetPIDMap(0)->Draw("colz");
@@ -930,24 +971,6 @@ void MyGuiActionClass::DoPIDEff(TString cmdStr)
     gMyMainFrameGui->SwitchCanvas(1);
 }
 
-void MyGuiActionClass::DoSaveDetFile(const char *fname)
-{
-    if (fname == NULL)
-        return;
-    gMyCommonRICH->SaveRings(fname);
-}
-
-void MyGuiActionClass::DoLoadDetFile(const char *fname)
-{
-    if (fname == NULL)
-        return;
-    gMyCommonRICH->LoadRings(fname);
-    GetDetectorParameters();
-
-    DoLoadTextBuf();
-    DoDrawConfig("Show the configurations");
-}
-
 void MyGuiActionClass::DoSaveRecFile(const char *fname)
 {
     if (fname == NULL)
@@ -960,6 +983,27 @@ void MyGuiActionClass::DoLoadRecFile(const char *fname)
     if (fname == NULL)
         return;
     gMyCommonRICH->LoadRecFile(fname);
+}
+
+//______________________________________________________________________________
+// cosmic ray data analysis
+void MyGuiActionClass::DoReadCosmicData(const char *fname)
+{
+    ifstream f(fname);
+    if (!f.is_open())
+        return;
+}
+
+void MyGuiActionClass::DoAnalysisCosmicData(TString cmdStr)
+{
+    if (cmdStr == "yes")
+    {
+    }
+    DoShowCosmicData();
+}
+
+void MyGuiActionClass::DoShowCosmicData()
+{
 }
 
 //______________________________________________________________________________

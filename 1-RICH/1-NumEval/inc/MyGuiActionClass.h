@@ -36,22 +36,31 @@ enum ButtonAction
     AnalysisAction = 100,
     DrawSelectedMat,
     DrawSelectedDet,
+
     LoadDetFile,
     SaveDetFile,
     ShowFCN,
     ShowSpecRICH,
     ShowMulParRICH,
     ShowScanRICHList,
-    ShowRecRICHList,
     LoadRecFile,
     SaveRecFile,
+    ShowRecRICHList,
     ShowPIDEff,
-
+    SEP1,
+    SEP2,
     GenSpecRICH,
     GenMulParRICH,
     GenScanRICHList,
     GenRecRICHList,
     GenPIDEff,
+
+    //cosmic ray data analysis
+    ReadCosmicData,
+    AnalysisCosmicData,
+    LoadCosmicRes,
+    SaveCosmicRes,
+    ShowCosmicData,
 };
 
 //-----------------------------------------------------------------------------------------------
@@ -105,6 +114,10 @@ private:
     void DoGenHitMaps(TString cmdStr);
     void DoRecRings(TString cmdStr);
     void DoPIDEff(TString cmdStr);
+
+    void DoReadCosmicData(const char *fname);
+    void DoAnalysisCosmicData(TString cmdStr);
+    void DoShowCosmicData();
 
     //定义探测器结构
     int nRadLayer;            //可以有多层传输层

@@ -12,6 +12,8 @@
 #include "TCanvas.h"
 #include "TGTextEdit.h"
 #include "TGComboBox.h"
+#include "TG3DLine.h"
+#include "TGClient.h"
 #include "TGResourcePool.h"
 #include "TStyle.h"
 #include "TStyleManager.h"
@@ -62,6 +64,8 @@ private:
     TGComboBox *fComboCmd;
     TGTextEntry *fCommand;
     TGTextBuffer *fCommandBuf;
+
+    ClassDef(MyMainFrameGui, 1) 
 };
 
 extern MyMainFrameGui *gMyMainFrameGui;

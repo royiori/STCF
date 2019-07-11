@@ -379,7 +379,7 @@ private:
         //det.fWaveLengthHist->SetDirectory(0);
     }
 
-    ClassDef(MyRICHDetector, 1) //Jet class
+    ClassDef(MyRICHDetector, 1) 
 };
 
 #endif

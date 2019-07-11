@@ -75,25 +75,25 @@ namespace ROOT {
 } // end of namespace ROOT
 
 namespace ROOT {
-   static TClass *MyMainFrameGui_Dictionary();
-   static void MyMainFrameGui_TClassManip(TClass*);
    static void delete_MyMainFrameGui(void *p);
    static void deleteArray_MyMainFrameGui(void *p);
    static void destruct_MyMainFrameGui(void *p);
+   static void streamer_MyMainFrameGui(TBuffer &buf, void *obj);
 
    // Function generating the singleton type initializer
    static TGenericClassInfo *GenerateInitInstanceLocal(const ::MyMainFrameGui*)
    {
       ::MyMainFrameGui *ptr = 0;
-      static ::TVirtualIsAProxy* isa_proxy = new ::TIsAProxy(typeid(::MyMainFrameGui));
+      static ::TVirtualIsAProxy* isa_proxy = new ::TInstrumentedIsAProxy< ::MyMainFrameGui >(0);
       static ::ROOT::TGenericClassInfo 
-         instance("MyMainFrameGui", "inc/MyMainFrameGui.h", 25,
+         instance("MyMainFrameGui", ::MyMainFrameGui::Class_Version(), "inc/MyMainFrameGui.h", 27,
                   typeid(::MyMainFrameGui), ::ROOT::Internal::DefineBehavior(ptr, ptr),
-                  &MyMainFrameGui_Dictionary, isa_proxy, 0,
+                  &::MyMainFrameGui::Dictionary, isa_proxy, 16,
                   sizeof(::MyMainFrameGui) );
       instance.SetDelete(&delete_MyMainFrameGui);
       instance.SetDeleteArray(&deleteArray_MyMainFrameGui);
       instance.SetDestructor(&destruct_MyMainFrameGui);
+      instance.SetStreamerFunc(&streamer_MyMainFrameGui);
       return &instance;
    }
    TGenericClassInfo *GenerateInitInstance(const ::MyMainFrameGui*)
@@ -102,17 +102,6 @@ namespace ROOT {
    }
    // Static variable to force the class initialization
    static ::ROOT::TGenericClassInfo *_R__UNIQUE_DICT_(Init) = GenerateInitInstanceLocal((const ::MyMainFrameGui*)0x0); R__UseDummy(_R__UNIQUE_DICT_(Init));
-
-   // Dictionary for non-ClassDef classes
-   static TClass *MyMainFrameGui_Dictionary() {
-      TClass* theClass =::ROOT::GenerateInitInstanceLocal((const ::MyMainFrameGui*)0x0)->GetClass();
-      MyMainFrameGui_TClassManip(theClass);
-   return theClass;
-   }
-
-   static void MyMainFrameGui_TClassManip(TClass* ){
-   }
-
 } // end of namespace ROOT
 
 //______________________________________________________________________________
@@ -151,6 +140,41 @@ TClass *MyRICHDetector::Class()
 }
 
 //______________________________________________________________________________
+atomic_TClass_ptr MyMainFrameGui::fgIsA(0);  // static to hold class pointer
+
+//______________________________________________________________________________
+const char *MyMainFrameGui::Class_Name()
+{
+   return "MyMainFrameGui";
+}
+
+//______________________________________________________________________________
+const char *MyMainFrameGui::ImplFileName()
+{
+   return ::ROOT::GenerateInitInstanceLocal((const ::MyMainFrameGui*)0x0)->GetImplFileName();
+}
+
+//______________________________________________________________________________
+int MyMainFrameGui::ImplFileLine()
+{
+   return ::ROOT::GenerateInitInstanceLocal((const ::MyMainFrameGui*)0x0)->GetImplFileLine();
+}
+
+//______________________________________________________________________________
+TClass *MyMainFrameGui::Dictionary()
+{
+   fgIsA = ::ROOT::GenerateInitInstanceLocal((const ::MyMainFrameGui*)0x0)->GetClass();
+   return fgIsA;
+}
+
+//______________________________________________________________________________
+TClass *MyMainFrameGui::Class()
+{
+   if (!fgIsA.load()) { R__LOCKGUARD(gInterpreterMutex); fgIsA = ::ROOT::GenerateInitInstanceLocal((const ::MyMainFrameGui*)0x0)->GetClass(); }
+   return fgIsA;
+}
+
+//______________________________________________________________________________
 void MyRICHDetector::Streamer(TBuffer &R__b)
 {
    // Stream an object of class MyRICHDetector.
@@ -183,6 +207,39 @@ namespace ROOT {
    }
 } // end of namespace ROOT for class ::MyRICHDetector
 
+//______________________________________________________________________________
+void MyMainFrameGui::Streamer(TBuffer &R__b)
+{
+   // Stream an object of class MyMainFrameGui.
+
+   UInt_t R__s, R__c;
+   if (R__b.IsReading()) {
+      Version_t R__v = R__b.ReadVersion(&R__s, &R__c); if (R__v) { }
+      TGMainFrame::Streamer(R__b);
+      R__b >> fSettingText;
+      R__b >> fCTab;
+      int R__i;
+      for (R__i = 0; R__i < 100; R__i++)
+         R__b >> fCA[R__i];
+      R__b >> fComboCmd;
+      R__b >> fCommand;
+      R__b >> fCommandBuf;
+      R__b.CheckByteCount(R__s, R__c, MyMainFrameGui::IsA());
+   } else {
+      R__c = R__b.WriteVersion(MyMainFrameGui::IsA(), kTRUE);
+      TGMainFrame::Streamer(R__b);
+      R__b << fSettingText;
+      R__b << fCTab;
+      int R__i;
+      for (R__i = 0; R__i < 100; R__i++)
+         R__b << fCA[R__i];
+      R__b << fComboCmd;
+      R__b << fCommand;
+      R__b << fCommandBuf;
+      R__b.SetByteCount(R__c, kTRUE);
+   }
+}
+
 namespace ROOT {
    // Wrapper around operator delete
    static void delete_MyMainFrameGui(void *p) {
@@ -194,6 +251,10 @@ namespace ROOT {
    static void destruct_MyMainFrameGui(void *p) {
       typedef ::MyMainFrameGui current_t;
       ((current_t*)p)->~current_t();
+   }
+   // Wrapper around a custom streamer member function.
+   static void streamer_MyMainFrameGui(TBuffer &buf, void *obj) {
+      ((::MyMainFrameGui*)obj)->::MyMainFrameGui::Streamer(buf);
    }
 } // end of namespace ROOT for class ::MyMainFrameGui
 
@@ -404,7 +465,7 @@ namespace {
 #pragma clang diagnostic ignored "-Wignored-attributes"
 #pragma clang diagnostic ignored "-Wreturn-type-c-linkage"
 extern int __Cling_Autoloading_Map;
-class __attribute__((annotate(R"ATTRDUMP(Jet class)ATTRDUMP"))) __attribute__((annotate("$clingAutoload$inc/MyRICHDetector.h")))  MyRICHDetector;
+class __attribute__((annotate("$clingAutoload$inc/MyRICHDetector.h")))  MyRICHDetector;
 class __attribute__((annotate("$clingAutoload$inc/MyMainFrameGui.h")))  MyMainFrameGui;
 )DICTFWDDCLS";
     static const char* payloadCode = R"DICTPAYLOAD(

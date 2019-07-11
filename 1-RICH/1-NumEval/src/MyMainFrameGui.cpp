@@ -25,6 +25,9 @@ MyMainFrameGui::MyMainFrameGui(const TGWindow *p, int w, int h) : TGMainFrame(p,
     TGLayoutHints *LayoutY = new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsExpandY, 2, 2, 2, 2);
     TGLayoutHints *LayoutXY = new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsExpandX | kLHintsExpandY, 2, 2, 2, 2);
 
+    Pixel_t green;
+    fClient->GetColorByName("green", green);
+
     TGHorizontalFrame *fHFrame0 = new TGHorizontalFrame(this, 10, 10);
     AddFrame(fHFrame0, LayoutXY);
 
@@ -69,14 +72,24 @@ MyMainFrameGui::MyMainFrameGui(const TGWindow *p, int w, int h) : TGMainFrame(p,
 
             for (int j = 0; j < gMyGuiActionClass->GetNPageButton(i); j++)
             {
-                TGTextButton *fButtonTmp = new TGTextButton(fTabPage, gMyGuiActionClass->GetPageButtonName(i, j), gMyGuiActionClass->GetIndexButton(i) + j);
-                fButtonTmp->Associate(this);
-                fTabPage->AddFrame(fButtonTmp, LayoutX);
+                if (gMyGuiActionClass->GetPageButtonName(i, j) == "SEP")
+                {
+                    TGHorizontal3DLine *fHorizontal3DLine = new TGHorizontal3DLine(fTabPage, 102, 8);
+                    fTabPage->AddFrame(fHorizontal3DLine, LayoutX);
+                }
+                else
+                {
+                    TGTextButton *fButtonTmp = new TGTextButton(fTabPage, gMyGuiActionClass->GetPageButtonName(i, j), gMyGuiActionClass->GetIndexButton(i) + j);
+                    fButtonTmp->Associate(this);
+                    fTabPage->AddFrame(fButtonTmp, LayoutX);
+                    if(gMyGuiActionClass->GetPageButtonName(i, j).BeginsWith("Load"))
+                        fButtonTmp->ChangeBackground(green);
+                }
             }
         }
     }
 
-    //3.
+    //3. Results tab
     {
         fCTab = new TGTab(fVFrame3, 580, 580);
         const int NPage1 = 10;
@@ -99,7 +112,7 @@ MyMainFrameGui::MyMainFrameGui(const TGWindow *p, int w, int h) : TGMainFrame(p,
         pt->AddText("Author: LIUQ");
         pt->AddText("You can follow me on https://github.com/royiori");
         pt->Draw();
-        
+
         fCTab->SetTab(0);
         fCTab->Resize(fCTab->GetDefaultSize());
         fVFrame3->AddFrame(fCTab, LayoutXY);
@@ -157,7 +170,7 @@ Bool_t MyMainFrameGui::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
             fi.fIniDir = StrDup(dir);
             TString cmdStr;
 
-            if (parm1 == SaveDetFile || parm1 == LoadDetFile || parm1 == SaveRecFile || parm1 == LoadRecFile)
+            if (parm1 == SaveDetFile || parm1 == LoadDetFile || parm1 == SaveRecFile || parm1 == LoadRecFile || parm1 == ReadCosmicData || parm1 == LoadCosmicRes || parm1 == SaveCosmicRes)
             {
                 new TGFileDialog(gClient->GetRoot(), this, kFDOpen, &fi);
                 if (fi.fFilename == NULL)
@@ -167,7 +180,7 @@ Bool_t MyMainFrameGui::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
                     cmdStr += ".root";
             }
 
-            if (parm1 == GenSpecRICH || parm1 == GenMulParRICH || parm1 == GenScanRICHList || parm1 == GenRecRICHList || parm1 == GenPIDEff)
+            if (parm1 == GenSpecRICH || parm1 == GenMulParRICH || parm1 == GenScanRICHList || parm1 == GenRecRICHList || parm1 == GenPIDEff || parm1 == AnalysisCosmicData)
             {
                 int retval;
                 new TGMsgBox(gClient->GetRoot(), this, "Message-RICH", "Do you want RE-generate the histograms?",
