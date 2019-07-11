@@ -90,6 +90,16 @@ MyMainFrameGui::MyMainFrameGui(const TGWindow *p, int w, int h) : TGMainFrame(p,
             fCA[i]->SetFillColor(0);
             fCA[i]->SetBorderMode(0);
         }
+
+        TGCompositeFrame *fTabPage = fCTab->AddTab("About");
+        TRootEmbeddedCanvas *fEmbeddedCanvas = new TRootEmbeddedCanvas(0, fTabPage, 580, 360);
+        fTabPage->AddFrame(fEmbeddedCanvas, LayoutXY);
+        TPaveText *pt = new TPaveText(0.2, 0.2, 0.8, 0.8);
+        pt->AddText("STCF RICH-PID software package");
+        pt->AddText("Author: LIUQ");
+        pt->AddText("You can follow me on https://github.com/royiori");
+        pt->Draw();
+        
         fCTab->SetTab(0);
         fCTab->Resize(fCTab->GetDefaultSize());
         fVFrame3->AddFrame(fCTab, LayoutXY);
