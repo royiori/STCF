@@ -25,8 +25,9 @@ MyMainFrameGui::MyMainFrameGui(const TGWindow *p, int w, int h) : TGMainFrame(p,
     TGLayoutHints *LayoutY = new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsExpandY, 2, 2, 2, 2);
     TGLayoutHints *LayoutXY = new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsExpandX | kLHintsExpandY, 2, 2, 2, 2);
 
-    Pixel_t green;
+    Pixel_t green, yellow;
     fClient->GetColorByName("green", green);
+    fClient->GetColorByName("yellow", yellow);
 
     TGHorizontalFrame *fHFrame0 = new TGHorizontalFrame(this, 10, 10);
     AddFrame(fHFrame0, LayoutXY);
@@ -84,6 +85,8 @@ MyMainFrameGui::MyMainFrameGui(const TGWindow *p, int w, int h) : TGMainFrame(p,
                     fTabPage->AddFrame(fButtonTmp, LayoutX);
                     if(gMyGuiActionClass->GetPageButtonName(i, j).BeginsWith("Load"))
                         fButtonTmp->ChangeBackground(green);
+                    if(gMyGuiActionClass->GetPageButtonName(i, j).BeginsWith("Draw"))
+                        fButtonTmp->ChangeBackground(yellow);
                 }
             }
         }

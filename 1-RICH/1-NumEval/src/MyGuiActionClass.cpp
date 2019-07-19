@@ -118,13 +118,13 @@ MyGuiActionClass::MyGuiActionClass()
     trkStep = env->GetValue("trkStep", 1e-1);
     nphi = env->GetValue("nphi", 360);
 
-    np = env->GetValue("np", 4);
+    np = env->GetValue("np", 2);
     pMin = env->GetValue("pMin", 1.0);
-    pMax = env->GetValue("pMax", 4.0);
+    pMax = env->GetValue("pMax", 2.0);
 
-    nthe0 = env->GetValue("nthe0", 11);
+    nthe0 = env->GetValue("nthe0", 3);
     The0Min = env->GetValue("The0Min", 0);
-    The0Max = env->GetValue("The0Max", 10);
+    The0Max = env->GetValue("The0Max", 2);
 
     iph = env->GetValue("iph", 1);
     irad1 = env->GetValue("irad1", 0);
