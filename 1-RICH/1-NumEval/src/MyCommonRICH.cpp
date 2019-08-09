@@ -1035,7 +1035,9 @@ double MyCommonRICH::ReconstructRICHByBeta(MyRICHDetector *det, double irad, dou
     rthec1 = acos(1 / sqrt(1 + beta * beta / (1 + Tg * Tg / R0 / R0)));
 
     //5. theta1->thetac
-    return BetaThetaC(theta0, rthec1, phi, epsilon);
+    double rthec;
+    rthec = acos(cos(theta0) * cos(rthec1) + sin(theta0) * sin(rthec1) * sin(phi));
+    //return BetaThetaC(theta0, rthec1, phi, epsilon);
 }
 
 //-----------利用求解投影a来重建的算法-------------------------------------------

@@ -1,0 +1,16 @@
+#
+/control/verbose 0
+/run/verbose 0
+/vis/verbose 0
+/process/verbose 0
+/tracking/verbose 0
+#
+/run/initialize
+/process/eLoss/verbose 0
+#
+/gun/particle gamma
+/MySimulation/gun/direction 0 0 -1 
+/MySimulation/gun/energy 5.9 keV
+/MySimulation/gun/position 0 0 0 
+/MySimulation/gun/polarization 0 1 0 
+/run/beamOn 100

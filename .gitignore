@@ -158,6 +158,9 @@
 # vscode
 .vscode/
 
+# debug
+*debug/
+
 # User data
 *.pd1
 *.dat
