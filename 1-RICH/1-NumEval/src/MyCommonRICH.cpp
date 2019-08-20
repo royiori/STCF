@@ -274,6 +274,7 @@ MyCommonRICH::MyCommonRICH()
     gDet->SetNHypothesis(NHYPO);
     epsilon = 1e-5;
     nEvent = 1e4;
+    fileName = TString("./tmp.root");
 }
 
 MyCommonRICH::~MyCommonRICH()
@@ -492,6 +493,16 @@ void MyCommonRICH::UpdateThetaCExp(MyRICHDetector *det, double lambda)
 
 void MyCommonRICH::SaveRings(const char *fname)
 {
+    //hitmap文件规则：
+    //随着分析数据范围的变多以及分析时间过长，将文件划分为多个子文件将有助于增加鲁棒性
+    //hitmap文件作为分析的第一步，按以下规则来保存：
+    //1. 在用户点击SaveRings，仅仅保存用户设置的探测器参数，即gDet，同时保存这个文件名
+    //2. 在用户点击Scan Hitmap后，将进行多重循环来生成hitmap
+    //   此时以momentum为单位，在文件名后面添加“_mom_%d.root"来保存每一轮的hitmap
+
+    fileName = TString(fname);
+
+    //1. fileName保存用户设置的det信息
     TFile f(fname, "recreate");
     if (!f.IsOpen())
         return;
@@ -501,7 +512,7 @@ void MyCommonRICH::SaveRings(const char *fname)
     MyRICHDetector *det = new MyRICHDetector();
     T->Branch("det", "MyRICHDetector", &det, 20000, 1);
 
-    //1. gDet
+    //1. 保存gDet
     det = gDet; //->BuildFrom(*gDet, -1, 1);
     T->Fill();
 
@@ -512,6 +523,7 @@ void MyCommonRICH::SaveRings(const char *fname)
         T->Fill();
     }
 
+    /* 以下内容在 GenerateTheScanHitMapsForEachDetector 函数里单独保存为独立的root文件
     //3. gScanDetList
     for (int imom = 0; imom < (int)gScanDetList.size(); imom++)
         for (int ithe = 0; ithe < (int)gScanDetList[imom].size(); ithe++)
@@ -520,6 +532,7 @@ void MyCommonRICH::SaveRings(const char *fname)
                 det = gScanDetList[imom][ithe][ihypo]; //->BuildFrom(*gScanDetList[imom][ithe][ihypo]);
                 T->Fill();
             }
+    */
 
     T->Write();
     cout << "----> Current results are stored to " << fname << "." << endl;
@@ -527,6 +540,10 @@ void MyCommonRICH::SaveRings(const char *fname)
 
 void MyCommonRICH::LoadRings(const char *fname)
 {
+    //------------------
+    //1. 读取基本gDet的root文件
+    fileName = TString(fname);
+
     TH1::AddDirectory(kFALSE);
     TFile f(fname);
     if (!f.IsOpen())
@@ -537,35 +554,54 @@ void MyCommonRICH::LoadRings(const char *fname)
     T->SetBranchAddress("det", &det);
     cout << "----> Total entries: " << T->GetEntries() << endl;
 
-    //1. gDet
+    //1.1 gDet
     int ientry = 0;
     T->GetEntry(ientry++);
     gDirectory->cd();
     gDet->BuildFrom(*det, -1, 1);
 
-    //2. gDetList
+    //1.2 gDetList
     ResizeDetList(gDet->nhypo);
     for (int i = 0; i < gDet->nhypo; i++)
     {
         T->GetEntry(ientry++);
         gDetList[i] = new MyRICHDetector(*det, -1, 1);
     }
+    f.Close();
 
-    //3. gScanDetList
+    //------------------
+    //2. 读取gScanDetList
     ResizeScanDetList(gDet->np, gDet->nthe0, gDet->nhypo);
 
+    //在这里需要读取每个单独的root文件
     for (int imom = 0; imom < gDet->np; imom++)
     {
-        cout << "Loading " << imom << endl;
+        TString fName = fileName;
+        fName.Remove(fName.Index(".root"), 5);
+        fName += TString(Form("_imom_%d.root", imom));
+        TFile rootfile(fName);
+        if (!rootfile.IsOpen())
+        {
+            cout << "#### Fatal error: Can't open " << fName << " to read!" << endl;
+            continue;
+        }
+
+        MyRICHDetector *detector = new MyRICHDetector(0);
+        TTree *tree = (TTree *)rootfile.Get("TTree");
+        tree->SetBranchAddress("det", &detector);
+        ientry = 0;
+
+        cout << "Loading " << imom << " from " << fName << endl;
         for (int ithe = 0; ithe < gDet->nthe0; ithe++)
             for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
             {
-                T->GetEntry(ientry++);
-                gScanDetList[imom][ithe][ihypo] = new MyRICHDetector(*det, -1, 1);
+                tree->GetEntry(ientry++);
+                gScanDetList[imom][ithe][ihypo] = new MyRICHDetector(*detector, -1, 1);
             }
+
+        rootfile.Close();
     }
 
-    f.Close();
     cout << "----> Total entries loaded. " << endl;
 }
 
@@ -882,6 +918,8 @@ void MyCommonRICH::GenerateTheScanHitMapsForEachDetector()
     cout << "\n---------------------------";
     int id = 10;
     for (int imom = 0; imom < gDet->np; imom++)
+    {
+        // 1. 循环生成hitmap
         for (int ithe = 0; ithe < gDet->nthe0; ithe++)
             for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
             {
@@ -893,6 +931,28 @@ void MyCommonRICH::GenerateTheScanHitMapsForEachDetector()
                 gScanDetList[imom][ithe][ihypo]->SetParticleGun(mom, Theta0);
                 GenerateDetRing(gScanDetList[imom][ithe][ihypo]);
             }
+
+        // 2. 保存root文件
+        TString fname = fileName;
+        fname.Remove(fname.Index(".root"), 5);
+        fname += TString(Form("_imom_%d.root", imom));
+        TFile f(fname, "recreate");
+
+        // save detector infor.
+        TTree *T = new TTree("TTree", "NumClass");
+        MyRICHDetector *det = new MyRICHDetector();
+        T->Branch("det", "MyRICHDetector", &det, 20000, 1);
+
+        for (int ithe = 0; ithe < gDet->nthe0; ithe++)
+            for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
+            {
+                det = gScanDetList[imom][ithe][ihypo];
+                T->Fill();
+            }
+
+        T->Write();
+        f.Close();
+    }
 }
 
 //---- 被GuiAction调用的函数

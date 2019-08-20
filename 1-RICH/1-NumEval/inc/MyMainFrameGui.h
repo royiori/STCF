@@ -24,6 +24,8 @@
 
 #include "MyGuiActionClass.h"
 
+using namespace std;
+
 class MyMainFrameGui : public TGMainFrame
 {
 public:
@@ -53,6 +55,7 @@ public:
     TGText *GetText() { return fSettingText->GetText(); }
 
     void HandleCommand();
+    void ToggleButList(bool, int);
 
     int GetNPage() { return NPage; }
 
@@ -60,6 +63,9 @@ private:
     TGTextEdit *fSettingText;
     TGTab *fCTab;
     TCanvas *fCA[100];
+
+    //vector<TGTextButton *> butList;
+    map<int ,TGTextButton *> butList;
 
     virtual void CloseWindow();
     virtual Bool_t ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2);
@@ -69,7 +75,7 @@ private:
     TGTextBuffer *fCommandBuf;
 
     int NPage;
-    
+
     ClassDef(MyMainFrameGui, 1)
 };
 

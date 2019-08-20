@@ -86,7 +86,7 @@ namespace ROOT {
       ::MyMainFrameGui *ptr = 0;
       static ::TVirtualIsAProxy* isa_proxy = new ::TInstrumentedIsAProxy< ::MyMainFrameGui >(0);
       static ::ROOT::TGenericClassInfo 
-         instance("MyMainFrameGui", ::MyMainFrameGui::Class_Version(), "inc/MyMainFrameGui.h", 27,
+         instance("MyMainFrameGui", ::MyMainFrameGui::Class_Version(), "inc/MyMainFrameGui.h", 29,
                   typeid(::MyMainFrameGui), ::ROOT::Internal::DefineBehavior(ptr, ptr),
                   &::MyMainFrameGui::Dictionary, isa_proxy, 16,
                   sizeof(::MyMainFrameGui) );
@@ -221,6 +221,26 @@ void MyMainFrameGui::Streamer(TBuffer &R__b)
       int R__i;
       for (R__i = 0; R__i < 100; R__i++)
          R__b >> fCA[R__i];
+      {
+         map<int,TGTextButton*> &R__stl =  butList;
+         R__stl.clear();
+         TClass *R__tcl2 = TBuffer::GetClass(typeid(class TGTextButton *));
+         if (R__tcl2==0) {
+            Error("butList streamer","Missing the TClass object for class TGTextButton *!");
+            return;
+         }
+         int R__i, R__n;
+         R__b >> R__n;
+         for (R__i = 0; R__i < R__n; R__i++) {
+            int R__t;
+            R__b >> R__t;
+            TGTextButton* R__t2;
+            R__t2 = (TGTextButton*)R__b.ReadObjectAny(R__tcl2);
+            typedef int Value_t;
+            std::pair<Value_t const, class TGTextButton * > R__t3(R__t,R__t2);
+            R__stl.insert(R__t3);
+         }
+      }
       R__b >> fComboCmd;
       R__b >> fCommand;
       R__b >> fCommandBuf;
@@ -234,6 +254,18 @@ void MyMainFrameGui::Streamer(TBuffer &R__b)
       int R__i;
       for (R__i = 0; R__i < 100; R__i++)
          R__b << fCA[R__i];
+      {
+         map<int,TGTextButton*> &R__stl =  butList;
+         int R__n=int(R__stl.size());
+         R__b << R__n;
+         if(R__n) {
+            map<int,TGTextButton*>::iterator R__k;
+            for (R__k = R__stl.begin(); R__k != R__stl.end(); ++R__k) {
+            R__b << ((*R__k).first );
+            R__b << ((*R__k).second);
+            }
+         }
+      }
       R__b << fComboCmd;
       R__b << fCommand;
       R__b << fCommandBuf;
@@ -448,6 +480,69 @@ namespace ROOT {
       ((current_t*)p)->~current_t();
    }
 } // end of namespace ROOT for class vector<TH2F*>
+
+namespace ROOT {
+   static TClass *maplEintcOTGTextButtonmUgR_Dictionary();
+   static void maplEintcOTGTextButtonmUgR_TClassManip(TClass*);
+   static void *new_maplEintcOTGTextButtonmUgR(void *p = 0);
+   static void *newArray_maplEintcOTGTextButtonmUgR(Long_t size, void *p);
+   static void delete_maplEintcOTGTextButtonmUgR(void *p);
+   static void deleteArray_maplEintcOTGTextButtonmUgR(void *p);
+   static void destruct_maplEintcOTGTextButtonmUgR(void *p);
+
+   // Function generating the singleton type initializer
+   static TGenericClassInfo *GenerateInitInstanceLocal(const map<int,TGTextButton*>*)
+   {
+      map<int,TGTextButton*> *ptr = 0;
+      static ::TVirtualIsAProxy* isa_proxy = new ::TIsAProxy(typeid(map<int,TGTextButton*>));
+      static ::ROOT::TGenericClassInfo 
+         instance("map<int,TGTextButton*>", -2, "map", 873,
+                  typeid(map<int,TGTextButton*>), ::ROOT::Internal::DefineBehavior(ptr, ptr),
+                  &maplEintcOTGTextButtonmUgR_Dictionary, isa_proxy, 0,
+                  sizeof(map<int,TGTextButton*>) );
+      instance.SetNew(&new_maplEintcOTGTextButtonmUgR);
+      instance.SetNewArray(&newArray_maplEintcOTGTextButtonmUgR);
+      instance.SetDelete(&delete_maplEintcOTGTextButtonmUgR);
+      instance.SetDeleteArray(&deleteArray_maplEintcOTGTextButtonmUgR);
+      instance.SetDestructor(&destruct_maplEintcOTGTextButtonmUgR);
+      instance.AdoptCollectionProxyInfo(TCollectionProxyInfo::Generate(TCollectionProxyInfo::MapInsert< map<int,TGTextButton*> >()));
+      return &instance;
+   }
+   // Static variable to force the class initialization
+   static ::ROOT::TGenericClassInfo *_R__UNIQUE_DICT_(Init) = GenerateInitInstanceLocal((const map<int,TGTextButton*>*)0x0); R__UseDummy(_R__UNIQUE_DICT_(Init));
+
+   // Dictionary for non-ClassDef classes
+   static TClass *maplEintcOTGTextButtonmUgR_Dictionary() {
+      TClass* theClass =::ROOT::GenerateInitInstanceLocal((const map<int,TGTextButton*>*)0x0)->GetClass();
+      maplEintcOTGTextButtonmUgR_TClassManip(theClass);
+   return theClass;
+   }
+
+   static void maplEintcOTGTextButtonmUgR_TClassManip(TClass* ){
+   }
+
+} // end of namespace ROOT
+
+namespace ROOT {
+   // Wrappers around operator new
+   static void *new_maplEintcOTGTextButtonmUgR(void *p) {
+      return  p ? ::new((::ROOT::Internal::TOperatorNewHelper*)p) map<int,TGTextButton*> : new map<int,TGTextButton*>;
+   }
+   static void *newArray_maplEintcOTGTextButtonmUgR(Long_t nElements, void *p) {
+      return p ? ::new((::ROOT::Internal::TOperatorNewHelper*)p) map<int,TGTextButton*>[nElements] : new map<int,TGTextButton*>[nElements];
+   }
+   // Wrapper around operator delete
+   static void delete_maplEintcOTGTextButtonmUgR(void *p) {
+      delete ((map<int,TGTextButton*>*)p);
+   }
+   static void deleteArray_maplEintcOTGTextButtonmUgR(void *p) {
+      delete [] ((map<int,TGTextButton*>*)p);
+   }
+   static void destruct_maplEintcOTGTextButtonmUgR(void *p) {
+      typedef map<int,TGTextButton*> current_t;
+      ((current_t*)p)->~current_t();
+   }
+} // end of namespace ROOT for class map<int,TGTextButton*>
 
 namespace {
   void TriggerDictionaryInitialization_RICHDict_Impl() {

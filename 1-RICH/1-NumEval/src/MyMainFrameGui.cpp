@@ -84,10 +84,13 @@ MyMainFrameGui::MyMainFrameGui(const TGWindow *p, int w, int h) : TGMainFrame(p,
                     TGTextButton *fButtonTmp = new TGTextButton(fTabPage, gMyGuiActionClass->GetPageButtonName(i, j), gMyGuiActionClass->GetIndexButton(i) + j);
                     fButtonTmp->Associate(this);
                     fTabPage->AddFrame(fButtonTmp, LayoutX);
-                    if(gMyGuiActionClass->GetPageButtonName(i, j).BeginsWith("Load"))
+                    if (gMyGuiActionClass->GetPageButtonName(i, j).BeginsWith("Load"))
                         fButtonTmp->ChangeBackground(green);
-                    if(gMyGuiActionClass->GetPageButtonName(i, j).BeginsWith("Draw"))
+                    if (gMyGuiActionClass->GetPageButtonName(i, j).BeginsWith("Set"))
                         fButtonTmp->ChangeBackground(yellow);
+                    if (gMyGuiActionClass->GetPageButtonName(i, j).BeginsWith("Draw"))
+                        fButtonTmp->ChangeBackground(yellow);
+                    butList.insert(pair<int, TGTextButton *>(gMyGuiActionClass->GetIndexButton(i) + j, fButtonTmp));
                 }
             }
         }
@@ -131,6 +134,8 @@ MyMainFrameGui::MyMainFrameGui(const TGWindow *p, int w, int h) : TGMainFrame(p,
         fHFrame31->AddFrame(fComboCmd, LayoutX);
         fVFrame3->AddFrame(fHFrame31, LayoutX);
     }
+
+    ToggleButList(0, 0);
 
     SetWindowName("STCF-RICH");
     SetIconName("STCF-RICH");
@@ -192,6 +197,21 @@ Bool_t MyMainFrameGui::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
                 cmdStr = (retval == 1) ? "yes" : "no";
             }
 
+            if (parm1 == GenSpecRICH || parm1 == SaveDetFile)
+                ToggleButList(1, 1);
+            if (parm1 == GenMulParRICH || parm1 == SaveDetFile)
+                ToggleButList(1, 2);
+            if (parm1 == LoadDetFile || parm1 == GenScanRICHList)
+                ToggleButList(1, 3);
+            if (parm1 == LoadRecFile || parm1 == GenRecRICHList)
+                ToggleButList(1, 4);
+            if (parm1 == LoadRecFile || parm1 == GenPIDEff)
+                ToggleButList(1, 5);
+            if (parm1 == SaveDetFile)
+                ToggleButList(1, 6);
+            if (parm1 == SaveRecFile)
+                ToggleButList(1, 7);
+
             gMyGuiActionClass->ExecButtonClick(parm1, cmdStr.Data());
             break;
         }
@@ -213,4 +233,39 @@ void MyMainFrameGui::HandleCommand()
         fComboCmd->InsertEntry(string, 0, -1);
         fCommand->Clear();
     }
+}
+
+void MyMainFrameGui::ToggleButList(bool on, int flag)
+{
+    EButtonState stat = (on) ? kButtonUp : kButtonDisabled;
+
+    map<int, TGTextButton *>::iterator mIter;
+
+    if (flag == 0) //初始状态
+    {
+        butList.find(ShowSpecRICH)->second->SetState(stat);
+        butList.find(ShowMulParRICH)->second->SetState(stat);
+        butList.find(ShowScanRICHList)->second->SetState(stat);
+        butList.find(ShowRecRICHList)->second->SetState(stat);
+        butList.find(ShowPIDEff)->second->SetState(stat);
+        butList.find(GenScanRICHList)->second->SetState(stat);
+        butList.find(GenRecRICHList)->second->SetState(stat);
+        butList.find(GenPIDEff)->second->SetState(stat);
+    }
+    if (flag == 1)
+        butList.find(ShowSpecRICH)->second->SetState(stat);
+    if (flag == 2)
+        butList.find(ShowMulParRICH)->second->SetState(stat);
+    if (flag == 3)
+        butList.find(ShowScanRICHList)->second->SetState(stat);
+    if (flag == 4)
+        butList.find(ShowRecRICHList)->second->SetState(stat);
+    if (flag == 5)
+        butList.find(ShowPIDEff)->second->SetState(stat);
+    if (flag == 6)
+        butList.find(GenScanRICHList)->second->SetState(stat);
+    if (flag == 7)
+        butList.find(GenRecRICHList)->second->SetState(stat);
+    if (flag == 7)
+        butList.find(GenPIDEff)->second->SetState(stat);
 }

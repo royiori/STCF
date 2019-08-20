@@ -275,6 +275,9 @@ public:
     void SetPIDEff(int imom, int ithe, int ihypo, int jhypo, double eff) { fPidEffList[imom][ithe][ihypo][jhypo] = eff; }
 
 private:
+
+    TString fileName;
+
     TH2F *fOffsetMap, *fSigmaMap;
     vector<TH1F *> fOffsetVsNphPlot;   //[hypo]
     vector<TH1F *> fOffsetVsMomPlot;   //[hypo]

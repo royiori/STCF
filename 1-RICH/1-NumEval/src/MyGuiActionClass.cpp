@@ -38,20 +38,22 @@ MyGuiActionClass::MyGuiActionClass()
     ipage++;
     iButton[ipage] = LoadDetFile;
     sButton[ipage].push_back("Load Hitmap");
-    sButton[ipage].push_back("Save Hitmap");
     sButton[ipage].push_back("Show the FCN plot");
     sButton[ipage].push_back("Show the Specified Particle RICH");
     sButton[ipage].push_back("Show Multi-Particles RICH");
     sButton[ipage].push_back("Show the SCAN XY-hitmap and N-Photon map");
     sButton[ipage].push_back("Load Recon-map");
-    sButton[ipage].push_back("Save Recon-map");
     sButton[ipage].push_back("Show the SCAN Resolution Map");
     sButton[ipage].push_back("Show the PID efficiency Map");
     sButton[ipage].push_back("SEP");
     sButton[ipage].push_back("SEP");
     sButton[ipage].push_back("Generate the Specified Particle RICH");
     sButton[ipage].push_back("Generate Multi-Particles RICH");
+    sButton[ipage].push_back("SEP");
+    sButton[ipage].push_back("Set the Hitmap Root filename");
     sButton[ipage].push_back("SCAN to generate the XY-hitmap");
+    sButton[ipage].push_back("SEP");
+    sButton[ipage].push_back("Set the Recon-map Root filename");
     sButton[ipage].push_back("SCAN to generate the Resolution-Map");
     sButton[ipage].push_back("SCAN to generate the PID efficiency Map");
     nButton[ipage] = (int)sButton[ipage].size();
@@ -759,6 +761,10 @@ void MyGuiActionClass::DoSaveDetFile(const char *fname)
 {
     if (fname == NULL)
         return;
+    
+    DoShowSpecRICH("yes");
+    DoShowMulParRICH("yes");
+
     gMyCommonRICH->SaveRings(fname);
 }
 
