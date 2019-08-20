@@ -6,7 +6,7 @@
 //vector<double> lenlist; //light path length in each radiator list
 //vector<double> abslist; //absorption length in each radiator list
 
-const char *SHYPO[NHYPO] = {"p", "k", "#pi", "#mu"};
+const char *SHYPO[NHYPO] = {"p", "k", "#pi", "#mu", "e"};
 
 MyCommonRICH *gMyCommonRICH = (MyCommonRICH *)0;
 
@@ -286,6 +286,8 @@ MyCommonRICH::~MyCommonRICH()
 int MyCommonRICH::GetHypoID(TString p)
 {
     p.ToLower();
+    if (p == "e")
+        return 4;
     if (p == "mu" || p == "muon" || p == "#mu")
         return 3;
     if (p == "pi" || p == "pion" || p == "#pi")
@@ -318,6 +320,8 @@ double MyCommonRICH::GetMass(TString p)
         return gkMassKaon;
     if (p == "p" || p == "proton")
         return gkMassProton;
+    if (p == "e")
+        return gkMassElectron;
     return gkMassPion;
 }
 
@@ -576,16 +580,26 @@ void MyCommonRICH::SaveRecFile(const char *fname)
     TTree *T3 = new TTree("TTree3", "PID efficiency");
 
     int nhyp, nrad, nmom, nthe, nph;
+    double pMin, pMax, The0Min, The0Max;
     T1->Branch("nhyp", &nhyp, "nhyp/I");
     T1->Branch("nrad", &nrad, "nrad/I");
     T1->Branch("nmom", &nmom, "nmom/I");
     T1->Branch("nthe", &nthe, "nthe/I");
     T1->Branch("nph", &nph, "nph/I");
+    T1->Branch("pMin", &pMin, "pMin/D");
+    T1->Branch("pMax", &pMax, "pMax/D");
+    T1->Branch("The0Min", &The0Min, "The0Min/D");
+    T1->Branch("The0Max", &The0Max, "The0Max/D");
+
     nhyp = gDet->nhypo;
     nrad = gDet->nRadLayer;
     nmom = gDet->np;
     nthe = gDet->nthe0;
     nph = gDet->NPhoton;
+    pMin = gDet->pMin;
+    pMax = gDet->pMax;
+    The0Min = gDet->The0Min;
+    The0Max = gDet->The0Max;
 
     T1->Fill();
     T1->Write();
@@ -645,11 +659,17 @@ void MyCommonRICH::LoadRecFile(const char *fname)
         return;
 
     int nhyp, nrad, nmom, nthe, nph;
+    double pMin, pMax, The0Min, The0Max;
+
     T1->SetBranchAddress("nhyp", &nhyp);
     T1->SetBranchAddress("nrad", &nrad);
     T1->SetBranchAddress("nmom", &nmom);
     T1->SetBranchAddress("nthe", &nthe);
     T1->SetBranchAddress("nph", &nph);
+    T1->SetBranchAddress("pMin", &pMin);
+    T1->SetBranchAddress("pMax", &pMax);
+    T1->SetBranchAddress("The0Min", &The0Min);
+    T1->SetBranchAddress("The0Max", &The0Max);
     T1->GetEntry(0);
 
     cout << "---->Reading: nHypo=" << nhyp << ", nRadiator=" << nrad << ", nMomentum=" << nmom << ", nTheta0=" << nthe << ", nPhoton=" << nph << endl;
@@ -659,6 +679,14 @@ void MyCommonRICH::LoadRecFile(const char *fname)
         (T2->GetEntries() != nhyp * nrad * nmom * nthe * nph))
     {
         cout << "##### This map doesn't math with the hitmap, please check this data file is the right one or not." << endl;
+        return;
+    }
+
+    if (pMin != gDet->pMin || pMax != gDet->pMax || The0Min != gDet->The0Min || The0Max != gDet->The0Max)
+    {
+        cout << "##### This map doesn't math with the global detector settings(pMin/pMax/the0Min/the0Max), please check this data file is the right one or not." << endl;
+        cout << "##### Read values are momentum: (" << pMin << ", " << pMax << "), theta: (" << The0Min << ", " << The0Max << ")" << endl;
+        cout << "##### gDet values are momentum: (" << gDet->pMin << ", " << gDet->pMax << "), theta: (" << gDet->The0Min << ", " << gDet->The0Max << ")" << endl;
         return;
     }
 
@@ -704,6 +732,10 @@ void MyCommonRICH::LoadRecFile(const char *fname)
                 {
                     T3->GetEntry(ientry++);
                     fPidEffList[imom][ithe][ihypo][jhypo] = pideff;
+
+                    if (imom == 10)
+                        cout << "Momentum = " << imom << " GeV/c, theta = " << ithe << " degree, "
+                             << "particle = " << ihypo << " identified as " << jhypo << " prob = " << pideff << endl;
                 }
 
     cout << "----> Total entries loaded. " << endl;
@@ -1037,6 +1069,8 @@ double MyCommonRICH::ReconstructRICHByBeta(MyRICHDetector *det, double irad, dou
     //5. theta1->thetac
     double rthec;
     rthec = acos(cos(theta0) * cos(rthec1) + sin(theta0) * sin(rthec1) * sin(phi));
+
+    return rthec;
     //return BetaThetaC(theta0, rthec1, phi, epsilon);
 }
 

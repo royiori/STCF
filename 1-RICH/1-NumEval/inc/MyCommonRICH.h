@@ -16,7 +16,7 @@
 
 using namespace std;
 
-const int NHYPO = 4;
+const int NHYPO = 5;
 const int NMoment = 10;
 const int NThetaC = 10;
 
@@ -105,7 +105,7 @@ public:
         if (yval == f->GetYaxis()->GetBinLowEdge(f->GetYaxis()->GetNbins() + 1)) //maximum
             ybin = f->GetYaxis()->GetNbins();
 
-        return f->ProjectionX("", ybin, ybin);
+        return f->ProjectionX(f->GetName()+TString("_X"), ybin, ybin);
     }
 
     TH1D *MyProjectY(TH2F *f, double xval)
@@ -118,7 +118,7 @@ public:
         if (xval == f->GetXaxis()->GetBinLowEdge(f->GetXaxis()->GetNbins() + 1))
             xbin = f->GetXaxis()->GetNbins();
 
-        return f->ProjectionY("", xbin, xbin);
+        return f->ProjectionY(f->GetName()+TString("_Y"), xbin, xbin);
     }
 
     //----------------------------

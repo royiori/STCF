@@ -633,33 +633,22 @@ void MyGuiActionClass::DoShowMulParRICH(TString cmdStr)
 
     //1. 不同粒子的光子击中分布图
     gMyMainFrameGui->SwitchCanvas(1);
-    gMyStyle->SetTitle("Cherenkov Rings for #mu/#pi/K/p");
+    gMyStyle->SetTitle("Cherenkov Rings for p/K/#pi/#mu/e");
     gMyStyle->SetXLabel("X[mm]");
     gMyStyle->SetYLabel("Y[mm]");
+    gMyStyle->SetDrawOption("");
     for (int ihypo = 0; ihypo < gMyCommonRICH->GetDetector()->nhypo; ihypo++)
         gMyStyle->SetLegends(ihypo, Form("%s Nph=%.1f", gMyCommonRICH->GetDetList(ihypo)->particle.Data(), gMyCommonRICH->GetDetListHitMap(ihypo)->Integral()));
-    gMyStyle->SetDrawOption("");
-    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetListHitMap(0), gMyCommonRICH->GetDetListHitMap(1), gMyCommonRICH->GetDetListHitMap(2), gMyCommonRICH->GetDetListHitMap(3));
+    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetListHitMap(0), gMyCommonRICH->GetDetListHitMap(1), gMyCommonRICH->GetDetListHitMap(2), gMyCommonRICH->GetDetListHitMap(3), gMyCommonRICH->GetDetListHitMap(4));
     gMyMainFrameGui->UpdateCanvas(1);
-    //sleep(1);
 
-    //2. 分别显示四种粒子的击中分布图，要看更详细的就用单个的看
-    gMyMainFrameGui->SwitchCanvas(2);
-    gMyCommonRICH->DrawDetListHitMap(0, "colz");
-    gMyMainFrameGui->UpdateCanvas(2);
-    //sleep(1);
-    gMyMainFrameGui->SwitchCanvas(3);
-    gMyCommonRICH->DrawDetListHitMap(1, "colz");
-    gMyMainFrameGui->UpdateCanvas(3);
-    //sleep(1);
-    gMyMainFrameGui->SwitchCanvas(4);
-    gMyCommonRICH->DrawDetListHitMap(2, "colz");
-    gMyMainFrameGui->UpdateCanvas(4);
-    //sleep(1);
-    gMyMainFrameGui->SwitchCanvas(5);
-    gMyCommonRICH->DrawDetListHitMap(3, "colz");
-    gMyMainFrameGui->UpdateCanvas(5);
-    //sleep(1);
+    //2. 分别显示n种粒子的击中分布图，要看更详细的就用单个的看
+    for (int ihypo = 0; ihypo < gMyCommonRICH->GetDetector()->nhypo; ihypo++)
+    {
+        gMyMainFrameGui->SwitchCanvas(2 + ihypo);
+        gMyCommonRICH->DrawDetListHitMap(ihypo, "colz");
+        gMyMainFrameGui->UpdateCanvas(2 + ihypo);
+    }
     gMyMainFrameGui->SwitchCanvas(1);
 }
 
@@ -680,38 +669,38 @@ void MyGuiActionClass::DoGenHitMaps(TString cmdStr)
     double the = gMyCommonRICH->GetDetScan(imom, ithe, 0)->Theta0;
 
     //1. 用ShowMom和ShowThe指定了动量和入射角度的四种粒子的光子击中分布图
-    gMyStyle->SetTitle(Form("Cherenkov Rings for [%.1fGeV/c, %.1f#circ] #mu/#pi/K/p", mom, the));
+    gMyStyle->SetTitle(Form("Cherenkov Rings for [%.1fGeV/c, %.1f#circ] e/#mu/#pi/K/p", mom, the));
     gMyStyle->SetXLabel("X[mm]");
     gMyStyle->SetYLabel("Y[mm]");
     for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
         gMyStyle->SetLegends(ihypo, Form("%s Nph=%.1f", gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle.Data(), gMyCommonRICH->GetDetScanHitMap(imom, ithe, ihypo)->Integral()));
     gMyStyle->SetDrawOption("");
     gMyMainFrameGui->SwitchCanvas(1);
-    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetScanHitMap(imom, ithe, 0), gMyCommonRICH->GetDetScanHitMap(imom, ithe, 1), gMyCommonRICH->GetDetScanHitMap(imom, ithe, 2), gMyCommonRICH->GetDetScanHitMap(imom, ithe, 3));
+    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetScanHitMap(imom, ithe, 0), gMyCommonRICH->GetDetScanHitMap(imom, ithe, 1), gMyCommonRICH->GetDetScanHitMap(imom, ithe, 2), gMyCommonRICH->GetDetScanHitMap(imom, ithe, 3), gMyCommonRICH->GetDetScanHitMap(imom, ithe, 4));
     gMyMainFrameGui->UpdateCanvas(1);
     //sleep(1);
 
     //2. ShowMom的粒子产生的切伦科夫光子数随不同入射角度的变化
     gMyMainFrameGui->SwitchCanvas(2);
-    gMyStyle->SetTitle(Form("Number of photon for [%.1fGeV/c] #mu/#pi/K/p", mom));
+    gMyStyle->SetTitle(Form("Number of photon for [%.1fGeV/c] e/#mu/#pi/K/p", mom));
     gMyStyle->SetXLabel("#Theta [degree]");
     gMyStyle->SetYLabel("Number of photon");
     for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
         gMyStyle->SetLegends(ihypo, gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle);
     gMyStyle->SetDrawOption("");
-    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetScanNphMapAtMom(0, mom), -1, -1, gMyCommonRICH->GetDetScanNphMapAtMom(1, mom), gMyCommonRICH->GetDetScanNphMapAtMom(2, mom), gMyCommonRICH->GetDetScanNphMapAtMom(3, mom));
+    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetScanNphMapAtMom(0, mom), -1, -1, gMyCommonRICH->GetDetScanNphMapAtMom(1, mom), gMyCommonRICH->GetDetScanNphMapAtMom(2, mom), gMyCommonRICH->GetDetScanNphMapAtMom(3, mom), gMyCommonRICH->GetDetScanNphMapAtMom(4, mom));
     gMyMainFrameGui->UpdateCanvas(2);
     //sleep(1);
 
     //3. ShowThe的粒子产生的切伦科夫光子数随不同入射动量的变化
     gMyMainFrameGui->SwitchCanvas(3);
-    gMyStyle->SetTitle(Form("Number of photon for [#theta=%.1f#circ] #mu/#pi/K/p", the));
+    gMyStyle->SetTitle(Form("Number of photon for [#theta=%.1f#circ] e/#mu/#pi/K/p", the));
     gMyStyle->SetXLabel("momentum [GeV/c]");
     gMyStyle->SetYLabel("Number of photon");
     for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
         gMyStyle->SetLegends(ihypo, gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle);
     gMyStyle->SetDrawOption("");
-    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetScanNphMapAtTheta(0, the), -1, -1, gMyCommonRICH->GetDetScanNphMapAtTheta(1, the), gMyCommonRICH->GetDetScanNphMapAtTheta(2, the), gMyCommonRICH->GetDetScanNphMapAtTheta(3, the));
+    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetScanNphMapAtTheta(0, the), -1, -1, gMyCommonRICH->GetDetScanNphMapAtTheta(1, the), gMyCommonRICH->GetDetScanNphMapAtTheta(2, the), gMyCommonRICH->GetDetScanNphMapAtTheta(3, the), gMyCommonRICH->GetDetScanNphMapAtTheta(4, the));
     gMyMainFrameGui->UpdateCanvas(3);
     //sleep(1);
 
@@ -835,7 +824,7 @@ void MyGuiActionClass::DoRecRings(TString cmdStr)
     for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
         gMyStyle->SetLegends(ihypo, gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle);
     gMyMainFrameGui->SwitchCanvas(2);
-    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetRecOffsetVsThetaPlot(0), -1, -1, gMyCommonRICH->GetDetRecOffsetVsThetaPlot(1), gMyCommonRICH->GetDetRecOffsetVsThetaPlot(2), gMyCommonRICH->GetDetRecOffsetVsThetaPlot(3));
+    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetRecOffsetVsThetaPlot(0), -1, -1, gMyCommonRICH->GetDetRecOffsetVsThetaPlot(1), gMyCommonRICH->GetDetRecOffsetVsThetaPlot(2), gMyCommonRICH->GetDetRecOffsetVsThetaPlot(3), gMyCommonRICH->GetDetRecOffsetVsThetaPlot(4));
     gMyMainFrameGui->UpdateCanvas(2);
 
     //3. 相同入射角度的粒子重建offset随着不同动量的分布
@@ -846,7 +835,7 @@ void MyGuiActionClass::DoRecRings(TString cmdStr)
     for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
         gMyStyle->SetLegends(ihypo, gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle);
     gMyMainFrameGui->SwitchCanvas(3);
-    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetRecOffsetVsMomPlot(0), -1, -1, gMyCommonRICH->GetDetRecOffsetVsMomPlot(1), gMyCommonRICH->GetDetRecOffsetVsMomPlot(2), gMyCommonRICH->GetDetRecOffsetVsMomPlot(3));
+    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetRecOffsetVsMomPlot(0), -1, -1, gMyCommonRICH->GetDetRecOffsetVsMomPlot(1), gMyCommonRICH->GetDetRecOffsetVsMomPlot(2), gMyCommonRICH->GetDetRecOffsetVsMomPlot(3), gMyCommonRICH->GetDetRecOffsetVsMomPlot(4));
     gMyMainFrameGui->UpdateCanvas(3);
 
     //-----sigma
@@ -863,7 +852,7 @@ void MyGuiActionClass::DoRecRings(TString cmdStr)
     for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
         gMyStyle->SetLegends(ihypo, gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle);
     gMyMainFrameGui->SwitchCanvas(5);
-    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetRecSigmaVsThetaPlot(0), -1, -1, gMyCommonRICH->GetDetRecSigmaVsThetaPlot(1), gMyCommonRICH->GetDetRecSigmaVsThetaPlot(2), gMyCommonRICH->GetDetRecSigmaVsThetaPlot(3));
+    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetRecSigmaVsThetaPlot(0), -1, -1, gMyCommonRICH->GetDetRecSigmaVsThetaPlot(1), gMyCommonRICH->GetDetRecSigmaVsThetaPlot(2), gMyCommonRICH->GetDetRecSigmaVsThetaPlot(3), gMyCommonRICH->GetDetRecSigmaVsThetaPlot(4));
     gMyMainFrameGui->UpdateCanvas(5);
 
     //6. 相同入射角度的粒子重建sigma随着不同动量的分布
@@ -874,7 +863,7 @@ void MyGuiActionClass::DoRecRings(TString cmdStr)
     for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
         gMyStyle->SetLegends(ihypo, gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle);
     gMyMainFrameGui->SwitchCanvas(6);
-    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetRecSigmaVsMomPlot(0), -1, -1, gMyCommonRICH->GetDetRecSigmaVsMomPlot(1), gMyCommonRICH->GetDetRecSigmaVsMomPlot(2), gMyCommonRICH->GetDetRecSigmaVsMomPlot(3));
+    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetRecSigmaVsMomPlot(0), -1, -1, gMyCommonRICH->GetDetRecSigmaVsMomPlot(1), gMyCommonRICH->GetDetRecSigmaVsMomPlot(2), gMyCommonRICH->GetDetRecSigmaVsMomPlot(3), gMyCommonRICH->GetDetRecSigmaVsMomPlot(4));
     gMyMainFrameGui->UpdateCanvas(6);
 
     //7. 相同动量，相同入射角度的粒子重建offset随着不同光子数的分布
@@ -885,7 +874,7 @@ void MyGuiActionClass::DoRecRings(TString cmdStr)
     for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
         gMyStyle->SetLegends(ihypo, gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle);
     gMyMainFrameGui->SwitchCanvas(7);
-    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetRecOffsetVsNphPlot(0), -1, -1, gMyCommonRICH->GetDetRecOffsetVsNphPlot(1), gMyCommonRICH->GetDetRecOffsetVsNphPlot(2), gMyCommonRICH->GetDetRecOffsetVsNphPlot(3));
+    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetRecOffsetVsNphPlot(0), -1, -1, gMyCommonRICH->GetDetRecOffsetVsNphPlot(1), gMyCommonRICH->GetDetRecOffsetVsNphPlot(2), gMyCommonRICH->GetDetRecOffsetVsNphPlot(3), gMyCommonRICH->GetDetRecOffsetVsNphPlot(4));
     gMyMainFrameGui->UpdateCanvas(7);
 
     //8. 相同动量，相同入射角度的粒子重建sigma随着不同光子数的分布
@@ -896,7 +885,7 @@ void MyGuiActionClass::DoRecRings(TString cmdStr)
     for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
         gMyStyle->SetLegends(ihypo, gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle);
     gMyMainFrameGui->SwitchCanvas(8);
-    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetRecSigmaVsNphPlot(0), -1, -1, gMyCommonRICH->GetDetRecSigmaVsNphPlot(1), gMyCommonRICH->GetDetRecSigmaVsNphPlot(2), gMyCommonRICH->GetDetRecSigmaVsNphPlot(3));
+    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetRecSigmaVsNphPlot(0), -1, -1, gMyCommonRICH->GetDetRecSigmaVsNphPlot(1), gMyCommonRICH->GetDetRecSigmaVsNphPlot(2), gMyCommonRICH->GetDetRecSigmaVsNphPlot(3), gMyCommonRICH->GetDetRecSigmaVsNphPlot(4));
     gMyMainFrameGui->UpdateCanvas(8);
 
     //9. 显示单个的填图及拟合结果
@@ -954,7 +943,7 @@ void MyGuiActionClass::DoPIDEff(TString cmdStr)
     for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
         gMyStyle->SetLegends(ihypo, gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle);
     gMyMainFrameGui->SwitchCanvas(5);
-    gMyStyle->DrawHistograms(gMyCommonRICH->GetPIDMapVsMom(0), -1, -1, gMyCommonRICH->GetPIDMapVsMom(1), gMyCommonRICH->GetPIDMapVsMom(2), gMyCommonRICH->GetPIDMapVsMom(3));
+    gMyStyle->DrawHistograms(gMyCommonRICH->GetPIDMapVsMom(0), -1, -1, gMyCommonRICH->GetPIDMapVsMom(1), gMyCommonRICH->GetPIDMapVsMom(2), gMyCommonRICH->GetPIDMapVsMom(3), gMyCommonRICH->GetPIDMapVsMom(4));
     gMyMainFrameGui->UpdateCanvas(5);
 
     //-----pid vs. theta
@@ -965,7 +954,7 @@ void MyGuiActionClass::DoPIDEff(TString cmdStr)
     for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
         gMyStyle->SetLegends(ihypo, gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle);
     gMyMainFrameGui->SwitchCanvas(6);
-    gMyStyle->DrawHistograms(gMyCommonRICH->GetPIDMapVsTheta(0), -1, -1, gMyCommonRICH->GetPIDMapVsTheta(1), gMyCommonRICH->GetPIDMapVsTheta(2), gMyCommonRICH->GetPIDMapVsTheta(3));
+    gMyStyle->DrawHistograms(gMyCommonRICH->GetPIDMapVsTheta(0), -1, -1, gMyCommonRICH->GetPIDMapVsTheta(1), gMyCommonRICH->GetPIDMapVsTheta(2), gMyCommonRICH->GetPIDMapVsTheta(3), gMyCommonRICH->GetPIDMapVsTheta(4));
     gMyMainFrameGui->UpdateCanvas(6);
 
     gMyMainFrameGui->SwitchCanvas(1);

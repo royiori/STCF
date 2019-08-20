@@ -8,6 +8,7 @@ const char *filetypes[] = {"ROOT files", "*.root",
                            "All files", "*",
                            0, 0};
 
+const int NPAGE = 10;
 //______________________________________________________________________________
 //
 MyMainFrameGui::MyMainFrameGui(const TGWindow *p, int w, int h) : TGMainFrame(p, w, h)
@@ -95,9 +96,9 @@ MyMainFrameGui::MyMainFrameGui(const TGWindow *p, int w, int h) : TGMainFrame(p,
     //3. Results tab
     {
         fCTab = new TGTab(fVFrame3, 580, 580);
-        const int NPage1 = 10;
+        NPage = NPAGE;
 
-        for (int i = 0; i < NPage1; i++)
+        for (int i = 0; i < NPage; i++)
         {
             TGCompositeFrame *fTabPage = fCTab->AddTab((i == 0) ? "Config" : Form("Res%d", i));
             TRootEmbeddedCanvas *fEmbeddedCanvas = new TRootEmbeddedCanvas(0, fTabPage, 580, 360);

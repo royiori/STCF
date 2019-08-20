@@ -224,6 +224,7 @@ void MyMainFrameGui::Streamer(TBuffer &R__b)
       R__b >> fComboCmd;
       R__b >> fCommand;
       R__b >> fCommandBuf;
+      R__b >> NPage;
       R__b.CheckByteCount(R__s, R__c, MyMainFrameGui::IsA());
    } else {
       R__c = R__b.WriteVersion(MyMainFrameGui::IsA(), kTRUE);
@@ -236,6 +237,7 @@ void MyMainFrameGui::Streamer(TBuffer &R__b)
       R__b << fComboCmd;
       R__b << fCommand;
       R__b << fCommandBuf;
+      R__b << NPage;
       R__b.SetByteCount(R__c, kTRUE);
    }
 }

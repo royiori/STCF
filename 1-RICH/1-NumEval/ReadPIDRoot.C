@@ -1,11 +1,8 @@
 void ReadPIDRoot()
 {
-    //可以从hit.root里读扫描的动量/角度/光子数范围min和max，简单起见也可以直接这里输入：
-    double pmin = 0;
-    double pmax = 4.;
-    double themin = 0.;
-    double themax = 30.;
-
+    const int NHYPO = 4;
+    const char *SHYPO[NHYPO] = {"p", "k", "#pi", "#mu"};
+    
     //读pid文件
     TString fname("./simdata/STCF-5mm-pid.root");
     TFile f(fname);
@@ -21,6 +18,8 @@ void ReadPIDRoot()
         return;
 
     int nhyp, nrad, nmom, nthe, nph;
+    double pMin, pMax, The0Min, The0Max;
+
     T1->SetBranchAddress("nhyp", &nhyp);
     T1->SetBranchAddress("nrad", &nrad);
     T1->SetBranchAddress("nmom", &nmom);
@@ -31,9 +30,10 @@ void ReadPIDRoot()
     cout << "---->Reading: nHypo=" << nhyp << ", nRadiator=" << nrad << ", nMomentum=" << nmom << ", nTheta0=" << nthe << ", nPhoton=" << nph << endl;
     cout << "---->Reading: nEntries=" << T2->GetEntries() << endl;
 
-    double pstep = (pmax - pmin) / (nmom - 1);
-    double thstep = (themax - themin) / (nthe - 1);
+    double pstep = (pMax - pMin) / (nmom - 1);
+    double thstep = (The0Max - The0Min) / (nthe - 1);
 
+    //------------------------------------
     //2. T2是重建的中心值和分辨率及对应的拟合误差
     if (T2 == NULL)
         return;
@@ -55,24 +55,18 @@ void ReadPIDRoot()
                         T2->GetEntry(ientry++);
 
                         //根据需要拿对应的中心值和误差的结果：
-                        double mom = pmin + imom * pstep;
-                        double the = themin + ithe * thstep;
+                        double mom = pMin + imom * pstep;
+                        double the = The0Min + ithe * thstep;
 
-                        //只输出一部分的结果
-                        if (iph != 10)
-                            continue;
-                        if (imom < 10 || imom > 20)
-                            continue;
-                        if (ithe != 0)
-                            continue;
-                        if (irad != 0)
-                            continue;
+                        continue;
 
                         cout << "Momentum = " << mom << " GeV/c, theta = " << the << " degree, "
-                             << "particle = " << ihypo << ", radiator = " << irad << ", photon = " << iph << ", "
+                             << "particle = " << SHYPO[ihypo] << ", radiator = " << irad << ", photon = " << iph << ", "
                              << "offset = " << mean << "+-" << merr << ", sigma=" << sigm << "+-" << serr << endl;
                     }
 
+    //------------------------------------
+    //3. T3是PID的效率和误判率    
     if (T3 == NULL)
         return;
 
@@ -88,11 +82,11 @@ void ReadPIDRoot()
                     T3->GetEntry(ientry++);
 
                     //根据需要拿对应的中心值和误差的结果：
-                    double mom = pmin + imom * pstep;
-                    double the = themin + ithe * thstep;
+                    double mom = pMin + imom * pstep;
+                    double the = The0Min + ithe * thstep;
 
                     cout << "Momentum = " << mom << " GeV/c, theta = " << the << " degree, "
-                         << "particle = " << ihypo << " identified as " << jhypo << " prob = " << pideff << endl;
+                         << "particle = " << SHYPO[ihypo] << " identified as " << SHYPO[jhypo] << " prob = " << pideff << endl;
                 }
 
     cout << "----> Total entries loaded. " << endl;

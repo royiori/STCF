@@ -53,6 +53,9 @@ public:
     TGText *GetText() { return fSettingText->GetText(); }
 
     void HandleCommand();
+
+    int GetNPage() { return NPage; }
+
 private:
     TGTextEdit *fSettingText;
     TGTab *fCTab;
@@ -65,7 +68,9 @@ private:
     TGTextEntry *fCommand;
     TGTextBuffer *fCommandBuf;
 
-    ClassDef(MyMainFrameGui, 1) 
+    int NPage;
+    
+    ClassDef(MyMainFrameGui, 1)
 };
 
 extern MyMainFrameGui *gMyMainFrameGui;

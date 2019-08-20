@@ -43,7 +43,7 @@ void MyStyle::Draw1DHistVector(vector<TH1 *> hvec, double Min, double Max)
         min = (min > hvec[i]->GetMinimum()) ? hvec[i]->GetMinimum() : min;
         max = (max < hvec[i]->GetMaximum()) ? hvec[i]->GetMaximum() : max;
     }
-    min = (Min != -1) ? Min : min;
+    min = (Min != -1) ? Min : min * 0.95;
     max = (Max != -1) ? Max : max * 1.05;
 
     gH1->GetYaxis()->SetRangeUser(min, max);
