@@ -268,7 +268,6 @@ double SolverThetaC(TF1 *fcn1, double x1, double y1, double x0, double y0, doubl
 //
 MyCommonRICH::MyCommonRICH()
 {
-    fRhoFcn = new TF1("fRhoFcn", findRho, 0, 2 * TMath::Pi(), 100);
     fNphFcn = new TF1("fNphFcn", "sqrt([0]/x+[1])", 1, 49);
     gDet = new MyRICHDetector(0);
     gDet->SetNHypothesis(NHYPO);
@@ -302,12 +301,12 @@ int MyCommonRICH::GetHypoID(TString p)
 
 int MyCommonRICH::GetMomID(double momentum)
 {
-    return int(round((momentum - gDet->pMin) / gDet->pStep));
+    return (gDet->pStep == 0) ? 0 : int(round((momentum - gDet->pMin) / gDet->pStep));
 }
 
 int MyCommonRICH::GetThetaID(double Theta)
 {
-    return int(round((Theta - gDet->The0Min) / gDet->The0Step));
+    return (gDet->The0Step == 0) ? 0 : int(round((Theta - gDet->The0Min) / gDet->The0Step));
 }
 
 double MyCommonRICH::GetMass(TString p)
@@ -491,6 +490,38 @@ void MyCommonRICH::UpdateThetaCExp(MyRICHDetector *det, double lambda)
         det->fThetaCReal.push_back(CherenkovAng(Beta(det->momentum, det->mass), rlist[i]));
 }
 
+int MyCommonRICH::LoadRings(const char *fname)
+{
+    // return: -1 文件不存在
+    //          1 gdet文件存在
+    //          2 hitmap文件存在
+    //          3 recmap文件存在
+    //          4 pidmap文件存在
+
+    fileName = TString(fname);
+    if (fileName.Index(".root") == -1)
+        return -1;
+
+    headName = fileName;
+    headName.Remove(headName.Index(".root"), 5);
+
+    TH1::AddDirectory(kFALSE);
+    if (LoadDetFile() < 0)
+        return -1;
+
+    if (LoadHitFile() < 0)
+        return 1;
+
+    if (LoadRecFile() < 0)
+        return 2;
+
+    if (LoadPidFile() < 0)
+        return 3;
+
+    cout << "----> Total entries loaded. " << endl;
+    return 4;
+}
+
 void MyCommonRICH::SaveRings(const char *fname)
 {
     //hitmap文件规则：
@@ -498,56 +529,25 @@ void MyCommonRICH::SaveRings(const char *fname)
     //hitmap文件作为分析的第一步，按以下规则来保存：
     //1. 在用户点击SaveRings，仅仅保存用户设置的探测器参数，即gDet，同时保存这个文件名
     //2. 在用户点击Scan Hitmap后，将进行多重循环来生成hitmap
-    //   此时以momentum为单位，在文件名后面添加“_mom_%d.root"来保存每一轮的hitmap
+    //   此时以momentum为单位，在文件名后面添加"_mom_%d.root"来保存每一轮的hitmap
+    //3. 在用户点击Scan Recmap后，会全部分析完然后保存成"_rec.root"的文件
+    //4. 在用户点击Scan PIDmap后，会全部分析完然后保存成"_pid.root"的文件
 
     fileName = TString(fname);
+    headName = fileName;
+    headName.Remove(headName.Index(".root"), 5);
 
-    //1. fileName保存用户设置的det信息
-    TFile f(fname, "recreate");
-    if (!f.IsOpen())
-        return;
-
-    // save detector infor.
-    TTree *T = new TTree("TTree", "NumClass");
-    MyRICHDetector *det = new MyRICHDetector();
-    T->Branch("det", "MyRICHDetector", &det, 20000, 1);
-
-    //1. 保存gDet
-    det = gDet; //->BuildFrom(*gDet, -1, 1);
-    T->Fill();
-
-    //2. gDetList
-    for (int i = 0; i < (int)gDetList.size(); i++)
-    {
-        det = gDetList[i]; //->BuildFrom(*gDetList[i]);
-        T->Fill();
-    }
-
-    /* 以下内容在 GenerateTheScanHitMapsForEachDetector 函数里单独保存为独立的root文件
-    //3. gScanDetList
-    for (int imom = 0; imom < (int)gScanDetList.size(); imom++)
-        for (int ithe = 0; ithe < (int)gScanDetList[imom].size(); ithe++)
-            for (int ihypo = 0; ihypo < (int)gScanDetList[imom][ithe].size(); ihypo++)
-            {
-                det = gScanDetList[imom][ithe][ihypo]; //->BuildFrom(*gScanDetList[imom][ithe][ihypo]);
-                T->Fill();
-            }
-    */
-
-    T->Write();
-    cout << "----> Current results are stored to " << fname << "." << endl;
+    SaveDetFile();
 }
 
-void MyCommonRICH::LoadRings(const char *fname)
+int MyCommonRICH::LoadDetFile()
 {
-    //------------------
-    //1. 读取基本gDet的root文件
-    fileName = TString(fname);
-
-    TH1::AddDirectory(kFALSE);
-    TFile f(fname);
+    //-----------------------------------
+    // 1. 读取基本gDet的root文件
+    //
+    TFile f(fileName);
     if (!f.IsOpen())
-        return;
+        return -1;
 
     MyRICHDetector *det = new MyRICHDetector(0);
     TTree *T = (TTree *)f.Get("TTree");
@@ -569,52 +569,186 @@ void MyCommonRICH::LoadRings(const char *fname)
     }
     f.Close();
 
-    //------------------
-    //2. 读取gScanDetList
-    ResizeScanDetList(gDet->np, gDet->nthe0, gDet->nhypo);
-
-    //在这里需要读取每个单独的root文件
-    for (int imom = 0; imom < gDet->np; imom++)
-    {
-        TString fName = fileName;
-        fName.Remove(fName.Index(".root"), 5);
-        fName += TString(Form("_imom_%d.root", imom));
-        TFile rootfile(fName);
-        if (!rootfile.IsOpen())
-        {
-            cout << "#### Fatal error: Can't open " << fName << " to read!" << endl;
-            continue;
-        }
-
-        MyRICHDetector *detector = new MyRICHDetector(0);
-        TTree *tree = (TTree *)rootfile.Get("TTree");
-        tree->SetBranchAddress("det", &detector);
-        ientry = 0;
-
-        cout << "Loading " << imom << " from " << fName << endl;
-        for (int ithe = 0; ithe < gDet->nthe0; ithe++)
-            for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
-            {
-                tree->GetEntry(ientry++);
-                gScanDetList[imom][ithe][ihypo] = new MyRICHDetector(*detector, -1, 1);
-            }
-
-        rootfile.Close();
-    }
-
-    cout << "----> Total entries loaded. " << endl;
+    return 0;
 }
 
-void MyCommonRICH::SaveRecFile(const char *fname)
+void MyCommonRICH::SaveDetFile()
 {
-    TFile f(fname, "recreate");
+    //1. fileName保存用户设置的det信息
+    TFile f(fileName, "recreate");
     if (!f.IsOpen())
         return;
 
-    TTree *T1 = new TTree("TTree1", "Detector Info");
-    TTree *T2 = new TTree("TTree2", "Mean/Sigma Map");
-    TTree *T3 = new TTree("TTree3", "PID efficiency");
+    // save detector infor.
+    TTree *T = new TTree("TTree", "NumClass");
+    MyRICHDetector *det = new MyRICHDetector();
+    T->Branch("det", "MyRICHDetector", &det, 20000, 1);
 
+    //1. 保存gDet
+    det = gDet; //->BuildFrom(*gDet, -1, 1);
+    T->Fill();
+
+    //2. gDetList
+    for (int i = 0; i < (int)gDetList.size(); i++)
+    {
+        det = gDetList[i]; //->BuildFrom(*gDetList[i]);
+        T->Fill();
+    }
+
+    T->Write();
+    f.Close();
+}
+
+int MyCommonRICH::LoadHitFile()
+{
+    //-----------------------------------
+    // 2. 读取gScanDetList，也就是hitmap文件
+    //
+    ResizeScanDetList(gDet->np, gDet->nthe0, gDet->nhypo, 0);
+
+    for (int imom = 0; imom < gDet->np; imom++)
+    {
+        TString hitFile = headName;
+        hitFile += TString(Form("_imom_%d.root", imom));
+        TFile f(hitFile);
+
+        if (!f.IsOpen())
+        {
+            cout << "##### Fatal error: Can't open " << hitFile << " to read!" << endl;
+            return -1;
+        }
+
+        MyRICHDetector *detector = new MyRICHDetector(0);
+        TTree *T = (TTree *)f.Get("TTree");
+        T->SetBranchAddress("det", &detector);
+        int ientry = 0;
+
+        cout << "Loading " << imom << " from " << hitFile << endl;
+        for (int ithe = 0; ithe < gDet->nthe0; ithe++)
+            for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
+            {
+                T->GetEntry(ientry++);
+                gScanDetList[imom][ithe][ihypo] = new MyRICHDetector(*detector, -1, 1);
+            }
+
+        f.Close();
+    }
+
+    return 0;
+}
+
+void MyCommonRICH::SaveHitFile(int imom)
+{
+    TString hitFile = headName;
+    hitFile += TString(Form("_imom_%d.root", imom));
+    TFile f(hitFile, "recreate");
+
+    // save detector infor.
+    TTree *T = new TTree("TTree", "NumClass");
+    MyRICHDetector *det = new MyRICHDetector();
+    T->Branch("det", "MyRICHDetector", &det, 20000, 1);
+
+    for (int ithe = 0; ithe < gDet->nthe0; ithe++)
+        for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
+        {
+            det = gScanDetList[imom][ithe][ihypo];
+            T->Fill();
+        }
+
+    T->Write();
+    f.Close();
+}
+
+int MyCommonRICH::LoadRecFile()
+{
+    //------------------
+    // 3. 读取recmap文件
+    //
+    TString recFile = headName;
+    recFile += TString("_rec.root");
+
+    TFile f(recFile);
+    if (!f.IsOpen())
+        return -1;
+
+    TTree *T1 = (TTree *)f.Get("Configure");
+    TTree *T2 = (TTree *)f.Get("RecTree");
+
+    if (T1 == NULL)
+        return -1;
+
+    int nhyp, nrad, nmom, nthe, nph;
+    double pMin, pMax, The0Min, The0Max;
+
+    T1->SetBranchAddress("nhyp", &nhyp);
+    T1->SetBranchAddress("nrad", &nrad);
+    T1->SetBranchAddress("nmom", &nmom);
+    T1->SetBranchAddress("nthe", &nthe);
+    T1->SetBranchAddress("nph", &nph);
+    T1->SetBranchAddress("pMin", &pMin);
+    T1->SetBranchAddress("pMax", &pMax);
+    T1->SetBranchAddress("The0Min", &The0Min);
+    T1->SetBranchAddress("The0Max", &The0Max);
+    T1->GetEntry(0);
+
+    cout << "---->Reading REC file: nHypo=" << nhyp << ", nRadiator=" << nrad << ", nMomentum=" << nmom << ", nTheta0=" << nthe << ", nPhoton=" << nph << endl;
+    if ((nhyp != gDet->nhypo) || (nrad != gDet->nRadLayer) || (nmom != gDet->np) ||
+        (nthe != gDet->nthe0) || (nph != gDet->NPhoton) ||
+        (T2->GetEntries() != nhyp * nrad * nmom * nthe * nph))
+    {
+        cout << "##### This map doesn't math with the hitmap, please check this data file is the right one or not." << endl;
+        return -1;
+    }
+
+    if (pMin != gDet->pMin || pMax != gDet->pMax || The0Min != gDet->The0Min || The0Max != gDet->The0Max)
+    {
+        cout << "##### This map doesn't math with the global detector settings(pMin/pMax/the0Min/the0Max), please check this data file is the right one or not." << endl;
+        cout << "##### Read values are momentum: (" << pMin << ", " << pMax << "), theta: (" << The0Min << ", " << The0Max << ")" << endl;
+        cout << "##### gDet values are momentum: (" << gDet->pMin << ", " << gDet->pMax << "), theta: (" << gDet->The0Min << ", " << gDet->The0Max << ")" << endl;
+        return -1;
+    }
+
+    if (T2 == NULL)
+        return -1;
+
+    ResizeRecMap(nhyp, nrad, nmom, nthe, nph);
+
+    double mean, merr;
+    double sigm, serr;
+    T2->SetBranchAddress("mean", &mean);
+    T2->SetBranchAddress("merr", &merr);
+    T2->SetBranchAddress("sigm", &sigm);
+    T2->SetBranchAddress("serr", &serr);
+
+    int ientry = 0;
+    for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
+        for (int irad = 0; irad < gDet->nRadLayer; irad++)
+            for (int imom = 0; imom < gDet->np; imom++)
+                for (int ithe = 0; ithe < gDet->nthe0; ithe++)
+                    for (int iph = 0; iph < gDet->NPhoton; iph++)
+                    {
+                        T2->GetEntry(ientry++);
+                        fRecOffList[ihypo][irad][imom][ithe][iph] = mean;
+                        fRecOffErrList[ihypo][irad][imom][ithe][iph] = merr;
+                        fRecSigList[ihypo][irad][imom][ithe][iph] = sigm;
+                        fRecSigErrList[ihypo][irad][imom][ithe][iph] = serr;
+                    }
+
+    return 0;
+}
+
+void MyCommonRICH::SaveRecFile()
+{
+    TString recFile = headName;
+    recFile += TString("_rec.root");
+    TFile f(recFile, "recreate");
+    if (!f.IsOpen())
+        return;
+
+    TTree *T1 = new TTree("Configure", "Detector Info");
+    TTree *T2 = new TTree("RecTree", "Mean/Sigma Map");
+
+    //Save Tree1
     int nhyp, nrad, nmom, nthe, nph;
     double pMin, pMax, The0Min, The0Max;
     T1->Branch("nhyp", &nhyp, "nhyp/I");
@@ -640,6 +774,7 @@ void MyCommonRICH::SaveRecFile(const char *fname)
     T1->Fill();
     T1->Write();
 
+    //Save Tree2
     double mean, merr;
     double sigm, serr;
     T2->Branch("mean", &mean, "mean/D");
@@ -662,37 +797,27 @@ void MyCommonRICH::SaveRecFile(const char *fname)
                         T2->Fill();
                         ientry++;
                     }
+
     T2->Write();
-    cout << "----> " << ientry << " reconstruction entries are stored to " << fname << "." << endl;
-
-    if (fPidEffList.size() == 0)
-        return;
-
-    double pideff;
-    T3->Branch("pideff", &pideff, "pideff/D");
-    for (int imom = 0; imom < gDet->np; imom++)
-        for (int ithe = 0; ithe < gDet->nthe0; ithe++)
-            for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
-                for (int jhypo = 0; jhypo < gDet->nhypo; jhypo++)
-                {
-                    pideff = fPidEffList[imom][ithe][ihypo][jhypo];
-                    T3->Fill();
-                }
-    T3->Write();
+    f.Close();
 }
 
-void MyCommonRICH::LoadRecFile(const char *fname)
+int MyCommonRICH::LoadPidFile()
 {
-    TFile f(fname);
-    if (!f.IsOpen())
-        return;
+    //------------------
+    //4. 读取pidmap文件
+    TString pidFile = headName;
+    pidFile += TString("_pid.root");
 
-    TTree *T1 = (TTree *)f.Get("TTree1");
-    TTree *T2 = (TTree *)f.Get("TTree2");
-    TTree *T3 = (TTree *)f.Get("TTree3");
+    TFile f(pidFile);
+    if (!f.IsOpen())
+        return -1;
+
+    TTree *T1 = (TTree *)f.Get("Configure");
+    TTree *T2 = (TTree *)f.Get("PidTree");
 
     if (T1 == NULL)
-        return;
+        return -1;
 
     int nhyp, nrad, nmom, nthe, nph;
     double pMin, pMax, The0Min, The0Max;
@@ -708,14 +833,12 @@ void MyCommonRICH::LoadRecFile(const char *fname)
     T1->SetBranchAddress("The0Max", &The0Max);
     T1->GetEntry(0);
 
-    cout << "---->Reading: nHypo=" << nhyp << ", nRadiator=" << nrad << ", nMomentum=" << nmom << ", nTheta0=" << nthe << ", nPhoton=" << nph << endl;
-    cout << "---->Reading: nEntries=" << T2->GetEntries() << endl;
+    cout << "---->Reading PID root: nHypo=" << nhyp << ", nRadiator=" << nrad << ", nMomentum=" << nmom << ", nTheta0=" << nthe << ", nPhoton=" << nph << endl;
     if ((nhyp != gDet->nhypo) || (nrad != gDet->nRadLayer) || (nmom != gDet->np) ||
-        (nthe != gDet->nthe0) || (nph != gDet->NPhoton) ||
-        (T2->GetEntries() != nhyp * nrad * nmom * nthe * nph))
+        (nthe != gDet->nthe0) || (nph != gDet->NPhoton))
     {
         cout << "##### This map doesn't math with the hitmap, please check this data file is the right one or not." << endl;
-        return;
+        return -1;
     }
 
     if (pMin != gDet->pMin || pMax != gDet->pMax || The0Min != gDet->The0Min || The0Max != gDet->The0Max)
@@ -723,58 +846,82 @@ void MyCommonRICH::LoadRecFile(const char *fname)
         cout << "##### This map doesn't math with the global detector settings(pMin/pMax/the0Min/the0Max), please check this data file is the right one or not." << endl;
         cout << "##### Read values are momentum: (" << pMin << ", " << pMax << "), theta: (" << The0Min << ", " << The0Max << ")" << endl;
         cout << "##### gDet values are momentum: (" << gDet->pMin << ", " << gDet->pMax << "), theta: (" << gDet->The0Min << ", " << gDet->The0Max << ")" << endl;
-        return;
+        return -1;
     }
 
     if (T2 == NULL)
-        return;
-
-    ResizeRecMap(nhyp, nrad, nmom, nthe, nph);
-
-    double mean, merr;
-    double sigm, serr;
-    T2->SetBranchAddress("mean", &mean);
-    T2->SetBranchAddress("merr", &merr);
-    T2->SetBranchAddress("sigm", &sigm);
-    T2->SetBranchAddress("serr", &serr);
-
-    int ientry = 0;
-    for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
-        for (int irad = 0; irad < gDet->nRadLayer; irad++)
-            for (int imom = 0; imom < gDet->np; imom++)
-                for (int ithe = 0; ithe < gDet->nthe0; ithe++)
-                    for (int iph = 0; iph < gDet->NPhoton; iph++)
-                    {
-                        T2->GetEntry(ientry++);
-                        fRecOffList[ihypo][irad][imom][ithe][iph] = mean;
-                        fRecOffErrList[ihypo][irad][imom][ithe][iph] = merr;
-                        fRecSigList[ihypo][irad][imom][ithe][iph] = sigm;
-                        fRecSigErrList[ihypo][irad][imom][ithe][iph] = serr;
-                    }
-
-    if (T3 == NULL)
-        return;
+        return -1;
 
     ResizePIDEffMap(nmom, nthe, nhyp);
 
     double pideff;
-    T3->SetBranchAddress("pideff", &pideff);
+    T2->SetBranchAddress("pideff", &pideff);
 
-    ientry = 0;
+    int ientry = 0;
     for (int imom = 0; imom < gDet->np; imom++)
         for (int ithe = 0; ithe < gDet->nthe0; ithe++)
             for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
                 for (int jhypo = 0; jhypo < gDet->nhypo; jhypo++)
                 {
-                    T3->GetEntry(ientry++);
+                    T2->GetEntry(ientry++);
                     fPidEffList[imom][ithe][ihypo][jhypo] = pideff;
-
-                    if (imom == 10)
-                        cout << "Momentum = " << imom << " GeV/c, theta = " << ithe << " degree, "
-                             << "particle = " << ihypo << " identified as " << jhypo << " prob = " << pideff << endl;
                 }
 
-    cout << "----> Total entries loaded. " << endl;
+    return 0;
+}
+
+void MyCommonRICH::SavePidFile()
+{
+    TString recFile = headName;
+    recFile += TString("_pid.root");
+    TFile f(recFile, "recreate");
+    if (!f.IsOpen())
+        return;
+    if (fPidEffList.size() == 0)
+        return;
+
+    TTree *T1 = new TTree("Configure", "Detector Info");
+    TTree *T2 = new TTree("PidTree", "PID Efficiency");
+
+    //Save Tree1
+    int nhyp, nrad, nmom, nthe, nph;
+    double pMin, pMax, The0Min, The0Max;
+    T1->Branch("nhyp", &nhyp, "nhyp/I");
+    T1->Branch("nrad", &nrad, "nrad/I");
+    T1->Branch("nmom", &nmom, "nmom/I");
+    T1->Branch("nthe", &nthe, "nthe/I");
+    T1->Branch("nph", &nph, "nph/I");
+    T1->Branch("pMin", &pMin, "pMin/D");
+    T1->Branch("pMax", &pMax, "pMax/D");
+    T1->Branch("The0Min", &The0Min, "The0Min/D");
+    T1->Branch("The0Max", &The0Max, "The0Max/D");
+
+    nhyp = gDet->nhypo;
+    nrad = gDet->nRadLayer;
+    nmom = gDet->np;
+    nthe = gDet->nthe0;
+    nph = gDet->NPhoton;
+    pMin = gDet->pMin;
+    pMax = gDet->pMax;
+    The0Min = gDet->The0Min;
+    The0Max = gDet->The0Max;
+
+    T1->Fill();
+    T1->Write();
+
+    //Save Tree2
+    double pideff;
+    T2->Branch("pideff", &pideff, "pideff/D");
+    for (int imom = 0; imom < gDet->np; imom++)
+        for (int ithe = 0; ithe < gDet->nthe0; ithe++)
+            for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
+                for (int jhypo = 0; jhypo < gDet->nhypo; jhypo++)
+                {
+                    pideff = fPidEffList[imom][ithe][ihypo][jhypo];
+                    T2->Fill();
+                }
+    T2->Write();
+    f.Close();
 }
 
 //______________________________________________________________________________
@@ -785,6 +932,8 @@ double MyCommonRICH::PhotonGenFromRad(MyRICHDetector *det, int irad, int absFlag
         return 0;
 
     //1.初始化
+    TF1 *fRhoFcn = new TF1("fRhoFcn", findRho, 0, 2 * TMath::Pi(), 100);
+
     vector<double> thklist;
     vector<double> reflist;
     vector<double> abslist;
@@ -868,12 +1017,14 @@ double MyCommonRICH::PhotonGenFromRad(MyRICHDetector *det, int irad, int absFlag
             }
         }
     }
+
+    delete fRhoFcn;
     return detPh;
 }
 
 //---- 被GuiAction调用的函数
 /// 计算所有辐射体发射出来的光子数分布图
-void MyCommonRICH::GenerateDetRing(MyRICHDetector *det)
+void MyCommonRICH::GenerateDetRing(MyRICHDetector *det, int verbose)
 {
     if (det == 0)
         det = gDet;
@@ -887,11 +1038,14 @@ void MyCommonRICH::GenerateDetRing(MyRICHDetector *det)
     for (int irad = 0; irad < det->nRadLayer; irad++)
     {
         double detPh = PhotonGenFromRadWithAbs(det, irad);
-        cout << "-- Detector " << irad << " " << det->sRadLayer[irad] << " generates " << detPh << " ph." << endl;
+        if (verbose)
+            cout << "-- Detector " << irad << " " << det->sRadLayer[irad] << " generates " << detPh << " ph." << endl;
 
         totPh += detPh;
     }
-    cout << "Total photon from " << det->particle << ", p=" << det->momentum << "GeV/c, theta0=" << det->Theta0 << " : nPh=" << totPh << endl;
+
+    if (verbose)
+        cout << "Total photon from " << det->particle << ", p=" << det->momentum << "GeV/c, theta0=" << det->Theta0 << " : nPh=" << totPh << endl;
 }
 
 //---- 被GuiAction调用的函数
@@ -911,48 +1065,64 @@ void MyCommonRICH::GenerateMultiParticleRICHRings()
 
 //---- 被GuiAction调用的函数
 /// 根据momentum/theta范围生成四种粒子的光子数分布图
-void MyCommonRICH::GenerateTheScanHitMapsForEachDetector()
+//
+void *GenerateTheScanHitMapsHandler(void *ptr)
 {
-    ResizeScanDetList(gDet->np, gDet->nthe0, gDet->nhypo);
+    long ip = (long)ptr;
 
-    cout << "\n---------------------------";
-    int id = 10;
-    for (int imom = 0; imom < gDet->np; imom++)
+    MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
+    vector<vector<vector<MyRICHDetector *>>> gScanDetList = gMyCommonRICH->GetScanDetector();
+
+    int nthread = (NTHREAD < gDet->np) ? NTHREAD : gDet->np;
+    int ibegin = ip * gDet->np / nthread;
+    int iend = (ip + 1) * gDet->np / nthread;
+
+    for (int imom = ibegin; imom < iend; imom++)
     {
         // 1. 循环生成hitmap
         for (int ithe = 0; ithe < gDet->nthe0; ithe++)
             for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
             {
-                double mom = gDet->pMin + imom * gDet->pStep;
-                double Theta0 = gDet->The0Min + ithe * gDet->The0Step;
-                cout << "\n-- generating: [" << imom << " " << ithe << " " << ihypo << "]" << endl;
-                gScanDetList[imom][ithe][ihypo] = new MyRICHDetector(*gDet, id++);
-                gScanDetList[imom][ithe][ihypo]->SetParticleGun(SHYPO[ihypo], GetMass(SHYPO[ihypo]));
-                gScanDetList[imom][ithe][ihypo]->SetParticleGun(mom, Theta0);
-                GenerateDetRing(gScanDetList[imom][ithe][ihypo]);
+                gMyCommonRICH->GenerateDetRing(imom, ithe, ihypo);
             }
 
         // 2. 保存root文件
-        TString fname = fileName;
-        fname.Remove(fname.Index(".root"), 5);
-        fname += TString(Form("_imom_%d.root", imom));
-        TFile f(fname, "recreate");
-
-        // save detector infor.
-        TTree *T = new TTree("TTree", "NumClass");
-        MyRICHDetector *det = new MyRICHDetector();
-        T->Branch("det", "MyRICHDetector", &det, 20000, 1);
-
-        for (int ithe = 0; ithe < gDet->nthe0; ithe++)
-            for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
-            {
-                det = gScanDetList[imom][ithe][ihypo];
-                T->Fill();
-            }
-
-        T->Write();
-        f.Close();
+        gMyCommonRICH->SaveHitFile(imom);
     }
+
+    return 0;
+}
+
+void MyCommonRICH::GenerateDetRing(int imom, int ithe, int ihypo)
+{
+    double mom = gDet->pMin + imom * gDet->pStep;
+    double Theta0 = gDet->The0Min + ithe * gDet->The0Step;
+    cout << "-- generating : [" << imom << " " << ithe << " " << ihypo << "]" << endl;
+    gScanDetList[imom][ithe][ihypo]->SetParticleGun(SHYPO[ihypo], gMyCommonRICH->GetMass(SHYPO[ihypo]));
+    gScanDetList[imom][ithe][ihypo]->SetParticleGun(mom, Theta0);
+    GenerateDetRing(gScanDetList[imom][ithe][ihypo], 0);
+}
+
+void MyCommonRICH::GenerateTheScanHitMapsForEachDetector()
+{
+    cout << "\n---------------------------\n";
+
+    ResizeScanDetList(gDet->np, gDet->nthe0, gDet->nhypo);
+
+    int nthread = (NTHREAD < gDet->np) ? NTHREAD : gDet->np;
+
+    TThread *thread[nthread];
+
+    for (int i = 0; i < nthread; i++)
+        thread[i] = new TThread(Form("thit%d", i), GenerateTheScanHitMapsHandler, (void *)(size_t)i);
+
+    for (int i = 0; i < nthread; i++)
+        thread[i]->Run();
+
+    for (int i = 0; i < nthread; i++)
+        thread[i]->Join();
+
+    cout << "----> Hit-map generated." << endl;
 }
 
 //---- 被GuiAction调用的函数
@@ -976,7 +1146,9 @@ void MyCommonRICH::GenerateTheNPhotonMap()
         for (int imom = 0; imom < gDet->np; imom++)
             for (int ithe = 0; ithe < gDet->nthe0; ithe++)
             {
-                fNPhMap[ihypo]->SetBinContent(imom + 1, ithe + 1, gScanDetList[imom][ithe][ihypo]->GetHitMap()->Integral());
+                if (gScanDetList[imom][ithe][ihypo]->GetHitMap() != NULL)
+                    fNPhMap[ihypo]->SetBinContent(imom + 1, ithe + 1, gScanDetList[imom][ithe][ihypo]->GetHitMap()->Integral());
+
                 for (int irad = 0; irad < gDet->nRadLayer; irad++)
                 {
                     double nph = 0;
@@ -1264,6 +1436,24 @@ void MyCommonRICH::ReconstructRICHDetector(MyRICHDetector *det)
 
 //---- 被GuiAction调用的函数
 /// 生成momentum/theta范围的重建中心值偏差及展宽的分布图, 必须先完成GenerateTheScanHitMapsForEachDetector
+void *ReconstructionHandle(void *ptr)
+{
+    long ip = (long)ptr;
+
+    MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
+
+    int nthread = (NTHREAD < gDet->np) ? NTHREAD : gDet->np;
+    int ibegin = ip * gDet->np / nthread;
+    int iend = (ip + 1) * gDet->np / nthread;
+
+    for (int imom = ibegin; imom < iend; imom++)
+        for (int ithe = 0; ithe < (int)gDet->nthe0; ithe++)
+            for (int ihypo = 0; ihypo < (int)gDet->nhypo; ihypo++)
+                gMyCommonRICH->ReconstructRICHDetector(imom, ithe, ihypo);
+
+    return 0;
+}
+
 bool MyCommonRICH::ReconstructForEachDetector()
 {
     if (GetDetScanNumber() == 0)
@@ -1272,11 +1462,20 @@ bool MyCommonRICH::ReconstructForEachDetector()
         return false;
     }
 
-    for (int imom = 0; imom < (int)gDet->np; imom++)
-        for (int ithe = 0; ithe < (int)gDet->nthe0; ithe++)
-            for (int ihypo = 0; ihypo < (int)gDet->nhypo; ihypo++)
-                ReconstructRICHDetector(gScanDetList[imom][ithe][ihypo]);
+    int nthread = (NTHREAD < gDet->np) ? NTHREAD : gDet->np;
 
+    TThread *thread[nthread];
+
+    for (int i = 0; i < nthread; i++)
+        thread[i] = new TThread(Form("trec%d", i), ReconstructionHandle, (void *)(size_t)i);
+
+    for (int i = 0; i < nthread; i++)
+        thread[i]->Run();
+
+    for (int i = 0; i < nthread; i++)
+        thread[i]->Join();
+
+    cout << "----> Recontruction finished." << endl;
     return true;
 }
 
@@ -1292,7 +1491,6 @@ void MyCommonRICH::GenerateRecOffsetSigmaMap()
     {
         for (int irad = 0; irad < gDet->nRadLayer; irad++)
         {
-            cout << ihypo << " " << irad << endl;
             for (int imom = 0; imom < gDet->np; imom++)
                 for (int ithe = 0; ithe < gDet->nthe0; ithe++)
                     for (int iph = 1; iph < gDet->NPhoton; iph++)
@@ -1302,6 +1500,13 @@ void MyCommonRICH::GenerateRecOffsetSigmaMap()
                         double sigm = (fproj->Integral() == 0) ? 0 : fproj->GetFunction("gaus")->GetParameter(2);
                         double merr = (fproj->Integral() == 0) ? 0 : fproj->GetFunction("gaus")->GetParError(1);
                         double serr = (fproj->Integral() == 0) ? 0 : fproj->GetFunction("gaus")->GetParError(2);
+                        if (fproj->Integral() != 0 && fproj->GetFunction("gaus")->GetNDF() == 0)
+                        {
+                            mean = (fproj->Integral() == 0) ? 0 : fproj->GetMean();
+                            sigm = (fproj->Integral() == 0) ? 0 : fproj->GetRMS();
+                            merr = (fproj->Integral() == 0) ? 0 : fproj->GetMeanError();
+                            serr = (fproj->Integral() == 0) ? 0 : fproj->GetRMSError();
+                        }
                         fRecOffList[ihypo][irad][imom][ithe][iph] = mean;
                         fRecSigList[ihypo][irad][imom][ithe][iph] = sigm;
                         fRecOffErrList[ihypo][irad][imom][ithe][iph] = merr;
@@ -1310,6 +1515,10 @@ void MyCommonRICH::GenerateRecOffsetSigmaMap()
                     }
         }
     }
+
+    for (int imom = 0; imom < gDet->np; imom++)
+        gMyCommonRICH->SaveHitFile(imom);
+    SaveRecFile();
 }
 
 //---- 被GuiAction调用的函数, 生成相应的histogram
@@ -1416,6 +1625,7 @@ double MyCommonRICH::CalPIDProb(MyRICHDetector *det, vector<pair<double, double>
     int ihypo = GetHypoID(det->particle);
     int imom = GetMomID(det->momentum);
     int ithe = GetThetaID(det->Theta0);
+
     double hypoLambda = 185;
     UpdateThetaCExp(det, hypoLambda);
 
@@ -1457,7 +1667,7 @@ double MyCommonRICH::CalPIDProb(MyRICHDetector *det, vector<pair<double, double>
     {
         double avg = 0;
         int nph = recList[irad].size();
-        if (nph == 0 || fRecSigList[ihypo][irad][imom][ithe][nph] == 0)
+        if (nph <= 0 || fRecSigList[ihypo][irad][imom][ithe][nph] == 0)
             continue;
         ndf++;
 
@@ -1499,14 +1709,14 @@ void *CalPIDEfficiencyHandle(void *ptr)
     MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
     vector<vector<vector<MyRICHDetector *>>> gScanDetList = gMyCommonRICH->GetScanDetector();
 
-    int ibegin = ip * gDet->np / 4;
-    int iend = (ip + 1) * gDet->np / 4;
+    int nthread = (NTHREAD < gDet->np) ? NTHREAD : gDet->np;
+    int ibegin = ip * gDet->np / nthread;
+    int iend = (ip + 1) * gDet->np / nthread;
 
     vector<pair<double, double>> hit;
     vector<double> pideff;
     for (int imom = ibegin; imom < iend; imom++)
     {
-        cout << imom << endl;
         for (int ithe = 0; ithe < gDet->nthe0; ithe++)
             for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
             {
@@ -1539,17 +1749,13 @@ void *CalPIDEfficiencyHandle(void *ptr)
                         Yr = int(Yr / det->pixel) * det->pixel + det->pixel / 2;
                         hit.push_back(make_pair(Xr, Yr));
                     }
+
                     int pid = gMyCommonRICH->PIDProb(gScanDetList[imom][ithe], hit);
                     pideff[pid]++;
                 }
 
-                //cout << imom << " " << ithe << " hypo: " << ihypo << " rec: ";
                 for (int jhypo = 0; jhypo < gDet->nhypo; jhypo++)
-                {
-                    //cout << pideff[jhypo] / nEvent << " ";
                     gMyCommonRICH->SetPIDEff(imom, ithe, ihypo, jhypo, pideff[jhypo] / nEvent);
-                }
-                //cout<<endl;
             }
     }
     return 0;
@@ -1562,22 +1768,22 @@ bool MyCommonRICH::CalPIDEfficiency()
 
     ResizePIDEffMap(gDet->np, gDet->nthe0, gDet->nhypo);
 
-    TThread *thread0 = new TThread("t0", CalPIDEfficiencyHandle, (void *)0);
-    TThread *thread1 = new TThread("t1", CalPIDEfficiencyHandle, (void *)1);
-    TThread *thread2 = new TThread("t2", CalPIDEfficiencyHandle, (void *)2);
-    TThread *thread3 = new TThread("t3", CalPIDEfficiencyHandle, (void *)3);
+    int nthread = (NTHREAD < gDet->np) ? NTHREAD : gDet->np;
 
-    thread0->Run();
-    thread1->Run();
-    thread2->Run();
-    thread3->Run();
+    TThread *thread[nthread];
 
-    thread0->Join();
-    thread1->Join();
-    thread2->Join();
-    thread3->Join();
-    cout << "end." << endl;
+    for (int i = 0; i < nthread; i++)
+        thread[i] = new TThread(Form("tpid%d", i), CalPIDEfficiencyHandle, (void *)(size_t)i);
 
+    for (int i = 0; i < nthread; i++)
+        thread[i]->Run();
+
+    for (int i = 0; i < nthread; i++)
+        thread[i]->Join();
+
+    cout << "----> PID efficiency calculation finished." << endl;
+
+    SavePidFile();
     return true;
 }
 

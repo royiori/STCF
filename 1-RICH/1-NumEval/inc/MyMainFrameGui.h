@@ -26,6 +26,19 @@
 
 using namespace std;
 
+enum ShowButtonAction
+{
+    InitStatus,
+    EnableShowSpecButton,
+    EnableShowMulParButton,
+    EnableShowScanRICHButton,
+    EnableShowRecRICHButton,
+    EnableShowPIDEffButton,
+    EnableGenScanRICHButton,
+    EnableGenRecRICHButton,
+    EnableGenPIDEffButton,
+};
+
 class MyMainFrameGui : public TGMainFrame
 {
 public:
@@ -49,13 +62,25 @@ public:
         fCTab->SetTab(id);
         fCA[id]->cd();
     }
+    void DivideCanvas(int id, int x, int y) { fCA[id]->Divide(x, y); }
+    void SwitchDivCanvas(int id, int cid) { fCA[id]->cd(cid); }
     TCanvas *GetCanvas(int id) { return fCA[id]; }
 
     void LoadText(TString txt) { fSettingText->LoadBuffer(txt); }
     TGText *GetText() { return fSettingText->GetText(); }
 
     void HandleCommand();
-    void ToggleButList(bool, int);
+
+    void ToggleButList(bool, ShowButtonAction);
+    void InitShowButtonList() { ToggleButList(0, ShowButtonAction::InitStatus); }
+    void EnableShowSpecButton() { ToggleButList(1, ShowButtonAction::EnableShowSpecButton); }
+    void EnableShowMulParButton() { ToggleButList(1, ShowButtonAction::EnableShowMulParButton); }
+    void EnableShowScanRICHButton() { ToggleButList(1, ShowButtonAction::EnableShowScanRICHButton); }
+    void EnableShowRecRICHButton() { ToggleButList(1, ShowButtonAction::EnableShowRecRICHButton); }
+    void EnableShowPIDEffButton() { ToggleButList(1, ShowButtonAction::EnableShowPIDEffButton); }
+    void EnableGenScanRICHButton() { ToggleButList(1, ShowButtonAction::EnableGenScanRICHButton); }
+    void EnableGenRecRICHButton() { ToggleButList(1, ShowButtonAction::EnableGenRecRICHButton); }
+    void EnableGenPIDEffButton() { ToggleButList(1, ShowButtonAction::EnableGenPIDEffButton); }
 
     int GetNPage() { return NPage; }
 
@@ -65,7 +90,7 @@ private:
     TCanvas *fCA[100];
 
     //vector<TGTextButton *> butList;
-    map<int ,TGTextButton *> butList;
+    map<int, TGTextButton *> butList;
 
     virtual void CloseWindow();
     virtual Bool_t ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2);

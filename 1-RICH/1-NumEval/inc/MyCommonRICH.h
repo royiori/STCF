@@ -14,6 +14,8 @@
 #include "MyStyle.h"
 #include "TThread.h"
 
+const int NTHREAD = 4; //线程数
+
 using namespace std;
 
 const int NHYPO = 5;
@@ -105,7 +107,7 @@ public:
         if (yval == f->GetYaxis()->GetBinLowEdge(f->GetYaxis()->GetNbins() + 1)) //maximum
             ybin = f->GetYaxis()->GetNbins();
 
-        return f->ProjectionX(f->GetName()+TString("_X"), ybin, ybin);
+        return f->ProjectionX(f->GetName() + TString("_X"), ybin, ybin);
     }
 
     TH1D *MyProjectY(TH2F *f, double xval)
@@ -118,22 +120,25 @@ public:
         if (xval == f->GetXaxis()->GetBinLowEdge(f->GetXaxis()->GetNbins() + 1))
             xbin = f->GetXaxis()->GetNbins();
 
-        return f->ProjectionY(f->GetName()+TString("_Y"), xbin, xbin);
+        return f->ProjectionY(f->GetName() + TString("_Y"), xbin, xbin);
     }
 
     //----------------------------
     /// get detector reconstruction histograms
+    //[nph] fixed
     TH2F *GetDetRecOffsetMap() { return fOffsetMap; }
-    TH1F *GetDetRecOffsetVsNphPlot(int ihypo) { return fOffsetVsNphPlot[ihypo]; }
     TH1F *GetDetRecOffsetVsMomPlot(int ihypo) { return fOffsetVsMomPlot[ihypo]; }
     TH1F *GetDetRecOffsetVsThetaPlot(int ihypo) { return fOffsetVsThetaPlot[ihypo]; }
 
     TH2F *GetDetRecSigmaMap() { return fSigmaMap; }
-    TH1F *GetDetRecSigmaVsNphPlot(int ihypo) { return fSigmaVsNphPlot[ihypo]; }
     TH1F *GetDetRecSigmaVsMomPlot(int ihypo) { return fSigmaVsMomPlot[ihypo]; }
     TH1F *GetDetRecSigmaVsThetaPlot(int ihypo) { return fSigmaVsThetaPlot[ihypo]; }
 
+    //[mom][theta]fixed
     TH2F *GetDetRecRing(int imom, int itheta0, int ihypo) { return (GetDetScan(imom, itheta0, ihypo) == NULL) ? NULL : GetDetScan(imom, itheta0, ihypo)->GetRecMap(); }
+    TH1F *GetDetRecOffsetVsNphPlot(int ihypo) { return fOffsetVsNphPlot[ihypo]; }
+    TH1F *GetDetRecSigmaVsNphPlot(int ihypo) { return fSigmaVsNphPlot[ihypo]; }
+
     TH1D *GetRecMap(TString shypo, int irad, int imom, int itheta0, int iph) { return GenRecMap(GetHypoID(shypo), irad, imom, itheta0, iph); }
     TH1D *GetRecMap(int ihypo, int irad, int imom, int itheta0, int iph) { return GenRecMap(ihypo, irad, imom, itheta0, iph); }
 
@@ -201,15 +206,22 @@ public:
     double GetPrecision() { return epsilon; }
     MyDatabaseClass *GetDatabase() { return gDb; }
 
-    void SaveRings(const char *fname);
-    void LoadRings(const char *fname);
+    int LoadRings(const char *fname);
+    int LoadDetFile();
+    int LoadHitFile();
+    int LoadRecFile();
+    int LoadPidFile();
 
-    void SaveRecFile(const char *fname);
-    void LoadRecFile(const char *fname);
+    void SaveRings(const char *fname);
+    void SaveDetFile();
+    void SaveHitFile(int);
+    void SaveRecFile();
+    void SavePidFile();
 
     //----------------------------
     // calculations
-    void GenerateDetRing(MyRICHDetector *det = 0);
+    void GenerateDetRing(MyRICHDetector *det = 0, int verbose = 1);
+    void GenerateDetRing(int imom, int ithe, int ihypo);
     void GenerateMultiParticleRICHRings();
     void GenerateTheScanHitMapsForEachDetector();
     void GenerateTheNPhotonMap();
@@ -221,6 +233,7 @@ public:
 
     // reconstruction
     void ReconstructRICHDetector(MyRICHDetector *det = 0);
+    void ReconstructRICHDetector(int imom, int ithe, int ihypo) { ReconstructRICHDetector(gScanDetList[imom][ithe][ihypo]); }
     double ReconstructRICHBySolver(MyRICHDetector *det, double irad, double Xc, double Yc);
     double ReconstructRICHByBeta(MyRICHDetector *det, double irad, double Xc, double Yc, vector<double> thklist, vector<double> reflist, vector<double> abslist);
     double Findz0(MyRICHDetector *det, int irad, double Xc, double Yc, vector<double> thklist, vector<double> abslist);
@@ -253,7 +266,7 @@ private:
     int nEvent;
     double epsilon;
 
-    TF1 *fRhoFcn;
+    //TF1 *fRhoFcn;
     TF1 *fNphFcn;
     MyDatabaseClass *gDb;                                  //
     MyRICHDetector *gDet;                                  //id=0, 用来保存/读取探测器设置
@@ -275,16 +288,19 @@ public:
     void SetPIDEff(int imom, int ithe, int ihypo, int jhypo, double eff) { fPidEffList[imom][ithe][ihypo][jhypo] = eff; }
 
 private:
-
     TString fileName;
+    TString headName;
 
+    //[nph] fixed
     TH2F *fOffsetMap, *fSigmaMap;
-    vector<TH1F *> fOffsetVsNphPlot;   //[hypo]
-    vector<TH1F *> fOffsetVsMomPlot;   //[hypo]
-    vector<TH1F *> fOffsetVsThetaPlot; //[hypo]
-    vector<TH1F *> fSigmaVsNphPlot;
+    vector<TH1F *> fOffsetVsMomPlot;  
+    vector<TH1F *> fOffsetVsThetaPlot; 
     vector<TH1F *> fSigmaVsMomPlot;
     vector<TH1F *> fSigmaVsThetaPlot;
+
+    //[mom][theta] fixed
+    vector<TH1F *> fOffsetVsNphPlot;   
+    vector<TH1F *> fSigmaVsNphPlot;
 
     vector<TH2F *> fPIDMap;
     vector<TH1F *> fPIDVsMomPlot;
@@ -300,7 +316,7 @@ private:
         gDetList.resize(n);
     }
 
-    void ResizeScanDetList(int nmom, int nthe, int nhypo) //[动量][角度][粒子种类]
+    void ResizeScanDetList(int nmom, int nthe, int nhypo, int flag = 1) //[动量][角度][粒子种类]
     {
         for (int i = 0; i < (int)gScanDetList.size(); i++)
             for (int j = 0; j < (int)gScanDetList[i].size(); j++)
@@ -310,12 +326,19 @@ private:
                         delete gScanDetList[i][j][k];
                 }
 
+        int idbase = 10;
         gScanDetList.resize(nmom);
         for (int imom = 0; imom < nmom; imom++)
         {
             gScanDetList[imom].resize(nthe);
             for (int ithe = 0; ithe < nthe; ithe++)
+            {
                 gScanDetList[imom][ithe].resize(nhypo);
+
+                for (int ihypo = 0; ihypo < nhypo; ihypo++)
+                    if (flag)
+                        gScanDetList[imom][ithe][ihypo] = new MyRICHDetector(*gDet, idbase++);
+            }
         }
     }
 
@@ -405,7 +428,10 @@ private:
         double rms = fproj->GetRMS();
         rms = (rms < 0.01) ? 0.01 : rms;
         if (fproj->Integral() > 0)
-            fproj->Fit("gaus", "Q", "", fproj->GetMean() - 4 * rms, fproj->GetMean() + 4 * rms);
+        {
+            fproj->GetXaxis()->SetRangeUser(fproj->GetMean() - 6 * rms, fproj->GetMean() + 6 * rms);
+            fproj->Fit("gaus", "Q", "", fproj->GetMean() - 3 * rms, fproj->GetMean() + 3 * rms);
+        }
         return fproj;
     }
 

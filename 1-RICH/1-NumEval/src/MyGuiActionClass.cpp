@@ -42,7 +42,6 @@ MyGuiActionClass::MyGuiActionClass()
     sButton[ipage].push_back("Show the Specified Particle RICH");
     sButton[ipage].push_back("Show Multi-Particles RICH");
     sButton[ipage].push_back("Show the SCAN XY-hitmap and N-Photon map");
-    sButton[ipage].push_back("Load Recon-map");
     sButton[ipage].push_back("Show the SCAN Resolution Map");
     sButton[ipage].push_back("Show the PID efficiency Map");
     sButton[ipage].push_back("SEP");
@@ -50,10 +49,8 @@ MyGuiActionClass::MyGuiActionClass()
     sButton[ipage].push_back("Generate the Specified Particle RICH");
     sButton[ipage].push_back("Generate Multi-Particles RICH");
     sButton[ipage].push_back("SEP");
-    sButton[ipage].push_back("Set the Hitmap Root filename");
+    sButton[ipage].push_back("Set && save to the configure ROOT file");
     sButton[ipage].push_back("SCAN to generate the XY-hitmap");
-    sButton[ipage].push_back("SEP");
-    sButton[ipage].push_back("Set the Recon-map Root filename");
     sButton[ipage].push_back("SCAN to generate the Resolution-Map");
     sButton[ipage].push_back("SCAN to generate the PID efficiency Map");
     nButton[ipage] = (int)sButton[ipage].size();
@@ -464,10 +461,6 @@ void MyGuiActionClass::ExecButtonClick(Long_t bid, const char *cmdStr)
         DoGenHitMaps("no");
     if (bid == ShowRecRICHList)
         DoRecRings("no");
-    if (bid == LoadRecFile)
-        DoLoadRecFile(cmdStr);
-    if (bid == SaveRecFile)
-        DoSaveRecFile(cmdStr);
     if (bid == ShowPIDEff)
         DoPIDEff("no");
 
@@ -623,6 +616,9 @@ void MyGuiActionClass::DoShowSpecRICH(TString cmdStr)
 
     //sleep(1);
     gMyMainFrameGui->SwitchCanvas(1);
+
+    //update button status
+    gMyMainFrameGui->EnableShowSpecButton();
 }
 
 void MyGuiActionClass::DoShowMulParRICH(TString cmdStr)
@@ -652,6 +648,9 @@ void MyGuiActionClass::DoShowMulParRICH(TString cmdStr)
         gMyMainFrameGui->UpdateCanvas(2 + ihypo);
     }
     gMyMainFrameGui->SwitchCanvas(1);
+
+    //update button status
+    gMyMainFrameGui->EnableShowMulParButton();
 }
 
 void MyGuiActionClass::DoGenHitMaps(TString cmdStr)
@@ -755,26 +754,60 @@ void MyGuiActionClass::DoGenHitMaps(TString cmdStr)
     //sleep(1);
 
     gMyMainFrameGui->SwitchCanvas(1);
+
+    //update button status
+    gMyMainFrameGui->EnableShowScanRICHButton();
+    gMyMainFrameGui->EnableGenRecRICHButton();
 }
 
 void MyGuiActionClass::DoSaveDetFile(const char *fname)
 {
     if (fname == NULL)
         return;
-    
+
     DoShowSpecRICH("yes");
     DoShowMulParRICH("yes");
 
     gMyCommonRICH->SaveRings(fname);
+
+    //update button status
+    gMyMainFrameGui->EnableGenScanRICHButton();
 }
 
 void MyGuiActionClass::DoLoadDetFile(const char *fname)
 {
     if (fname == NULL)
         return;
-    gMyCommonRICH->LoadRings(fname);
-    GetDetectorParameters();
+    int ret = gMyCommonRICH->LoadRings(fname);
+    // return: -1 文件不存在
+    //          1 gdet文件存在
+    //          2 hitmap文件存在
+    //          3 recmap文件存在
+    //          4 pidmap文件存在
 
+    if (ret == -1) //文件不存在
+        return;
+
+    gMyMainFrameGui->EnableShowSpecButton();
+    gMyMainFrameGui->EnableShowMulParButton();
+    gMyMainFrameGui->EnableGenScanRICHButton();
+
+    if (ret > 1)
+    {
+        gMyMainFrameGui->EnableShowScanRICHButton();
+        gMyMainFrameGui->EnableGenRecRICHButton();
+    }
+
+    if (ret > 2)
+    {
+        gMyMainFrameGui->EnableShowRecRICHButton();
+        gMyMainFrameGui->EnableGenPIDEffButton();
+    }
+
+    if (ret > 3)
+        gMyMainFrameGui->EnableShowPIDEffButton();
+
+    GetDetectorParameters();
     DoLoadTextBuf();
     DoDrawConfig("Show the configurations");
 }
@@ -793,8 +826,6 @@ void MyGuiActionClass::DoRecRings(TString cmdStr)
     if (gMyCommonRICH->GetDetRectNumber() == 0)
         gMyCommonRICH->GenerateRecOffsetSigmaMap();
 
-    gMyMainFrameGui->ClearAllCanvas();
-
     MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
     int irad = irad1;
     int imom = gMyCommonRICH->GetMomID(pList);
@@ -806,21 +837,13 @@ void MyGuiActionClass::DoRecRings(TString cmdStr)
     TString rad = gDet->sRadLayer[irad];
 
     gMyCommonRICH->GenerateRecHistograms(particle, irad, imom, ithe, iph);
+    gMyMainFrameGui->ClearAllCanvas();
 
     //-----offset
     //1. 指定irad辐射体，重建offset随着粒子不同动量和角度的分布
     gMyMainFrameGui->SwitchCanvas(1);
     gMyCommonRICH->GetDetRecOffsetMap()->Draw("colz");
     gMyMainFrameGui->UpdateCanvas(1);
-
-    //2....
-    //gMyStyle->SetTitle(Form("Cherenkov Rings for [%.1fGeV/c, %.1f#circ] #mu/#pi/K/p", mom, the));
-    //gMyStyle->SetXLabel("Number of photon");
-    //gMyStyle->SetYLabel("Reconstruct #theta_c[#circ]");
-    //gMyStyle->SetDrawOption("");
-    //gMyMainFrameGui->SwitchCanvas(2);
-    //gMyStyle->DrawHistograms(gMyCommonRICH->GetDetRecRing(imom, ithe, 0), gMyCommonRICH->GetDetRecRing(imom, ithe, 1), gMyCommonRICH->GetDetRecRing(imom, ithe, 2), gMyCommonRICH->GetDetRecRing(imom, ithe, 3));
-    //gMyMainFrameGui->UpdateCanvas(2);
 
     //2. 相同动量的粒子重建offset随着不同入射角度的分布
     gMyStyle->SetTitle(Form("Reconstruct mean #theta_c from %d nPhoton for [%.1fGeV/c] from %s", iph, mom, rad.Data()));
@@ -872,35 +895,59 @@ void MyGuiActionClass::DoRecRings(TString cmdStr)
     gMyStyle->DrawHistograms(gMyCommonRICH->GetDetRecSigmaVsMomPlot(0), -1, -1, gMyCommonRICH->GetDetRecSigmaVsMomPlot(1), gMyCommonRICH->GetDetRecSigmaVsMomPlot(2), gMyCommonRICH->GetDetRecSigmaVsMomPlot(3), gMyCommonRICH->GetDetRecSigmaVsMomPlot(4));
     gMyMainFrameGui->UpdateCanvas(6);
 
-    //7. 相同动量，相同入射角度的粒子重建offset随着不同光子数的分布
+    //7. 相同动量，相同入射角度的粒子重建的二维分布
+    gMyStyle->SetTitle(Form("Cherenkov Rings for [%.1fGeV/c, %.1f#circ] #mu/#pi/K/p", mom, the));
+    gMyStyle->SetXLabel("Number of photon");
+    gMyStyle->SetYLabel("Reconstruct #theta_c[#circ]");
+    gMyStyle->SetDrawOption("");
+    gMyMainFrameGui->SwitchCanvas(7);
+    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetRecRing(imom, ithe, 0), gMyCommonRICH->GetDetRecRing(imom, ithe, 1), gMyCommonRICH->GetDetRecRing(imom, ithe, 2), gMyCommonRICH->GetDetRecRing(imom, ithe, 3), gMyCommonRICH->GetDetRecRing(imom, ithe, 4));
+    gMyMainFrameGui->UpdateCanvas(7);
+
+    //8. 相同动量，相同入射角度的粒子重建offset随着不同光子数的分布
     gMyStyle->SetTitle(Form("Reconstruct offset #theta_c for [%.1fGeV/c, %.1f#circ] from %s", mom, the, rad.Data()));
     gMyStyle->SetXLabel("Number of photon");
     gMyStyle->SetYLabel("Reconstruct offset[rad]");
     gMyStyle->SetDrawOption("ep");
     for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
         gMyStyle->SetLegends(ihypo, gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle);
-    gMyMainFrameGui->SwitchCanvas(7);
+    gMyMainFrameGui->SwitchCanvas(8);
     gMyStyle->DrawHistograms(gMyCommonRICH->GetDetRecOffsetVsNphPlot(0), -1, -1, gMyCommonRICH->GetDetRecOffsetVsNphPlot(1), gMyCommonRICH->GetDetRecOffsetVsNphPlot(2), gMyCommonRICH->GetDetRecOffsetVsNphPlot(3), gMyCommonRICH->GetDetRecOffsetVsNphPlot(4));
-    gMyMainFrameGui->UpdateCanvas(7);
+    gMyMainFrameGui->UpdateCanvas(8);
 
-    //8. 相同动量，相同入射角度的粒子重建sigma随着不同光子数的分布
+    //9. 相同动量，相同入射角度的粒子重建sigma随着不同光子数的分布
     gMyStyle->SetTitle(Form("Reconstruct sigma #theta_c nPhoton for [%.1fGeV/c, %.1f#circ] from %s", mom, the, rad.Data()));
     gMyStyle->SetXLabel("Number of photon");
     gMyStyle->SetYLabel("Reconstruct #theta_c sigma[rad]");
     gMyStyle->SetDrawOption("ep");
     for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
         gMyStyle->SetLegends(ihypo, gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle);
-    gMyMainFrameGui->SwitchCanvas(8);
-    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetRecSigmaVsNphPlot(0), -1, -1, gMyCommonRICH->GetDetRecSigmaVsNphPlot(1), gMyCommonRICH->GetDetRecSigmaVsNphPlot(2), gMyCommonRICH->GetDetRecSigmaVsNphPlot(3), gMyCommonRICH->GetDetRecSigmaVsNphPlot(4));
-    gMyMainFrameGui->UpdateCanvas(8);
-
-    //9. 显示单个的填图及拟合结果
     gMyMainFrameGui->SwitchCanvas(9);
-    if (gMyCommonRICH->GetRecMap(particle, irad, imom, ithe, iph) != NULL)
-        gMyCommonRICH->GetRecMap(particle, irad, imom, ithe, iph)->Draw();
+    gMyStyle->DrawHistograms(gMyCommonRICH->GetDetRecSigmaVsNphPlot(0), -1, -1, gMyCommonRICH->GetDetRecSigmaVsNphPlot(1), gMyCommonRICH->GetDetRecSigmaVsNphPlot(2), gMyCommonRICH->GetDetRecSigmaVsNphPlot(3), gMyCommonRICH->GetDetRecSigmaVsNphPlot(4));
     gMyMainFrameGui->UpdateCanvas(9);
 
+    //10. 显示单个的填图及拟合结果
+    gMyMainFrameGui->SwitchCanvas(10);
+    gMyMainFrameGui->DivideCanvas(10, 2, 2);
+    gMyMainFrameGui->SwitchDivCanvas(10, 1);
+    if (gMyCommonRICH->GetRecMap(particle, irad, imom, ithe, iph) != NULL)
+        gMyCommonRICH->GetRecMap(particle, irad, imom, ithe, iph)->Draw();
+    gMyMainFrameGui->SwitchDivCanvas(10, 2);
+    if (gMyCommonRICH->GetRecMap(particle, irad, imom, ithe, iph + 1) != NULL)
+        gMyCommonRICH->GetRecMap(particle, irad, imom, ithe, iph + 1)->Draw();
+    gMyMainFrameGui->SwitchDivCanvas(10, 3);
+    if (gMyCommonRICH->GetRecMap(particle, irad, imom, ithe, iph + 2) != NULL)
+        gMyCommonRICH->GetRecMap(particle, irad, imom, ithe, iph + 2)->Draw();
+    gMyMainFrameGui->SwitchDivCanvas(10, 4);
+    if (gMyCommonRICH->GetRecMap(particle, irad, imom, ithe, iph + 3) != NULL)
+        gMyCommonRICH->GetRecMap(particle, irad, imom, ithe, iph + 3)->Draw();
+    gMyMainFrameGui->UpdateCanvas(10);
+
     gMyMainFrameGui->SwitchCanvas(1);
+
+    //update button status
+    gMyMainFrameGui->EnableShowRecRICHButton();
+    gMyMainFrameGui->EnableGenPIDEffButton();
 }
 
 void MyGuiActionClass::DoPIDEff(TString cmdStr)
@@ -925,21 +972,12 @@ void MyGuiActionClass::DoPIDEff(TString cmdStr)
     gMyCommonRICH->GeneratePIDHistograms(particle, imom, ithe);
 
     //-----pid-map
-    gMyMainFrameGui->SwitchCanvas(1);
-    gMyCommonRICH->GetPIDMap(0)->Draw("colz");
-    gMyMainFrameGui->UpdateCanvas(1);
-
-    gMyMainFrameGui->SwitchCanvas(2);
-    gMyCommonRICH->GetPIDMap(1)->Draw("colz");
-    gMyMainFrameGui->UpdateCanvas(2);
-
-    gMyMainFrameGui->SwitchCanvas(3);
-    gMyCommonRICH->GetPIDMap(2)->Draw("colz");
-    gMyMainFrameGui->UpdateCanvas(3);
-
-    gMyMainFrameGui->SwitchCanvas(4);
-    gMyCommonRICH->GetPIDMap(3)->Draw("colz");
-    gMyMainFrameGui->UpdateCanvas(4);
+    for (int i = 0; i < NHYPO; i++)
+    {
+        gMyMainFrameGui->SwitchCanvas(1 + i);
+        gMyCommonRICH->GetPIDMap(i)->Draw("colz");
+        gMyMainFrameGui->UpdateCanvas(1 + i);
+    }
 
     //-----pid vs. momentum
     gMyStyle->SetTitle(Form("Reconstruct pid efficienchy for [%.1f#circ] from %s", the, particle.Data()));
@@ -948,9 +986,9 @@ void MyGuiActionClass::DoPIDEff(TString cmdStr)
     gMyStyle->SetDrawOption("ep");
     for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
         gMyStyle->SetLegends(ihypo, gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle);
-    gMyMainFrameGui->SwitchCanvas(5);
+    gMyMainFrameGui->SwitchCanvas(6);
     gMyStyle->DrawHistograms(gMyCommonRICH->GetPIDMapVsMom(0), -1, -1, gMyCommonRICH->GetPIDMapVsMom(1), gMyCommonRICH->GetPIDMapVsMom(2), gMyCommonRICH->GetPIDMapVsMom(3), gMyCommonRICH->GetPIDMapVsMom(4));
-    gMyMainFrameGui->UpdateCanvas(5);
+    gMyMainFrameGui->UpdateCanvas(6);
 
     //-----pid vs. theta
     gMyStyle->SetTitle(Form("Reconstruct pid efficienchy for [%.1fGeV/c] from %s", mom, particle.Data()));
@@ -959,25 +997,14 @@ void MyGuiActionClass::DoPIDEff(TString cmdStr)
     gMyStyle->SetDrawOption("ep");
     for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
         gMyStyle->SetLegends(ihypo, gMyCommonRICH->GetDetScan(imom, ithe, ihypo)->particle);
-    gMyMainFrameGui->SwitchCanvas(6);
+    gMyMainFrameGui->SwitchCanvas(7);
     gMyStyle->DrawHistograms(gMyCommonRICH->GetPIDMapVsTheta(0), -1, -1, gMyCommonRICH->GetPIDMapVsTheta(1), gMyCommonRICH->GetPIDMapVsTheta(2), gMyCommonRICH->GetPIDMapVsTheta(3), gMyCommonRICH->GetPIDMapVsTheta(4));
-    gMyMainFrameGui->UpdateCanvas(6);
+    gMyMainFrameGui->UpdateCanvas(7);
 
     gMyMainFrameGui->SwitchCanvas(1);
-}
 
-void MyGuiActionClass::DoSaveRecFile(const char *fname)
-{
-    if (fname == NULL)
-        return;
-    gMyCommonRICH->SaveRecFile(fname);
-}
-
-void MyGuiActionClass::DoLoadRecFile(const char *fname)
-{
-    if (fname == NULL)
-        return;
-    gMyCommonRICH->LoadRecFile(fname);
+    //update button status
+    gMyMainFrameGui->EnableShowPIDEffButton();
 }
 
 //______________________________________________________________________________

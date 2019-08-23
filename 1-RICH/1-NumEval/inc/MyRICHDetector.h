@@ -179,7 +179,7 @@ public:
         np = n;
         pMin = min;
         pMax = max;
-        pStep = (n > 0) ? (max - min) / (n - 1) : 0;
+        pStep = (n - 1 > 0) ? (max - min) / (n - 1) : 0;
     }
     void SetTheta0ScanRange(int n, double min, double max)
     {
@@ -188,11 +188,11 @@ public:
         nthe0 = n;
         The0Min = min;
         The0Max = max;
-        The0Step = (n > 0) ? (The0Max - The0Min) / (n - 1) : 0;
+        The0Step = (n - 1 > 0) ? (The0Max - The0Min) / (n - 1) : 0;
 
         the0Min = min * 3.1415927 / 180.;
         the0Max = max * 3.1415927 / 180.;
-        the0Step = (n > 0 && the0Max != the0Min) ? (the0Max - the0Min) / (n - 1) : 0;
+        the0Step = (n - 1 > 0 && the0Max != the0Min) ? (the0Max - the0Min) / (n - 1) : 0;
     }
 
     int nhypo;
@@ -257,7 +257,7 @@ public:
 
         if (fRecMap != 0)
             delete fRecMap;
-        fRecMap = new TH2F(Form("fRecMap%d", id), Form("Reconstructed Cherenkov Ring for %s @ [%.1f GeV/c, %.1f#circ]", particle.Data(), momentum, Theta0), NPhoton, 0, NPhoton, 720, 0, TMath::Pi() / 2);
+        fRecMap = new TH2F(Form("fRecMap%d", id), Form("Reconstructed Cherenkov Ring for %s @ [%.1f GeV/c, %.1f#circ]", particle.Data(), momentum, Theta0), NPhoton, 0, NPhoton, 360*4, 0, TMath::Pi() / 3);
         fRecMap->GetXaxis()->SetTitle("Number of photon");
         fRecMap->GetYaxis()->SetTitle("Reconstructed Theta_c[rad]");
         return fRecMap;
@@ -379,7 +379,7 @@ private:
         //det.fWaveLengthHist->SetDirectory(0);
     }
 
-    ClassDef(MyRICHDetector, 1) 
+    ClassDef(MyRICHDetector, 1)
 };
 
 #endif

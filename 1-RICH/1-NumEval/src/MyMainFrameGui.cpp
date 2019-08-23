@@ -8,7 +8,7 @@ const char *filetypes[] = {"ROOT files", "*.root",
                            "All files", "*",
                            0, 0};
 
-const int NPAGE = 10;
+const int NPAGE = 11;
 //______________________________________________________________________________
 //
 MyMainFrameGui::MyMainFrameGui(const TGWindow *p, int w, int h) : TGMainFrame(p, w, h)
@@ -135,7 +135,7 @@ MyMainFrameGui::MyMainFrameGui(const TGWindow *p, int w, int h) : TGMainFrame(p,
         fVFrame3->AddFrame(fHFrame31, LayoutX);
     }
 
-    ToggleButList(0, 0);
+    InitShowButtonList();
 
     SetWindowName("STCF-RICH");
     SetIconName("STCF-RICH");
@@ -179,7 +179,7 @@ Bool_t MyMainFrameGui::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
             fi.fIniDir = StrDup(dir);
             TString cmdStr;
 
-            if (parm1 == SaveDetFile || parm1 == LoadDetFile || parm1 == SaveRecFile || parm1 == LoadRecFile || parm1 == ReadCosmicData || parm1 == LoadCosmicRes || parm1 == SaveCosmicRes)
+            if (parm1 == SaveDetFile || parm1 == LoadDetFile || parm1 == ReadCosmicData || parm1 == LoadCosmicRes || parm1 == SaveCosmicRes)
             {
                 new TGFileDialog(gClient->GetRoot(), this, kFDOpen, &fi);
                 if (fi.fFilename == NULL)
@@ -196,21 +196,6 @@ Bool_t MyMainFrameGui::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
                              kMBIconExclamation, kMBYes | kMBNo, &retval);
                 cmdStr = (retval == 1) ? "yes" : "no";
             }
-
-            if (parm1 == GenSpecRICH || parm1 == SaveDetFile)
-                ToggleButList(1, 1);
-            if (parm1 == GenMulParRICH || parm1 == SaveDetFile)
-                ToggleButList(1, 2);
-            if (parm1 == LoadDetFile || parm1 == GenScanRICHList)
-                ToggleButList(1, 3);
-            if (parm1 == LoadRecFile || parm1 == GenRecRICHList)
-                ToggleButList(1, 4);
-            if (parm1 == LoadRecFile || parm1 == GenPIDEff)
-                ToggleButList(1, 5);
-            if (parm1 == SaveDetFile)
-                ToggleButList(1, 6);
-            if (parm1 == SaveRecFile)
-                ToggleButList(1, 7);
 
             gMyGuiActionClass->ExecButtonClick(parm1, cmdStr.Data());
             break;
@@ -235,13 +220,13 @@ void MyMainFrameGui::HandleCommand()
     }
 }
 
-void MyMainFrameGui::ToggleButList(bool on, int flag)
+void MyMainFrameGui::ToggleButList(bool on, ShowButtonAction flag)
 {
     EButtonState stat = (on) ? kButtonUp : kButtonDisabled;
 
     map<int, TGTextButton *>::iterator mIter;
 
-    if (flag == 0) //初始状态
+    if (flag == InitStatus) //初始状态
     {
         butList.find(ShowSpecRICH)->second->SetState(stat);
         butList.find(ShowMulParRICH)->second->SetState(stat);
@@ -252,20 +237,22 @@ void MyMainFrameGui::ToggleButList(bool on, int flag)
         butList.find(GenRecRICHList)->second->SetState(stat);
         butList.find(GenPIDEff)->second->SetState(stat);
     }
-    if (flag == 1)
+
+    if (flag == ShowButtonAction::EnableShowSpecButton)
         butList.find(ShowSpecRICH)->second->SetState(stat);
-    if (flag == 2)
+    if (flag == ShowButtonAction::EnableShowMulParButton)
         butList.find(ShowMulParRICH)->second->SetState(stat);
-    if (flag == 3)
+    if (flag == ShowButtonAction::EnableShowScanRICHButton)
         butList.find(ShowScanRICHList)->second->SetState(stat);
-    if (flag == 4)
+    if (flag == ShowButtonAction::EnableShowRecRICHButton)
         butList.find(ShowRecRICHList)->second->SetState(stat);
-    if (flag == 5)
+    if (flag == ShowButtonAction::EnableShowPIDEffButton)
         butList.find(ShowPIDEff)->second->SetState(stat);
-    if (flag == 6)
+
+    if (flag == ShowButtonAction::EnableGenScanRICHButton)
         butList.find(GenScanRICHList)->second->SetState(stat);
-    if (flag == 7)
+    if (flag == ShowButtonAction::EnableGenRecRICHButton)
         butList.find(GenRecRICHList)->second->SetState(stat);
-    if (flag == 7)
+    if (flag==ShowButtonAction::EnableGenPIDEffButton)
         butList.find(GenPIDEff)->second->SetState(stat);
 }

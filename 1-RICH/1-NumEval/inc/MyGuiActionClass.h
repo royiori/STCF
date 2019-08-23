@@ -42,7 +42,6 @@ enum ButtonAction
     ShowSpecRICH,
     ShowMulParRICH,
     ShowScanRICHList,
-    LoadRecFile,
     ShowRecRICHList,
     ShowPIDEff,
     SEP1,
@@ -52,13 +51,11 @@ enum ButtonAction
     SEP3,
     SaveDetFile,
     GenScanRICHList,
-    SEP4,
-    SaveRecFile,
     GenRecRICHList,
     GenPIDEff,
 
     //cosmic ray data analysis
-    ReadCosmicData,
+    ReadCosmicData = 200,
     AnalysisCosmicData,
     LoadCosmicRes,
     SaveCosmicRes,
@@ -109,8 +106,6 @@ private:
     void DoShowFCN();
     void DoSaveDetFile(const char *fname);
     void DoLoadDetFile(const char *fname);
-    void DoSaveRecFile(const char *fname);
-    void DoLoadRecFile(const char *fname);
     void DoShowSpecRICH(TString cmdStr);
     void DoShowMulParRICH(TString cmdStr);
     void DoGenHitMaps(TString cmdStr);
