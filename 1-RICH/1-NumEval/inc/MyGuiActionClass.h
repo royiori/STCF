@@ -62,12 +62,15 @@ enum ButtonAction
     ShowCosmicData,
 };
 
+const int BATCH = 1;
+const int GUI = 2;
+
 //-----------------------------------------------------------------------------------------------
 //
 class MyGuiActionClass
 {
 public:
-    MyGuiActionClass();
+    MyGuiActionClass(int flag = GUI); //默认用GUI模式
     ~MyGuiActionClass();
 
     int GetNTabPage() { return nTabPage; }
@@ -78,11 +81,14 @@ public:
     TString GetPageButtonName(int i, int j) { return sButton[i].at(j); }
 
     TString GenerateSettingsText();
-    void ReadSettingsText();
+    void ReadSettingsText(const char *fname=NULL);
 
+    void DoReadBatchFile(const char *fname);
     void ExecButtonClick(Long_t bid, const char *cmd);
 
 private:
+    int BatGuiFlag;
+
     //gui related action
     int nTabPage;
     TString sTabPage[10];
@@ -94,27 +100,6 @@ private:
     int nSelectedMat, nSelectedDet;
     vector<TString> selectedMat;
     vector<TString> selectedDet;
-
-    bool ValicationCheck();
-    void DoDrawConfig(TString str);
-    void DoLoadTextBuf();
-    void ShowMaterialInfo(TString);
-    void ShowDetectorInfo(TString);
-    void DoDrawSelectedMat();
-    void DoDrawSelectedDet();
-
-    void DoShowFCN();
-    void DoSaveDetFile(const char *fname);
-    void DoLoadDetFile(const char *fname);
-    void DoShowSpecRICH(TString cmdStr);
-    void DoShowMulParRICH(TString cmdStr);
-    void DoGenHitMaps(TString cmdStr);
-    void DoRecRings(TString cmdStr);
-    void DoPIDEff(TString cmdStr);
-
-    void DoReadCosmicData(const char *fname);
-    void DoAnalysisCosmicData(TString cmdStr);
-    void DoShowCosmicData();
 
     //定义探测器结构
     int nRadLayer;            //可以有多层传输层
@@ -141,7 +126,7 @@ private:
 
     TString particle;
     double mass, momentum, Theta0;
-    
+
     int NXBin, NYBin;
     double XBinMin, XBinMax, YBinMin, YBinMax;
 
@@ -168,6 +153,28 @@ private:
     TString filePath;
     MyStyle *gMyStyle;
     MyDatabaseClass *gMyDatabaseClass;
+
+    //.. button action
+    bool ValicationCheck();
+    void DoDrawConfig(TString str);
+    void DoLoadTextBuf();
+    void ShowMaterialInfo(TString);
+    void ShowDetectorInfo(TString);
+    void DoDrawSelectedMat();
+    void DoDrawSelectedDet();
+
+    void DoShowFCN();
+    void DoSaveDetFile(const char *fname);
+    void DoLoadDetFile(const char *fname);
+    void DoShowSpecRICH(TString cmdStr);
+    void DoShowMulParRICH(TString cmdStr);
+    void DoGenHitMaps(TString cmdStr);
+    void DoRecRings(TString cmdStr);
+    void DoPIDEff(TString cmdStr);
+
+    void DoReadCosmicData(const char *fname);
+    void DoAnalysisCosmicData(TString cmdStr);
+    void DoShowCosmicData();
 };
 
 extern MyGuiActionClass *gMyGuiActionClass;

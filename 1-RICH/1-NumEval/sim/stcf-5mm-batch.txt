@@ -1,0 +1,80 @@
+
+#---------------------------
+#    Detector settings
+#---------------------------
+
+# The number of radiator layers, thickness in [mm]
+Radiator C6F14 10.0
+Radiator Quartz 4.0
+
+# The transition layer, content is percentile [%]
+TransLayer Ar 50.0
+TransLayer CH4 50.0
+
+# The thickness of the transition layer in [mm]
+TransThick 100.0
+
+# The Impurities in the transition layer, content is [ppm]
+Impurities H2O 1.0
+Impurities O2 1.0
+
+# The photocathode detector, pixel size in [mm]
+PCDetector CsI 5.0
+
+# The n_pixel range for view, [xmin, xmax, ymin, ymax]
+PixelRange -400.0 400.0 -400.0 400.0
+
+# The lambda range for analysis
+Lambda 61 160.0 220.0
+
+#---------------------------
+#    (Multi-)Particle settings
+#---------------------------
+
+# The Specified (Multi-)Particle to show (momentum[GeV], angle[degree])
+Particle: mu 2.0 10.0
+
+#---------------------------
+#    SCAN settings
+#---------------------------
+
+# Particle to SCAN (N, Min, Max) for momentum[GeV/c])
+Momentum: 8 1.0 2.0
+
+
+# Particle to SCAN (N, Min, Max) for theta_0[degree])
+Theta0: 1 0.0 10.0
+
+
+# From ShowMom[GeV/c], ShowThe[degree] and photon from ShowRad
+ShowMom: 2.0 
+ShowThe: 0.0 
+ShowRad: 0 1
+ShowPhoton: 25
+
+#---------------------------
+#    Precision settings
+#---------------------------
+
+# Step size for charge particle track[mm]
+trkStep: 1.000000
+
+# Number of Step for phi [0~2pi] * 360
+nPhi: 1
+
+# Solver precision
+Precision: 0.001000
+
+# nEvents for reconstruction the resolution
+nEvent: 100
+
+#---------------------------
+#    Others
+#---------------------------
+
+# Draw the selected material
+SelectedMat: Quartz Quartz311 Quartz3001 Quartz3301 
+
+# Draw the selected detector
+SelectedDet: CsI APD 
+#---------------------------

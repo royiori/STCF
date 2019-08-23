@@ -5,8 +5,9 @@ MyGuiActionClass *gMyGuiActionClass = (MyGuiActionClass *)0;
 
 //______________________________________________________________________________
 //
-MyGuiActionClass::MyGuiActionClass()
+MyGuiActionClass::MyGuiActionClass(int flag)
 {
+    BatGuiFlag = flag;
     env = new TEnv(gSystem->WorkingDirectory() + TString("/.env"));
     env->SaveLevel(kEnvLocal);
 
@@ -334,7 +335,7 @@ vector<TString> ReadContent(TString LINE)
     return text;
 }
 
-void MyGuiActionClass::ReadSettingsText()
+void MyGuiActionClass::ReadSettingsText(const char* txtfile)
 {
     int nline = 0;
     TGLongPosition pos(0, nline);
@@ -348,7 +349,12 @@ void MyGuiActionClass::ReadSettingsText()
     sImpurities.clear();
     mapImpurities.clear();
 
-    TGText *text = gMyMainFrameGui->GetText();
+    TGText *text = new TGText();
+    if (BatGuiFlag == GUI)
+        text = gMyMainFrameGui->GetText();
+    else
+        text->Load(txtfile);
+
     while (text->GetLineLength(nline) != -1)
     {
         if (text->GetChar(pos) != -1)
@@ -579,12 +585,87 @@ void MyGuiActionClass::DoLoadTextBuf()
 }
 
 //______________________________________________________________________________
+// 与读取/保存文件相关
+void MyGuiActionClass::DoReadBatchFile(const char *fname)
+{
+    TString rootfile(fname);
+    if(!rootfile.EndsWith(".txt"))
+    {
+        cout<<"##### Configure file must end with '.txt'"<<endl;
+        return;
+    }
+
+    ReadSettingsText(fname);
+    rootfile.ReplaceAll(".txt", ".root");
+    DoSaveDetFile(rootfile);
+    DoGenHitMaps("yes");
+    DoRecRings("yes");
+    DoPIDEff("yes");
+}
+
+void MyGuiActionClass::DoSaveDetFile(const char *fname)
+{
+    if (fname == NULL)
+        return;
+
+    DoShowSpecRICH("yes");
+    DoShowMulParRICH("yes");
+
+    gMyCommonRICH->SaveRings(fname);
+
+    //update button status
+    if (BatGuiFlag == GUI)
+        gMyMainFrameGui->EnableGenScanRICHButton();
+}
+
+void MyGuiActionClass::DoLoadDetFile(const char *fname)
+{
+    if (fname == NULL)
+        return;
+    int ret = gMyCommonRICH->LoadRings(fname);
+    // return: -1 文件不存在
+    //          1 gdet文件存在
+    //          2 hitmap文件存在
+    //          3 recmap文件存在
+    //          4 pidmap文件存在
+
+    if (ret == -1) //文件不存在
+        return;
+
+    gMyMainFrameGui->EnableShowSpecButton();
+    gMyMainFrameGui->EnableShowMulParButton();
+    gMyMainFrameGui->EnableGenScanRICHButton();
+
+    if (ret > 1)
+    {
+        gMyMainFrameGui->EnableShowScanRICHButton();
+        gMyMainFrameGui->EnableGenRecRICHButton();
+    }
+
+    if (ret > 2)
+    {
+        gMyMainFrameGui->EnableShowRecRICHButton();
+        gMyMainFrameGui->EnableGenPIDEffButton();
+    }
+
+    if (ret > 3)
+        gMyMainFrameGui->EnableShowPIDEffButton();
+
+    GetDetectorParameters();
+    DoLoadTextBuf();
+    DoDrawConfig("Show the configurations");
+}
+
+//______________________________________________________________________________
 // hitmap analysis button actions
 void MyGuiActionClass::DoShowSpecRICH(TString cmdStr)
 {
     SetDetectorParameters();
     if (cmdStr == "yes" || gMyCommonRICH->GetDetHitMap()->GetEntries() == 0)
         gMyCommonRICH->GenerateDetRing();
+
+    if (BatGuiFlag == BATCH)
+        return;
 
     gMyMainFrameGui->ClearAllCanvas();
     //1. 阳极上看到的光子击中
@@ -626,6 +707,8 @@ void MyGuiActionClass::DoShowMulParRICH(TString cmdStr)
     SetDetectorParameters();
     if (cmdStr == "yes" || gMyCommonRICH->GetDetListNumber() != NHYPO)
         gMyCommonRICH->GenerateMultiParticleRICHRings();
+    if (BatGuiFlag == BATCH)
+        return;
 
     gMyMainFrameGui->ClearAllCanvas();
 
@@ -659,6 +742,10 @@ void MyGuiActionClass::DoGenHitMaps(TString cmdStr)
     if (cmdStr == "yes" || gMyCommonRICH->GetDetScanNumber() == 0)
         gMyCommonRICH->GenerateTheScanHitMapsForEachDetector();
     gMyCommonRICH->GenerateTheNPhotonMap();
+
+    if (BatGuiFlag == BATCH)
+        return;
+
     gMyMainFrameGui->ClearAllCanvas();
 
     MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
@@ -760,58 +847,6 @@ void MyGuiActionClass::DoGenHitMaps(TString cmdStr)
     gMyMainFrameGui->EnableGenRecRICHButton();
 }
 
-void MyGuiActionClass::DoSaveDetFile(const char *fname)
-{
-    if (fname == NULL)
-        return;
-
-    DoShowSpecRICH("yes");
-    DoShowMulParRICH("yes");
-
-    gMyCommonRICH->SaveRings(fname);
-
-    //update button status
-    gMyMainFrameGui->EnableGenScanRICHButton();
-}
-
-void MyGuiActionClass::DoLoadDetFile(const char *fname)
-{
-    if (fname == NULL)
-        return;
-    int ret = gMyCommonRICH->LoadRings(fname);
-    // return: -1 文件不存在
-    //          1 gdet文件存在
-    //          2 hitmap文件存在
-    //          3 recmap文件存在
-    //          4 pidmap文件存在
-
-    if (ret == -1) //文件不存在
-        return;
-
-    gMyMainFrameGui->EnableShowSpecButton();
-    gMyMainFrameGui->EnableShowMulParButton();
-    gMyMainFrameGui->EnableGenScanRICHButton();
-
-    if (ret > 1)
-    {
-        gMyMainFrameGui->EnableShowScanRICHButton();
-        gMyMainFrameGui->EnableGenRecRICHButton();
-    }
-
-    if (ret > 2)
-    {
-        gMyMainFrameGui->EnableShowRecRICHButton();
-        gMyMainFrameGui->EnableGenPIDEffButton();
-    }
-
-    if (ret > 3)
-        gMyMainFrameGui->EnableShowPIDEffButton();
-
-    GetDetectorParameters();
-    DoLoadTextBuf();
-    DoDrawConfig("Show the configurations");
-}
-
 //______________________________________________________________________________
 // reconstruction / PID efficiency analysis button actions
 void MyGuiActionClass::DoRecRings(TString cmdStr)
@@ -825,6 +860,9 @@ void MyGuiActionClass::DoRecRings(TString cmdStr)
 
     if (gMyCommonRICH->GetDetRectNumber() == 0)
         gMyCommonRICH->GenerateRecOffsetSigmaMap();
+
+    if (BatGuiFlag == BATCH)
+        return;
 
     MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
     int irad = irad1;
@@ -958,6 +996,9 @@ void MyGuiActionClass::DoPIDEff(TString cmdStr)
         if (!gMyCommonRICH->CalPIDEfficiency())
             return;
     }
+
+    if (BatGuiFlag == BATCH)
+        return;
 
     gMyMainFrameGui->ClearAllCanvas();
 
