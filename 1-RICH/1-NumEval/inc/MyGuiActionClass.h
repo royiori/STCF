@@ -70,7 +70,7 @@ const int GUI = 2;
 class MyGuiActionClass
 {
 public:
-    MyGuiActionClass(int flag = GUI); //默认用GUI模式
+    MyGuiActionClass(const char *path, int flag = GUI); //默认用GUI模式
     ~MyGuiActionClass();
 
     int GetNTabPage() { return nTabPage; }
@@ -81,7 +81,7 @@ public:
     TString GetPageButtonName(int i, int j) { return sButton[i].at(j); }
 
     TString GenerateSettingsText();
-    int ReadSettingsText(const char *fname=NULL);
+    int ReadSettingsText(const char *fname = NULL);
 
     void SetNThread(int nt) { gMyCommonRICH->SetNThread(nt); }
     void DoReadBatchFile(const char *fname, const char *epoch);

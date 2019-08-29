@@ -5,7 +5,7 @@ MyGuiActionClass *gMyGuiActionClass = (MyGuiActionClass *)0;
 
 //______________________________________________________________________________
 //
-MyGuiActionClass::MyGuiActionClass(int flag)
+MyGuiActionClass::MyGuiActionClass(const char *realpath, int flag)
 {
     BatGuiFlag = flag;
     env = new TEnv(gSystem->WorkingDirectory() + TString("/.env"));
@@ -16,7 +16,7 @@ MyGuiActionClass::MyGuiActionClass(int flag)
     gMyStyle->SetColorPattern(MATHEMATIC_STYLE);
 
     gMyCommonRICH = new MyCommonRICH();
-    gMyDatabaseClass = new MyDatabaseClass();
+    gMyDatabaseClass = new MyDatabaseClass(realpath);
 
     // pages
     nTabPage = 4;

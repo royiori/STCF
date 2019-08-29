@@ -1113,7 +1113,7 @@ void *GenerateTheScanHitMapsHandler(void *ptr)
     vector<vector<vector<MyRICHDetector *>>> gScanDetList = gMyCommonRICH->GetScanDetector();
 
     GetMomentumScanRange(ip, ibegin, iend);
-    
+
     if (ibegin == -1 || iend == -1)
         return 0;
 
@@ -1154,8 +1154,8 @@ void MyCommonRICH::GenerateTheScanHitMapsForEachDetector()
     TThread *thread[nthread];
 
     for (int i = 0; i < nthread; i++)
-         thread[i] = new TThread(Form("thit%d", i), GenerateTheScanHitMapsHandler, (void *)(size_t)i);
- 
+        thread[i] = new TThread(Form("thit%d", i), GenerateTheScanHitMapsHandler, (void *)(size_t)i);
+
     for (int i = 0; i < nthread; i++)
         thread[i]->Run();
 
@@ -1530,6 +1530,8 @@ void MyCommonRICH::GenerateRecOffsetSigmaMap()
     // 1. 拟合重建结果
     int p0 = (Epoch == -1) ? 0 : Epoch;
     int p1 = (Epoch == -1) ? gDet->np : Epoch + 1;
+    if (p0 > gDet->np || p1 > gDet->np)
+        return;
 
     for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
     {
@@ -1832,9 +1834,12 @@ bool MyCommonRICH::CalPIDEfficiency()
 
     int p0 = (Epoch == -1) ? 0 : Epoch;
     int p1 = (Epoch == -1) ? gDet->np : Epoch + 1;
+    if (p0 > gDet->np || p1 > gDet->np)
+        return false;
+
     for (int imom = p0; imom < p1; imom++)
         SavePidFile(imom);
-        
+
     return true;
 }
 

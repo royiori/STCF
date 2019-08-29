@@ -3,7 +3,7 @@
 
 //______________________________________________________________________________
 //
-MyDatabaseClass::MyDatabaseClass()
+MyDatabaseClass::MyDatabaseClass(const char *path)
 {
     MaterialList.push_back("C6F14");
     MaterialList.push_back("Quartz");
@@ -38,7 +38,8 @@ MyDatabaseClass::MyDatabaseClass()
     DetQEGraph.resize(nDetector);
 
     // read data
-    TString datpath = gSystem->WorkingDirectory() + TString("/database/");
+    //TString datpath = gSystem->WorkingDirectory() + TString("/database/");
+    TString datpath = TString(path) + TString("/database/");
     for (int i = 0; i < nMaterial; i++)
         MatAbsData.push_back(new MyReadData(datpath + MaterialList[i] + "_abs.txt", MaterialList[i] + "_abs"));
     for (int i = 0; i < nMaterial; i++)

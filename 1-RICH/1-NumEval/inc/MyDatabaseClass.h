@@ -15,7 +15,7 @@ using namespace std;
 class MyDatabaseClass
 {
 public:
-    MyDatabaseClass();
+    MyDatabaseClass(const char *path);
     ~MyDatabaseClass();
 
     int GetNMaterial() { return nMaterial; }
