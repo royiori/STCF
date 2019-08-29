@@ -14,8 +14,6 @@
 #include "MyStyle.h"
 #include "TThread.h"
 
-const int NTHREAD = 4; //线程数
-
 using namespace std;
 
 const int NHYPO = 5;
@@ -37,6 +35,11 @@ class MyCommonRICH
 public:
     MyCommonRICH();
     ~MyCommonRICH();
+
+    void SetNThread(int nt) { NThread = nt; }
+    void SetEpoch(int ep) { Epoch = ep; }
+    int GetNThread() { return NThread; }
+    int GetEpoch() { return Epoch; }
 
     //----------------------------
     /// Mass & Beta function
@@ -215,8 +218,8 @@ public:
     void SaveRings(const char *fname);
     void SaveDetFile();
     void SaveHitFile(int);
-    void SaveRecFile();
-    void SavePidFile();
+    void SaveRecFile(int);
+    void SavePidFile(int);
 
     //----------------------------
     // calculations
@@ -263,6 +266,9 @@ private:
     void UpdateThetaCExp(MyRICHDetector *det, double hypolambda);
 
     // variables
+    int NThread;
+    int Epoch;
+
     int nEvent;
     double epsilon;
 
@@ -293,13 +299,13 @@ private:
 
     //[nph] fixed
     TH2F *fOffsetMap, *fSigmaMap;
-    vector<TH1F *> fOffsetVsMomPlot;  
-    vector<TH1F *> fOffsetVsThetaPlot; 
+    vector<TH1F *> fOffsetVsMomPlot;
+    vector<TH1F *> fOffsetVsThetaPlot;
     vector<TH1F *> fSigmaVsMomPlot;
     vector<TH1F *> fSigmaVsThetaPlot;
 
     //[mom][theta] fixed
-    vector<TH1F *> fOffsetVsNphPlot;   
+    vector<TH1F *> fOffsetVsNphPlot;
     vector<TH1F *> fSigmaVsNphPlot;
 
     vector<TH2F *> fPIDMap;

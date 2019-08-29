@@ -13,6 +13,7 @@ int main(int argc, char **argv)
         gStyle->SetStatFont(42);
 
         gMyGuiActionClass = new MyGuiActionClass();
+        gMyGuiActionClass->SetNThread(4);
         gMyMainFrameGui = new MyMainFrameGui(gClient->GetRoot(), 1250, 600);
 
         // run ROOT application
@@ -26,7 +27,8 @@ int main(int argc, char **argv)
     //采用batch模式
     //输入参数： 保存的文件路径及文件名
     gMyGuiActionClass = new MyGuiActionClass(BATCH);
-    gMyGuiActionClass->DoReadBatchFile(argv[1]); //batch file
+    gMyGuiActionClass->SetNThread(1);
+    gMyGuiActionClass->DoReadBatchFile(argv[1], argv[2]); //batch file
 
     return 0;
 }

@@ -335,7 +335,7 @@ vector<TString> ReadContent(TString LINE)
     return text;
 }
 
-void MyGuiActionClass::ReadSettingsText(const char* txtfile)
+int MyGuiActionClass::ReadSettingsText(const char *txtfile)
 {
     int nline = 0;
     TGLongPosition pos(0, nline);
@@ -353,7 +353,13 @@ void MyGuiActionClass::ReadSettingsText(const char* txtfile)
     if (BatGuiFlag == GUI)
         text = gMyMainFrameGui->GetText();
     else
-        text->Load(txtfile);
+    {
+        if (!text->Load(txtfile))
+        {
+            cout << "##### Can't open configure file " << txtfile << ". " << endl;
+            return -1;
+        }
+    }
 
     while (text->GetLineLength(nline) != -1)
     {
@@ -440,6 +446,8 @@ void MyGuiActionClass::ReadSettingsText(const char* txtfile)
         mapTransLayers[sTransLayer[i]] = pTransLayer[i];
     for (int i = 0; i < nImpurities; i++)
         mapImpurities[sImpurities[i]] = pImpurities[i];
+
+    return 0;
 }
 
 //______________________________________________________________________________
@@ -586,21 +594,33 @@ void MyGuiActionClass::DoLoadTextBuf()
 
 //______________________________________________________________________________
 // 与读取/保存文件相关
-void MyGuiActionClass::DoReadBatchFile(const char *fname)
+void MyGuiActionClass::DoReadBatchFile(const char *fname, const char *sepoch)
 {
     TString rootfile(fname);
-    if(!rootfile.EndsWith(".txt"))
+    if (!rootfile.EndsWith(".txt"))
     {
-        cout<<"##### Configure file must end with '.txt'"<<endl;
+        cout << "##### Configure file must end with '.txt'" << endl;
         return;
     }
 
-    ReadSettingsText(fname);
+    gMyCommonRICH->SetEpoch(TString(sepoch).Atoi());
+
+    if (ReadSettingsText(fname) == -1)
+        return;
+
+    SetDetectorParameters();
+    if (gMyCommonRICH->GetEpoch() == 0) // detector.root
+    {
+        gMyCommonRICH->GenerateDetRing();
+        gMyCommonRICH->GenerateMultiParticleRICHRings();
+    }
+
     rootfile.ReplaceAll(".txt", ".root");
-    DoSaveDetFile(rootfile);
-    DoGenHitMaps("yes");
-    DoRecRings("yes");
-    DoPIDEff("yes");
+    gMyCommonRICH->SaveRings(rootfile);
+    gMyCommonRICH->GenerateTheScanHitMapsForEachDetector(); //hitmap.root
+    gMyCommonRICH->ReconstructForEachDetector();
+    gMyCommonRICH->GenerateRecOffsetSigmaMap();
+    gMyCommonRICH->CalPIDEfficiency();
 }
 
 void MyGuiActionClass::DoSaveDetFile(const char *fname)
@@ -614,8 +634,7 @@ void MyGuiActionClass::DoSaveDetFile(const char *fname)
     gMyCommonRICH->SaveRings(fname);
 
     //update button status
-    if (BatGuiFlag == GUI)
-        gMyMainFrameGui->EnableGenScanRICHButton();
+    gMyMainFrameGui->EnableGenScanRICHButton();
 }
 
 void MyGuiActionClass::DoLoadDetFile(const char *fname)
@@ -707,8 +726,6 @@ void MyGuiActionClass::DoShowMulParRICH(TString cmdStr)
     SetDetectorParameters();
     if (cmdStr == "yes" || gMyCommonRICH->GetDetListNumber() != NHYPO)
         gMyCommonRICH->GenerateMultiParticleRICHRings();
-    if (BatGuiFlag == BATCH)
-        return;
 
     gMyMainFrameGui->ClearAllCanvas();
 
@@ -742,9 +759,6 @@ void MyGuiActionClass::DoGenHitMaps(TString cmdStr)
     if (cmdStr == "yes" || gMyCommonRICH->GetDetScanNumber() == 0)
         gMyCommonRICH->GenerateTheScanHitMapsForEachDetector();
     gMyCommonRICH->GenerateTheNPhotonMap();
-
-    if (BatGuiFlag == BATCH)
-        return;
 
     gMyMainFrameGui->ClearAllCanvas();
 
@@ -860,9 +874,6 @@ void MyGuiActionClass::DoRecRings(TString cmdStr)
 
     if (gMyCommonRICH->GetDetRectNumber() == 0)
         gMyCommonRICH->GenerateRecOffsetSigmaMap();
-
-    if (BatGuiFlag == BATCH)
-        return;
 
     MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
     int irad = irad1;
@@ -996,9 +1007,6 @@ void MyGuiActionClass::DoPIDEff(TString cmdStr)
         if (!gMyCommonRICH->CalPIDEfficiency())
             return;
     }
-
-    if (BatGuiFlag == BATCH)
-        return;
 
     gMyMainFrameGui->ClearAllCanvas();
 

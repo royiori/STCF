@@ -81,9 +81,10 @@ public:
     TString GetPageButtonName(int i, int j) { return sButton[i].at(j); }
 
     TString GenerateSettingsText();
-    void ReadSettingsText(const char *fname=NULL);
+    int ReadSettingsText(const char *fname=NULL);
 
-    void DoReadBatchFile(const char *fname);
+    void SetNThread(int nt) { gMyCommonRICH->SetNThread(nt); }
+    void DoReadBatchFile(const char *fname, const char *epoch);
     void ExecButtonClick(Long_t bid, const char *cmd);
 
 private:

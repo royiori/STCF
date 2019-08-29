@@ -1,9 +1,9 @@
-
 #---------------------------
 #    Detector settings
 #---------------------------
 
 # The number of radiator layers, thickness in [mm]
+Radiator Quartz 4.0
 Radiator C6F14 10.0
 Radiator Quartz 4.0
 
