@@ -1,0 +1,18 @@
+At ui server, we submit jobs by "cmd".
+We need to create one *.cmd for one job.
+
+The template.cmd is one template for cmd file.
+You need to modify the EXE and INPUT1 INPUT2.
+line 11 is not necessary, you can remove them. ( We have bl-1-*,bl-2-*,bl-3-*,bl-4-*,bl-5-* machines.)
+line 13 is only for long jobs. If your job can terminate in 8 hours, you can remove this line.
+line 5, the Arguments correspond to the $1 $2 in the template.sh.
+
+
+The "run.sh" file is to create many cmd files automatically based on template.cmd.
+It will create a folder named "jobs" and put all cmd,sh,out,log,err files in this folder.
+And submit jobs by "condor_submit" *cmd.
+
+You can use condor_q $username to check your jobs' status.
+You can use condor_rm $username to delete all your jobs.
+
+2019-08-21:     machine bl-2-12 has some problem, so in line 11, it's forbidden.
