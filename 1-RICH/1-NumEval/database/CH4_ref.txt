@@ -1,9 +1,9 @@
-#CH4 Reflective index data from 
+#CH4 Refractive index data from 
 # 529nm ~ 658nm:  https://refractiveindex.info/?shelf=organic&book=methane&page=Loria
 # 
 #
 #
-#LABEL: Lambda,   Reflective Index
+#LABEL: Lambda,   Refractive Index
 529.0,  1.0004480098469
 530.3,  1.0004479024102
 531.6,  1.0004477957607

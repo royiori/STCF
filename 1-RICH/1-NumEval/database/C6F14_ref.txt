@@ -1,9 +1,9 @@
-#C6F14 Reflective index data from 
+#C6F14 Refractive index data from 
 # ALICE TDR Figure 2.25, Equation 2.12
 # Calculation from 160nm to 220nm
 #        n = 0.0172 * eng(lambda) + 1.177
 #
-#LABEL: Lambda,   Reflective Index
+#LABEL: Lambda,   Refractive Index
 160, 1.31046,
 161, 1.30964,
 162, 1.30882,

@@ -1,7 +1,7 @@
-#Aerogel110 Reflective index data not input 
+#Aerogel110 Refractive index data not input 
 # 
 #
 #
-#LABEL: Lambda,   Reflective Index
+#LABEL: Lambda,   Refractive Index
 0,     1.10
 1000., 1.10

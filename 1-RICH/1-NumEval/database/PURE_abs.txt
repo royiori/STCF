@@ -1,0 +1,6 @@
+#PURE Transmission data 
+#
+#Neglect the absorption
+#LABEL: Lambda,  Absorption Length[cm]
+120.0, 1000000,
+1200.0, 1000000,

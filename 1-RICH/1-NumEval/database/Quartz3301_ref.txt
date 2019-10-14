@@ -1,10 +1,10 @@
-#Quartz Reflective index data from 
+#Quartz Refractive index data from 
 # 160nm ~ 220nm: Calculation from ALICE TDR Equation 2.10
 #      n^2 = 46.411 / (10.666 * 10.666 - eng * eng) + 228.71 / (18.125 * 18.125 - eng * eng) + 1; 
 #
 # 220nm ~ 6700nm https://refractiveindex.info/?shelf=main&book=SiO2&page=Malitson
 #
-#LABEL: Lambda,   Reflective Index
+#LABEL: Lambda,   Refractive Index
 160, 1.64896,
 161, 1.64463,
 162, 1.64047,

@@ -5,6 +5,7 @@
 //
 MyDatabaseClass::MyDatabaseClass(const char *path)
 {
+    MaterialList.push_back("PURE");
     MaterialList.push_back("C6F14");
     MaterialList.push_back("Quartz");
     MaterialList.push_back("Quartz311");
@@ -22,6 +23,7 @@ MyDatabaseClass::MyDatabaseClass(const char *path)
     MaterialList.push_back("Ar");
     MaterialList.push_back("N2");
     MaterialList.push_back("CH4");
+    MaterialList.push_back("C4F10");
     MaterialList.push_back("H2O");
     MaterialList.push_back("O2");
     nMaterial = (int)MaterialList.size();
@@ -29,6 +31,7 @@ MyDatabaseClass::MyDatabaseClass(const char *path)
     MatTrsGraph.resize(nMaterial);
     MatRefGraph.resize(nMaterial);
 
+    DetectorList.push_back("PURE");
     DetectorList.push_back("CsI");
     DetectorList.push_back("MPPC1025");
     DetectorList.push_back("MPPC1050");
@@ -60,14 +63,14 @@ double MyDatabaseClass::GetMatAbsValue(TString matStr, double lambda, double ppm
         return MatAbsData.at(id)->GetValue(lambda);
 
     // ppm!=0 so it's cross section, use ppm to calcuate the absorption length
-    double A = 1;
-    A = (matStr == "H2O") ? 18 : A;
-    A = (matStr == "O2") ? 32 : A;
+    //double A = 1;
+    //A = (matStr == "H2O") ? 18 : A;
+    //A = (matStr == "O2") ? 32 : A;
     double Xsec = MatAbsData.at(id)->GetValue(lambda);
     double xsec = Xsec * 1E6 * 1E-28; //m^2
-    double density = ppm / A * 6.02214129 * 1E23;
-    double absleng = 100. / 1 / xsec / density; // /sqrt(2)  //[cm]
-    return (xsec == 0 || density == 0) ? 10000 : absleng;
+    double density = ppm  * 0.0406 * 6.02214129 * 1E23;//ppm定义为单位体积到分子数占比
+    double absleng = (ppm <= 0) ? 0 : 100. / 1 / xsec / density; // /sqrt(2)  //[cm]
+    return (xsec == 0 || density == 0) ? 10000000. : absleng;
 }
 
 TGraph *MyDatabaseClass::GetMatAbsGraph(TString matStr, int nL, double lmin, double lmax, double ppm)
@@ -91,7 +94,6 @@ TGraph *MyDatabaseClass::GetMatAbsGraph(TString matStr, int nL, double lmin, dou
     return MatAbsGraph[id];
 }
 
-
 TGraph *MyDatabaseClass::GetMatTrsGraph(TString matStr, int nL, double lmin, double lmax, double ppm)
 {
     int id = GetID(matStr, MaterialList);
@@ -106,7 +108,7 @@ TGraph *MyDatabaseClass::GetMatTrsGraph(TString matStr, int nL, double lmin, dou
     {
         double lambda = lmin + (i + 0.5) * lstep;
         double abslen = GetMatAbsValue(matStr, lambda, ppm);
-        MatTrsGraph[id]->SetPoint(i, lambda, exp(-1./abslen)); //[cm]
+        MatTrsGraph[id]->SetPoint(i, lambda, exp(-1. / abslen)); //[cm]
     }
     MatTrsGraph[id]->SetTitle("Transmission for 10mm " + matStr);
     MatTrsGraph[id]->GetXaxis()->SetTitle("lambda");
@@ -118,7 +120,7 @@ TGraph *MyDatabaseClass::GetMatTrsGraph(TString matStr, int nL, double lmin, dou
 //
 double MyDatabaseClass::GetMatRefValue(TString matStr, double lambda)
 {
-    int id  = GetID(matStr, MaterialList);
+    int id = GetID(matStr, MaterialList);
     return (id == -1) ? 1 : MatRefData.at(id)->GetValue(lambda);
 }
 
@@ -137,9 +139,9 @@ TGraph *MyDatabaseClass::GetMatRefGraph(TString matStr, int nL, double lmin, dou
         double lambda = lmin + (i + 0.5) * lstep;
         MatRefGraph[id]->SetPoint(i, lambda, GetMatRefValue(matStr, lambda));
     }
-    MatRefGraph[id]->SetTitle("Reflective index of " + matStr);
+    MatRefGraph[id]->SetTitle("Refractive index of " + matStr);
     MatRefGraph[id]->GetXaxis()->SetTitle("lambda");
-    MatRefGraph[id]->GetYaxis()->SetTitle("Reflective index");
+    MatRefGraph[id]->GetYaxis()->SetTitle("Refractive index");
     return MatRefGraph[id];
 }
 

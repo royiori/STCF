@@ -1,9 +1,9 @@
-#Ar Reflective index data from 
+#Ar Refractive index data from 
 # 140 nm ~ 567 nm: https://refractiveindex.info/?shelf=main&book=Ar&page=Bideau-Mehu
 # 567 nm ~ 2059nm: https://refractiveindex.info/?shelf=main&book=Ar&page=Peck-0C
 #
 #
-#LABEL: Lambda,   Reflective Index
+#LABEL: Lambda,   Refractive Index
 140.4,  1.0003954468031
 144.7,  1.000384471176
 148.9,  1.0003754104638

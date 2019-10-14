@@ -1,10 +1,10 @@
-#N2 Reflective index data from 
+#N2 Refractive index data from 
 # 145nm ~ 270nm:  https://refractiveindex.info/?shelf=main&book=N2&page=Griesmann
 # 450nm ~ 2059nm: https://refractiveindex.info/?shelf=main&book=N2&page=Peck-0C 
 # 
 #
 #
-#LABEL: Lambda,   Reflective Index
+#LABEL: Lambda,   Refractive Index
 145.0,  1.0004073239748
 146.3,  1.0004042484761
 147.5,  1.0004015317003

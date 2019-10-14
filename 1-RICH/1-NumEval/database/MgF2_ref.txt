@@ -1,8 +1,8 @@
-#MgF2 Reflective index data from 
+#MgF2 Refractive index data from 
 # 140 nm ~ 7500 nm: https://refractiveindex.info/?shelf=main&book=MgF2&page=Li-o
 #
 #
-#LABEL: Lambda,   Reflective Index
+#LABEL: Lambda,   Refractive Index
 140.0,  1.503424322613
 145.7,  1.4886211076878
 151.6,  1.4760348184102

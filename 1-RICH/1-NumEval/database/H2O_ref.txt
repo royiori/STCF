@@ -1,9 +1,9 @@
-#H2O Reflective index data from 
+#H2O Refractive index data from 
 # 180nm ~ 1130nm:  https://refractiveindex.info/?shelf=main&book=H2O&page=Daimon-20.0C
 # 
 #
 #
-#LABEL: Lambda,   Reflective Index
+#LABEL: Lambda,   Refractive Index
 182.0,  1.4679465862259
 191.5,  1.4407913910231
 200.9,  1.422764121467

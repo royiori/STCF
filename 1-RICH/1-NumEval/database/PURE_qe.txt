@@ -1,0 +1,5 @@
+#CsI Quantum efficiency from ALICE TDR Fig.2.2 Weizmann (RD-26) reference
+#
+#LABEL: Lambda,  QE[%]
+10, 100, 
+1200, 100, 

@@ -1,0 +1,7 @@
+#Aerogel105 Reflective index data not input 
+# 
+#
+#
+#LABEL: Lambda,   Reflective Index
+0,     1.05
+1000., 1.05

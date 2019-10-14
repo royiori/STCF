@@ -1,0 +1,5 @@
+#PURE Refractive index 
+#
+#LABEL: Lambda,   Refractive Index
+120., 1.3,
+1000, 1.3,

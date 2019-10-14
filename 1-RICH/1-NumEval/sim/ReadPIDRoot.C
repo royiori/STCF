@@ -1,9 +1,10 @@
 #include "TString.h"
 #include "TFile.h"
 #include "TTree.h"
+#include "TGraph.h"
 
 //设置文件名
-TString HeadName("./sim/STCF-5mm-batch");
+TString HeadName("./STCF-5mm-batch");
 
 //读pid文件
 void ReadPIDRoot()
@@ -12,7 +13,7 @@ void ReadPIDRoot()
     const char *SHYPO[NHYPO] = {"p", "k", "#pi", "#mu", "e"};
 
     //1. 读一个pid文件, 取出关键量
-    TFile f(HeadName + TString("_pid_0.root"));
+    TFile f(HeadName + TString("_pid.root"));
     if (!f.IsOpen())
         return;
 
@@ -39,8 +40,6 @@ void ReadPIDRoot()
     double pstep = (nmom <= 1) ? 0 : (pMax - pMin) / (nmom - 1);
     double thstep = (nthe <= 1) ? 0 : (The0Max - The0Min) / (nthe - 1);
 
-    f.Close();
-
     //------------------------------------
     //2. 读取PID的效率和误判率
 
@@ -59,27 +58,34 @@ void ReadPIDRoot()
         }
     }
 
-    for (int imom = 0; imom < nmom; imom++)
+    TTree *T2 = (TTree *)f.Get("PidTree");
+    if (T2 == NULL)
+        return;
+
+    double pideff;
+    T2->SetBranchAddress("pideff", &pideff);
+
+    //画图
+    TFile I(HeadName + TString("_out.root"), "RECREATE");
+    if (!I.IsOpen())
+        return;
+
+    int dMom = 81;
+    TH2D * hMom[dMom][NHYPO];
+    for (int ihpyo = 0; ihpyo < nhyp; ihpyo++) 
     {
-        TString pidFile = HeadName;
-        pidFile += TString(Form("_pid_%d.root", imom));
+      for(int jhypo = 0; jhypo < nhyp; jhypo++)
+      {
+        const string name = Form("PID efficiency for %s as %s", SHYPO[ihpyo], SHYPO[jhypo]);
+        hMom[ihpyo][jhypo] = new TH2D(name.c_str(), name.c_str(), 81, 0, 4, 71, 0, 70 );
+      }
+        
+    }
 
-        TFile f(pidFile);
-        if (!f.IsOpen())
-        {
-            cout << "##### Can't open " << pidFile << "." << endl;
-            return;
-        }
-
-        TTree *T2 = (TTree *)f.Get("PidTree");
-        if (T2 == NULL)
-            return;
-
-        double pideff;
-        T2->SetBranchAddress("pideff", &pideff);
-
-        int ientry = 0;
+    int ientry = 0;
+    for (int imom = 0; imom < nmom; imom++)
         for (int ithe = 0; ithe < nthe; ithe++)
+            //for (int ithe = 0; ithe < nhyp; ithe++)
             for (int ihypo = 0; ihypo < nhyp; ihypo++)
                 for (int jhypo = 0; jhypo < nhyp; jhypo++)
                 {
@@ -89,10 +95,26 @@ void ReadPIDRoot()
                     //根据需要拿对应的中心值和误差的结果：
                     double mom = pMin + imom * pstep;
                     double the = The0Min + ithe * thstep;
-                    cout << "Momentum = " << mom << " GeV/c, theta = " << the << " degree, "
-                         << "particle = " << SHYPO[ihypo] << " identified as " << SHYPO[jhypo] << " prob = " << pideff << endl;
+                    //cout << "Momentum = " << mom << " GeV/c, theta = " << the << " degree, "
+                         //<< "particle = " << SHYPO[ihypo] << " identified as " << SHYPO[jhypo] << " prob = " << pideff << endl;
+                   
+                    hMom[ihypo][jhypo] -> Fill(mom,the,pideff);
                 }
-    }
 
     cout << "----> Total entries loaded. " << endl;
+   
+    for (int ihpyo = 0; ihpyo < nhyp; ihpyo++) 
+    {
+      for(int jhypo = 0; jhypo < nhyp; jhypo++)
+      {
+        hMom[ihpyo][jhypo] -> GetXaxis() -> SetTitle("/#it{GeV}");
+        hMom[ihpyo][jhypo] -> GetYaxis() -> SetTitle("#it{#theta}");
+        hMom[ihpyo][jhypo]-> Write();
+      }
+        
+    }
+    // 出图检查
+
+    I.Close();
+    f.Close();
 }

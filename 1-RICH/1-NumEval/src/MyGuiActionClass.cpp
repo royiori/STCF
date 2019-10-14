@@ -454,12 +454,15 @@ int MyGuiActionClass::ReadSettingsText(const char *txtfile)
 // basic button actions
 void MyGuiActionClass::ExecButtonClick(Long_t bid, const char *cmdStr)
 {
+    if (bid == LoadTextBuf)
+    {
+        DoLoadTextBuf();
+        return;
+    }
     ReadSettingsText();
 
     if (bid == DrawConfig)
         DoDrawConfig("Show the configurations");
-    if (bid == LoadTextBuf)
-        DoLoadTextBuf();
     if (bid == LoadDetFile)
         DoLoadDetFile(cmdStr);
     if (bid == SaveDetFile)
@@ -1142,9 +1145,9 @@ void MyGuiActionClass::DoDrawSelectedMat()
             gMyStyle->SetLegends(gid++, matName);
         }
     }
-    gMyStyle->SetTitle("Reflective index");
+    gMyStyle->SetTitle("Refractive index");
     gMyStyle->SetXLabel("Wavelength [nm]");
-    gMyStyle->SetYLabel("Reflective index");
+    gMyStyle->SetYLabel("Refractive index");
 
     gMyMainFrameGui->SwitchCanvas(2);
     gMyStyle->DrawPresetGraph();

@@ -1,8 +1,8 @@
-#CaF2 Reflective index data from 
+#CaF2 Refractive index data from 
 # 138 nm ~ 2326 nm: https://refractiveindex.info/?shelf=main&book=CaF2&page=Daimon-20
 #
 #
-#LABEL: Lambda,   Reflective Index
+#LABEL: Lambda,   Refractive Index
 138.0,  1.6370414813673
 159.9,  1.5530600790728
 181.8,  1.5144866720607
