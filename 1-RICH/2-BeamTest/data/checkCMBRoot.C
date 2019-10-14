@@ -62,8 +62,13 @@ TH2F *fhitmapReal[NDET][2];
 TGraph *fFootmap;
 TH2F *fHitmap;
 TH1F *fDeviation[NDET][2];
-TH1F *fRec;
-TH1F *fRec2;
+TH1F *fRec;                //单个cluster的重建结果
+TH1F *fRec2;               // 一个事例里的cluster重建结果
+TH1F *fQphoton, *fTphoton; //重建有效后，确认是光子的信号，然后再填Q/T的分布
+TH1F *fTotQphoton;
+TH2F *fQTphoton;
+TH1F *fClusterPhoton;
+TH1F *fNClusterPhoton;
 TH1F *fNRec;
 TGraph2D *gRec;
 
@@ -276,16 +281,15 @@ double ReconstructRICHByBeta(double Xr, double Yr)
 
     if (verbose)
     {
-        //cout << "\n(*\n(" << Yr << "-" << Y0 << ") / (" << Xr << ", " << X0 << ")" << endl;
-        //cout << "phi = " << phi << "; thetac=" << thetac << "; theta0=" << theta0 << "; Xep=" << Xep << ";" << endl;
-        //cout << "a1=" << a[0] * Xep << " a2=" << a[1] * Xep << endl;
-        //cout << "R01=" << R - a[0] * Xep << " R02=" << R - a[1] * Xep << endl;
-        //cout << "n" << R0 / sqrt(R0 * R0 + Tg * Tg) / sin(theta1);
-        ////", theta1=" << theta1 << endl;
-        ////cout << "R0=" << R0 << ", R=" << R << ", Rrad=" << Rrad << endl;
-        ////cout << "nquartz2 = " << nquartz2 << ", sinTheta2=" << R0 / sqrt(R0 * R0 + Tg * Tg) << ", sinTheta1 = " << sin(theta1) << endl;
-        //cout << "rthec=" << rthec[0] << ", " << rthec[1] << endl;
-        //cout << "*)\n\n";
+        cout << "\n(*\n(" << Yr << "-" << Y0 << ") / (" << Xr << ", " << X0 << ")" << endl;
+        cout << "phi = " << phi << "; thetac=" << thetac << "; theta0=" << theta0 << "; Xep=" << Xep << ";" << endl;
+        cout << "a1=" << a[0] * Xep << " a2=" << a[1] * Xep << endl;
+        cout << "R01=" << R - a[0] * Xep << " R02=" << R - a[1] * Xep << endl;
+        //", theta1=" << theta1 << endl;
+        //cout << "R0=" << R0 << ", R=" << R << ", Rrad=" << Rrad << endl;
+        //cout << "nquartz2 = " << nquartz2 << ", sinTheta2=" << R0 / sqrt(R0 * R0 + Tg * Tg) << ", sinTheta1 = " << sin(theta1) << endl;
+        cout << "rthec=" << rthec[0] << ", " << rthec[1] << endl;
+        cout << "*)\n\n";
     }
 
     if (isnan(rthec[0]))
@@ -800,13 +804,13 @@ void AnalysisRICH(vector<int> uselist, int target, vector<MyBeamTestData *> detl
             double Xr = -1 * (x - foot[0]);
             double Yr = sqrt(pow(y - foot[1], 2) + pow(z - foot[2], 2)) * (foot[1] - y) / fabs(y - foot[1]);
             //cout<<(y - foot[1]) / fabs(y - foot[1])<<endl;
-            double rec = ReconstructRICHByBeta(Xr, Yr);
             if (Yr > -40 || y < 40)
                 continue;
+            double rec = ReconstructRICHByBeta(Xr, Yr);
             fFootmap->SetPoint(fFootmap->GetN() + 1, foot[0], foot[1]);
             fHitmap->Fill(Xr, Yr);
             fRec->Fill(rec);
-            gRec->SetPoint(gRec->GetN() + 1, x, y, rec);
+            gRec->SetPoint(gRec->GetN() + 1, Xr, Yr, rec);
             recMean += rec;
             nrec++;
             if (verbose)
@@ -816,8 +820,40 @@ void AnalysisRICH(vector<int> uselist, int target, vector<MyBeamTestData *> detl
 
     if (nrec > 0)
     {
-        fRec2->Fill(recMean / nrec);
-        fNRec->Fill(nrec);
+        double rec = recMean / nrec;
+        fRec2->Fill(rec);
+        if (fabs(rec - 0.9) < 3 * 0.03) //认为是一个有效的光子击中
+        {
+            int nclu = 0;
+            fNRec->Fill(nrec);
+            for (int i = 0; i < (int)branch.size(); i++) //光子的Q和T
+            {
+                if (!IsRICHClusterEffective(branch[i], xmean, xrms, ymean, yrms, qsum))
+                    continue;
+
+                CalRICHPosition(target, xmean, ymean, x, y, z);
+                double Xr = -1 * (x - foot[0]);
+                double Yr = sqrt(pow(y - foot[1], 2) + pow(z - foot[2], 2)) * (foot[1] - y) / fabs(y - foot[1]);
+                if (Yr > -40 || y < 40)
+                    continue;
+                double rec = ReconstructRICHByBeta(Xr, Yr);
+                if (fabs(rec - 0.9) > 3 * 0.03)
+                    continue;
+
+                nclu++;
+                double sum = 0;
+                fClusterPhoton->Fill(branch[i].size());
+                for (int j = 0; j < (int)branch[i].size(); j++)
+                {
+                    fQphoton->Fill(branch[i][j].q);
+                    fTphoton->Fill(branch[i][j].t);
+                    fQTphoton->Fill(branch[i][j].q, branch[i][j].t);
+                    sum += branch[i][j].q;
+                }
+                fTotQphoton->Fill(sum);
+            }
+            fNClusterPhoton->Fill(branch.size()); //fNClusterPhoton 应该和 fNRec 分布差不多
+        }
     }
 
     if (verbose)
@@ -899,7 +935,7 @@ void DrawRICH(TString cname, int id)
     TCanvas *cc = new TCanvas(cname);
     cc->SetTitle(fName + " " + detName[id]);
     cc->Clear();
-    cc->Divide(4, 4);
+    cc->Divide(4, 3);
     cc->cd(1);
     cc->GetPad(1)->SetLogz();
     fhitmap[id][0]->Draw("colz");
@@ -928,8 +964,8 @@ void DrawRICH(TString cname, int id)
     cc->cd(11);
     fhitmapReal[id][0]->ProjectionY()->Draw();
 
-    cc->cd(13);
-    cc->GetPad(13)->SetLogz();
+    cc->cd(12);
+    cc->GetPad(12)->SetLogz();
     fhitmapReal[id][1]->Draw("colz");
 }
 
@@ -1035,6 +1071,10 @@ void DrawDeviation(TString cname, vector<int> uselist)
         fDeviation[uselist[i]][0]->Fit("gaus", "q");
         cc->cd(1 + i + uselist.size());
         fDeviation[uselist[i]][1]->Fit("gaus", "q");
+
+        cout << detName[uselist[i]]
+             << " efficiency_x = " << fDeviation[uselist[i]][0]->Integral(1, 100) / fDeviation[uselist[i]][0]->GetEntries()
+             << " efficiency_y = " << fDeviation[uselist[i]][1]->Integral(1, 100) / fDeviation[uselist[i]][1]->GetEntries() << endl;
     }
 }
 
@@ -1043,19 +1083,35 @@ void DrawReconstruction(TString cname, int target)
     TCanvas *cc = new TCanvas(cname);
     cc->SetTitle("Deviation distribution for " + fName);
     cc->Clear();
-    cc->Divide(3, 2);
+    cc->Divide(5, 2);
     cc->cd(1);
+    fRec->SetXTitle("Reconstructed Cherenkov angle(rad)");
+    fRec->SetYTitle("Entries");
     fRec->Draw();
-    cc->cd(2);
-    gRec->Draw("pcol");
-    cc->cd(3);
-    fFootmap->Draw("ap");
-    cc->cd(4);
-    fHitmap->Draw("colz");
-    cc->cd(5);
-    fRec2->Draw();
     cc->cd(6);
+    fRec2->SetXTitle("Reconstructed Cherenkov angle(rad)");
+    fRec2->SetYTitle("Entries");
+    fRec2->Fit("gaus");
+    cc->cd(2);
+    gRec->SetTitle("Reconstruction 2D map");
+    gRec->Draw("pcol");
+    cc->cd(7);
+    fHitmap->Draw("colz");
+    cc->cd(3);
+    fFootmap->SetTitle("Foot position");
+    fFootmap->GetXaxis()->SetTitle("X(mm)");
+    fFootmap->GetYaxis()->SetTitle("Y(mm)");
+    fFootmap->Draw("ap");
+    cc->cd(9);
     fNRec->Draw();
+    cc->cd(4);
+    fTotQphoton->Draw();
+    cc->cd(8);
+    fQTphoton->Draw("colz");
+    cc->cd(5);
+    fClusterPhoton->Draw();
+    cc->cd(10);
+    fNClusterPhoton->Draw();
 }
 //---------------
 // 主函数
@@ -1081,17 +1137,27 @@ void checkCMBRoot()
     //--------------------------
     // 定义histogram & graph
     int nbin;
+
     ftmp1 = new TH1F("ftmp1", "tmp", 128, 0, 128);
     ftmp2 = new TH2F("ftmp2", "tmp", 32, 0, 32, 32, 0, 32);
-    fRec = new TH1F("fRec", "reconstructed cherenkov angle", 100, 0., 1);        //3.1415926/2);
-    fRec2 = new TH1F("fRec2", "reconstructed mean cherenkov angle", 100, 0., 1); //3.1415926/2);
-    fNRec = new TH1F("fNRec", "number reconstructed cherenkov photons", 10, 0, 10);      //3.1415926/2);
+    //光子重建相关
+    fRec = new TH1F("fRec", "reconstructed cherenkov angle by single cluster", 100, 0.5, 1.5);           //3.1415926/2);
+    fRec2 = new TH1F("fRec2", "reconstructed mean cherenkov angle by multiple clusters", 100, 0.5, 1.5); //3.1415926/2);
+    fNRec = new TH1F("fNRec", "number reconstructed cherenkov photons", 10, 0, 10);                      //3.1415926/2);
+    fQphoton = new TH1F("fQphoton", "charge for photon signal", 256, 0, 4096 * 5);
+    fTphoton = new TH1F("fTphoton", "time for photon signal", 100, 200, 300);
+    fQTphoton = new TH2F("fQTphoton", "Q vs T for photons", 256, 0, 4096, 100, 200, 300);
+    fTotQphoton = new TH1F("fTotQphoton", "total photon charges", 256, 0, 4096);
+    fNClusterPhoton = new TH1F("fNClusterPhoton", "number of cluster for photons", 10, 0, 10);
+    fClusterPhoton = new TH1F("fClusterPhoton", "cluster size for photons", 10, 0, 10);
+
     gRec = new TGraph2D();
     gRec->GetXaxis()->SetTitle("X");
     gRec->GetYaxis()->SetTitle("Y");
     fFootmap = new TGraph(); //new TH2F("fFootmap", "foot map for RICH",  40, -40 / 2 * 5, 40 / 2 * 5, 40, -40 / 2 * 5, 40 / 2 * 5);
     fHitmap = new TH2F("fHitmap", "Real Position hit map", 40, -40 / 2 * 5, 40 / 2 * 5, 40, -40 / 2 * 5, 40 / 2 * 5);
 
+    //事例填图
     for (int i = 0; i < NDET; i++)
     {
         for (int j = 0; j < 2; j++)
