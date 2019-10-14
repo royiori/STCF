@@ -40,5 +40,5 @@ double Yoff[NDET] = {0, 0, 0, 0, 0, 0};
 double Zpos[NDET] = {375, 0, 97, 875, 0, 0};
 double angle = 45;
 
-long DSTEntries = 1000;                  //设置为小于100的数，就跑DSTEntries个事例，设置为大与100的数，就跑数据里的所有数据。
+long DSTEntries = 10000;                  //设置为小于100的数，就跑DSTEntries个事例，设置为大与100的数，就跑数据里的所有数据。
 int verbose = (DSTEntries < 100) ? 1 : 0; //输出信息后可以在mathematicas里检查

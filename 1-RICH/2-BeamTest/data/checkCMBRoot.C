@@ -205,12 +205,17 @@ double ReconstructRICHByBeta(double Xr, double Yr)
 //入射角theta为[0,pi/2]范围, Z出发到束流负方向，逆时针为正
 //phi为[-pi,pi]范围，从X轴出发到切伦科夫光的投影线的夹角，逆时针为正
 {
+    //if (Xr < 0 || Xr > 20 || Yr < 60 || Yr > 70)
+    //    return 0;
+
+    //Xr=65;
+    //Yr=5;
     //1. 初始化
     double nquartz = 1.585;
     double theta0 = angle / 180 * TMath::Pi(); //入射粒子和法线的夹角
     double beta = 1;
     double thetac = acos(1 / nquartz);
-    double Tg = 103;      //gas的厚度
+    double Tg = 93;       //gas的厚度
     double z0 = 5;        //预期出光点位置到辐射体上表面的平均位置～辐射体厚度/2
     double Xep = 10 - z0; //出光点位置到辐射体下表面的距离
 
@@ -222,48 +227,74 @@ double ReconstructRICHByBeta(double Xr, double Yr)
     double phi = atan((Yr - Y0) / (Xr - X0));
     double R = sqrt((Xr - X0) * (Xr - X0) + (Yr - Y0) * (Yr - Y0));
 
-    double a1 = findA(theta0, thetac, phi);
-    double theta1 = atan(a1);
+    //phi取值区间移到[0,2pi]
+    if (Yr > 0 && Xr > 0)
+        phi = phi;
+    if (Yr > 0 && Xr < 0)
+        phi = phi + TMath::Pi();
+    if (Yr < 0 && Xr < 0)
+        phi = phi + TMath::Pi();
+    if (Yr < 0 && Xr > 0)
+        phi = phi + 2 * TMath::Pi();
 
-    //3. 求R0
-    double Rrad = Xep * tan(theta1);
-    double Rqz = 0;
-    double nSinTheta = nquartz * sin(theta1);
+    double a[2];
+    a[0] = findA2(theta0, thetac, phi); //两个解
+    a[1] = findA3(theta0, thetac, phi);
 
-    //只有quartz一个辐射体，所以不需要计算
-    //for (int i = 1; i < (int)thklist.size() - 1; i++)
-    //{
-    //    if (nSinTheta / reflist[i] > 1)
-    //        continue;
-    //    Rqz += thklist[i] * tan(asin(nSinTheta / reflist[i]));
-    //}
+    double rthec[2];
 
-    double R0 = R - Rrad - Rqz;
+    //cout << "\n(*\n(" << Yr << "-" << Y0 << ") / (" << Xr << ", " << X0 << ")" << endl;
+    //cout << "phi = " << phi << "; thetac=" << thetac << "; theta0=" << theta0 << "; Xep=" << Xep << ";" << endl;
 
-    //4. 求重建的rec-theta1
-    double nquartz2 = R0 / sqrt(R0 * R0 + Tg * Tg) / sin(theta1);
+    for (int i = 0; i < 2; i++)
+    {
+        double theta1 = atan(a[i]);
 
-    double rthec = acos(1 / nquartz2 / beta);
-    //5. 求重建的thetac
-    /*
-    double Rtmp;
-    Rtmp = 2 * sqrt(1 + pow((R - R0) / Xep, 2));
-    rthec1 = cos(theta0) + 1 / cos(theta0) + sin(theta0) * (2 * (R - R0) * sin(phi) / Xep - tan(theta0));
-    rthec2 = acos(rthec1 / Rtmp);
-    */
+        //3. 求R0
+        double Rrad = Xep * tan(theta1);
+        double Rqz = 0;
+        double nSinTheta = nquartz * sin(theta1);
+
+        //只有quartz一个辐射体，所以不需要计算
+        //for (int i = 1; i < (int)thklist.size() - 1; i++)
+        //{
+        //    if (nSinTheta / reflist[i] > 1)
+        //        continue;
+        //    Rqz += thklist[i] * tan(asin(nSinTheta / reflist[i]));
+        //}
+
+        double R0 = R - Rrad - Rqz;
+
+        //4. 求重建的rec-theta1
+        double theta2 = atan(R0 / Tg);
+        double nquartz2 = sin(theta2) / sin(theta1);
+        rthec[i] = acos(1 / nquartz2 / beta);
+
+        //cout << "a=" << a[i] * Xep << " R0=" << R0 << " Theta2=" << theta2 << " " << sin(theta2) << "/" << sin(theta1) << endl;
+        //cout << "n=" << nquartz2 << " rec=" << rthec[i] << endl;
+    }
 
     if (verbose)
     {
-        cout << "\n(*\n(" << Yr << "-" << Y0 << ") / (" << Xr << ", " << X0 << ")" << endl;
-        cout << "phi = " << phi << "; thetac=" << thetac << "; theta0=" << theta0 << "; Xep=" << Xep << ";" << endl;
-        cout << "a1=" << a1 * Xep << ", theta1=" << theta1 << endl;
-        cout << "R0=" << R0 << ", R=" << R << ", Rrad=" << Rrad << endl;
-        cout << "nquartz2 = " << nquartz2 << ", sinTheta2=" << R0 / sqrt(R0 * R0 + Tg * Tg) << ", sinTheta1 = " << sin(theta1) << endl;
-        cout << "rthec=" << rthec << endl;
-        cout << "*)\n\n";
+        //cout << "\n(*\n(" << Yr << "-" << Y0 << ") / (" << Xr << ", " << X0 << ")" << endl;
+        //cout << "phi = " << phi << "; thetac=" << thetac << "; theta0=" << theta0 << "; Xep=" << Xep << ";" << endl;
+        //cout << "a1=" << a[0] * Xep << " a2=" << a[1] * Xep << endl;
+        //cout << "R01=" << R - a[0] * Xep << " R02=" << R - a[1] * Xep << endl;
+        //cout << "n" << R0 / sqrt(R0 * R0 + Tg * Tg) / sin(theta1);
+        ////", theta1=" << theta1 << endl;
+        ////cout << "R0=" << R0 << ", R=" << R << ", Rrad=" << Rrad << endl;
+        ////cout << "nquartz2 = " << nquartz2 << ", sinTheta2=" << R0 / sqrt(R0 * R0 + Tg * Tg) << ", sinTheta1 = " << sin(theta1) << endl;
+        //cout << "rthec=" << rthec[0] << ", " << rthec[1] << endl;
+        //cout << "*)\n\n";
     }
 
-    return rthec;
+    if (isnan(rthec[0]))
+        return rthec[1];
+    if (isnan(rthec[1]))
+        return rthec[0];
+    if (fabs(rthec[0] - thetac) < fabs(rthec[1] - thetac))
+        return rthec[0];
+    return rthec[1];
 }
 
 //---------------------------------------------------------------------------
@@ -766,12 +797,12 @@ void AnalysisRICH(vector<int> uselist, int target, vector<MyBeamTestData *> detl
         {
             //给出在探测器坐标系下的击中位置的坐标
             //探测器坐标系的零点为辐射体上表面与束流的交点》在阳极板上的投影
-            double Xr = x - foot[0];
-            double Yr = sqrt(pow(y - foot[1], 2) + pow(z - foot[2], 2));
+            double Xr = -1 * (x - foot[0]);
+            double Yr = sqrt(pow(y - foot[1], 2) + pow(z - foot[2], 2)) * (foot[1] - y) / fabs(y - foot[1]);
+            //cout<<(y - foot[1]) / fabs(y - foot[1])<<endl;
             double rec = ReconstructRICHByBeta(Xr, Yr);
-            if (Yr < 40 || y<40)
+            if (Yr > -40 || y < 40)
                 continue;
-                if(Xr<0) continue;
             fFootmap->SetPoint(fFootmap->GetN() + 1, foot[0], foot[1]);
             fHitmap->Fill(Xr, Yr);
             fRec->Fill(rec);
@@ -1052,9 +1083,9 @@ void checkCMBRoot()
     int nbin;
     ftmp1 = new TH1F("ftmp1", "tmp", 128, 0, 128);
     ftmp2 = new TH2F("ftmp2", "tmp", 32, 0, 32, 32, 0, 32);
-    fRec = new TH1F("fRec", "reconstructed cherenkov angle", 100, 0., 1.0);         //3.1415926/2);
-    fRec2 = new TH1F("fRec2", "reconstructed mean cherenkov angle", 100, 0., 1.0);  //3.1415926/2);
-    fNRec = new TH1F("fNRec", "number reconstructed cherenkov photons", 10, 0, 10); //3.1415926/2);
+    fRec = new TH1F("fRec", "reconstructed cherenkov angle", 100, 0., 1);        //3.1415926/2);
+    fRec2 = new TH1F("fRec2", "reconstructed mean cherenkov angle", 100, 0., 1); //3.1415926/2);
+    fNRec = new TH1F("fNRec", "number reconstructed cherenkov photons", 10, 0, 10);      //3.1415926/2);
     gRec = new TGraph2D();
     gRec->GetXaxis()->SetTitle("X");
     gRec->GetYaxis()->SetTitle("Y");
