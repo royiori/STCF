@@ -1,4 +1,4 @@
-Board	Chip Chip_Channel  束流坐标-X    束流坐标-Y 
+Board	Chip Chip_Channel  束流坐标-Y    束流坐标-X
 5	10	1	1	32
 5	10	0	2	32
 5	10	3	3	32

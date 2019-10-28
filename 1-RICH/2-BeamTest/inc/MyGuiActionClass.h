@@ -203,7 +203,7 @@ private:
     void DoReadRawData(TString cmdStr);
     void DoCheckRawRoot(TString cmdStr);
     void DoGenDSTRoot(TString cmdStr);
-    void DoCheckDSTRoot();
+    void DoCheckDSTRoot(TString cmdStr);
     void DoCombineDSTRoot(TString cmdStr);
     void DoLoadDSTRoot(TString cmdStr);
     void DoAnalysisCMDRoot();

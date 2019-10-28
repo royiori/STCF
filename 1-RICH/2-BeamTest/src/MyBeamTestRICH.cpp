@@ -5,6 +5,7 @@
 //
 MyBeamTestRICH::MyBeamTestRICH(int _id, int nx, int ny, double wx, double wy, double la) : MyBeamTestDetector(_id, nx, ny, wx, wy, la)
 {
+    fPed = 0;
     fAllHit = 0;
     fCharge = 0;
 }
@@ -154,6 +155,7 @@ bool MyBeamTestRICH::FillDistribution(int i, MyBeamTestHitData *eventList)
     {
         fAllHit = new TH2F(Form("AHit%d", id), Form("All hits for %s", name.Data()), 32, 0, 32, 32, 0, 32);
         fAllHit2 = new TH2F(Form("AHit%d_2", id), Form("All hits for %s", name.Data()), 36, -90 + pos[0], 90 + pos[0], 36, -90 + pos[1], 90 + pos[1]);
+        fPed = new TH2F(Form("fPed%d_2", id), Form("Pedestal for %s", name.Data()), 32, 0, 32, 32, 0, 32);
         fCharge = new TH1F(Form("Charg%d", id), Form("Charge distribution of %s", name.Data()), 200, 0, 10000);
         fAllHit->SetXTitle("channel");
         fAllHit->SetYTitle("channel");

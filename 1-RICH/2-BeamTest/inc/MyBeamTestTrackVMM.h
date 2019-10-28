@@ -32,6 +32,7 @@ public:
     virtual void DrawHits(TGeoManager *geom, TGeoVolume *stop, TGeoMedium *med, MyBeamTestHitData *hit);
     virtual void DrawDetector(TGeoManager *geom, TGeoVolume *top, TGeoMedium *med);
     virtual pair<double, double> MapPosition(int bd, int chip, int channel);
+    virtual void GenPedMap() {};
 
     virtual void AbsPosition(pair<double, double> epos, double *absPos)//epos 是电子学的x/y的channel号定义，也就是MapPosition的输出
     {

@@ -72,12 +72,12 @@ void ReadPIDRoot()
 
     int dMom = 81;
     TH2D * hMom[dMom][NHYPO];
-    for (int ihpyo = 0; ihpyo < nhyp; ihpyo++) 
+    for (int ihypo = 0; ihypo < nhyp; ihypo++) 
     {
       for(int jhypo = 0; jhypo < nhyp; jhypo++)
       {
-        const string name = Form("PID efficiency for %s as %s", SHYPO[ihpyo], SHYPO[jhypo]);
-        hMom[ihpyo][jhypo] = new TH2D(name.c_str(), name.c_str(), 81, 0, 4, 71, 0, 70 );
+        const string name = Form("PID efficiency for %s as %s", SHYPO[ihypo], SHYPO[jhypo]);
+        hMom[ihypo][jhypo] = new TH2D(Form("hmom_%d_%d", ihypo, jhypo), name.c_str(), 81, 0, 4, 71, 0, 70 );
       }
         
     }
@@ -103,13 +103,13 @@ void ReadPIDRoot()
 
     cout << "----> Total entries loaded. " << endl;
    
-    for (int ihpyo = 0; ihpyo < nhyp; ihpyo++) 
+    for (int ihypo = 0; ihypo < nhyp; ihypo++) 
     {
       for(int jhypo = 0; jhypo < nhyp; jhypo++)
       {
-        hMom[ihpyo][jhypo] -> GetXaxis() -> SetTitle("/#it{GeV}");
-        hMom[ihpyo][jhypo] -> GetYaxis() -> SetTitle("#it{#theta}");
-        hMom[ihpyo][jhypo]-> Write();
+        hMom[ihypo][jhypo] -> GetXaxis() -> SetTitle("/#it{GeV}");
+        hMom[ihypo][jhypo] -> GetYaxis() -> SetTitle("#it{#theta}");
+        hMom[ihypo][jhypo]-> Write();
       }
         
     }

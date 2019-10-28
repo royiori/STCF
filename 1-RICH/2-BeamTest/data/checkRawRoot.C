@@ -77,21 +77,12 @@ private:
     vector<double> *data = 0;
 
     //VMM
-    int Event3;
-    UShort_t board3;
-    UShort_t chip3;
-    UShort_t channel3;
-    UShort_t PDO3;
-    UShort_t BCID3;
-    UShort_t TDO3;
-
-    TBranch *b_Event3;
-    TBranch *b_board3;
-    TBranch *b_chip3;
-    TBranch *b_channel3;
-    TBranch *b_PDO3;
-    TBranch *b_BCID3;
-    TBranch *b_TDO3;
+    UShort_t PDO;
+    UShort_t BCID;
+    UShort_t TDO;
+    TBranch *b_PDO;
+    TBranch *b_BCID;
+    TBranch *b_TDO;
 
     TGraph *gWave = 0;
     TCanvas *c1;
@@ -138,7 +129,7 @@ public:
     }
     void DrawNextChannel()
     {
-        ic = (ic + 1 >= nentries) ? ic : ic + 1;
+        ic = (ic + 1 >= 1024) ? ic : ic + 1;
         DrawChannel(ic, 0);
     }
 
@@ -167,6 +158,7 @@ void MyReadRootGUI::Created()
     SetWindowName(path);
     ReadFile(path);
 
+    /*
     if (type == RICH)
     {
         for (int i = 0; i < env->GetValue("NRICH", 1); i++)
@@ -202,6 +194,7 @@ void MyReadRootGUI::Created()
                 chipname.push_back(env->GetValue(Form("TrkVMM%d-chip%d", i, j), 1));
         }
     }
+    */
 
     if (type != TrackerVMM)
     {
@@ -258,34 +251,39 @@ void MyReadRootGUI::ReadFile(TString fName)
 
     if (type == VMMType)
     {
-        fTree->SetBranchAddress("event", &Event3, &b_Event3);
-        fTree->SetBranchAddress("board", &board3, &b_board3);
-        fTree->SetBranchAddress("chip", &chip3, &b_chip3);
-        fTree->SetBranchAddress("channel", &channel3, &b_channel3);
-        fTree->SetBranchAddress("PDO", &PDO3, &b_PDO3);
-        fTree->SetBranchAddress("BCID", &BCID3, &b_BCID3);
-        fTree->SetBranchAddress("TDO", &TDO3, &b_TDO3);
+        fTree->SetBranchAddress("event", &Event, &b_Event);
+        fTree->SetBranchAddress("board", &board, &b_board);
+        fTree->SetBranchAddress("chip", &chip, &b_chip);
+        fTree->SetBranchAddress("channel", &channel, &b_channel);
+        fTree->SetBranchAddress("PDO", &PDO, &b_PDO);
+        fTree->SetBranchAddress("BCID", &BCID, &b_BCID);
+        fTree->SetBranchAddress("TDO", &TDO, &b_TDO);
     }
 
     nentries = fTree->GetEntriesFast();
     fHSlider1->SetRange(0, nentries);
     //fTree->Print();
 
-    //读ped-root
-    fName.ReplaceAll("raw.root", "ped.root");
-    fFile2 = new TFile(fName);
-    if (!fFile2->IsOpen())
+    if (type != VMMType)
     {
-        fPrintButton->SetEnabled(kFALSE);
-        fCheckButton->SetEnabled(kFALSE);
-        fHSlider2->SetEnabled(kFALSE);
-        fPreButton2->SetEnabled(kFALSE);
-        fNextButton2->SetEnabled(kFALSE);
-        fPreButton3->SetEnabled(kFALSE);
-        fNextButton3->SetEnabled(kFALSE);
+        //读ped-root
+        fName.ReplaceAll("raw.root", "ped.root");
+        fFile2 = new TFile(fName);
+        if (!fFile2->IsOpen())
+        {
+            fPrintButton->SetEnabled(kFALSE);
+            fCheckButton->SetEnabled(kFALSE);
+            fHSlider2->SetEnabled(kFALSE);
+            fPreButton2->SetEnabled(kFALSE);
+            fNextButton2->SetEnabled(kFALSE);
+            fPreButton3->SetEnabled(kFALSE);
+            fNextButton3->SetEnabled(kFALSE);
+        }
+        cout << "Pedestal file opened: " << fName << endl;
     }
-    cout << "Pedestal file opened: " << fName << endl;
 
+    boardname.clear();
+    chipname.clear();
     if (type == RICHType)
     {
         boardname.push_back(2);
@@ -297,6 +295,7 @@ void MyReadRootGUI::ReadFile(TString fName)
         chipname.push_back(12);
         chipname.push_back(13);
     }
+
     if (type == AGETType)
     {
         boardname.push_back(6);
@@ -358,7 +357,7 @@ void MyReadRootGUI::DrawChannel(int id1, int id2)
     fped = (TH1F *)fFile2->Get(Form("Ped_%d_%d_%d", boardname[iboard], chipname[ichip], ichannel));
     fwav = (TH1F *)fFile2->Get(Form("Wave_%d_%d_%d", boardname[iboard], chipname[ichip], ichannel));
     //fwav->Scale(1. / (fwav->GetEntries() / 512.));
-    cout << "--> Drawing " << boardname[iboard] << " " << chipname[ichip] << " " << ichannel << endl;
+    cout << "--> Drawing " << id1 << ", " << ichip << ", " << ichannel << ": " << boardname[iboard] << " " << chipname[ichip] << " " << ichannel << endl;
 
     c1->Clear();
     c1->Divide(3, 2);
@@ -443,8 +442,8 @@ void MyReadRootGUI::PrintData()
     }
     if (type == VMMType)
     {
-        cout << "Event: " << (int)Event3 << " Board:" << board3 << " Chip:" << chip3 << " Channel:" << channel3;
-        cout << " --  Q: " << PDO3 << " T_corse:" << BCID3 << " T_fine:" << TDO3 << endl;
+        cout << "Event: " << (int)Event << " Board:" << board << " Chip:" << chip << " Channel:" << channel;
+        cout << " --  Q: " << PDO << " T_corse:" << BCID << " T_fine:" << TDO << endl;
         ;
     }
 }
@@ -537,7 +536,7 @@ MyReadRootGUI::MyReadRootGUI() : TGMainFrame(gClient->GetRoot(), 10, 10, kHorizo
             fHSlider2 = new TGHSlider(fGroupFrame2, 200, kSlider1 | kScaleBoth, -1, kHorizontalFrame);
             fHSlider2->Connect("Released()", "MyReadRootGUI", this, "DrawSelectedChannel()");
             fHSlider2->SetRange(0, 1024);
-            fHSlider2->SetPosition(512);
+            fHSlider2->SetPosition(0);
             fGroupFrame2->AddFrame(fHSlider2, new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsExpandX, 2, 2, 2, 2));
             fHSlider2->SetEnabled(kFALSE);
 

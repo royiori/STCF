@@ -59,7 +59,7 @@ void ConvertRawRoot()
     vector<int> boardList2 = {6, 9, 1};
     vector<int> chipList2 = {10, 11, 12, 13};
 
-    for (int i = 0; i < 100; i++)
+    for (int i = 86; i < 87; i++)
     {
         FileStat_t fStat;
         TString fFolder(Form("./RUN%02d", i));
@@ -82,6 +82,7 @@ void ConvertRawRoot()
         GetFileList(fileDir2, ".dat", datList2);
         GetFileList(fileDir3, ".bin", datList3);
 
+        /*
         //快速检查事例数
         //...
         cout << "checking data..." << endl;
@@ -116,20 +117,21 @@ void ConvertRawRoot()
         cout << "--> Trig start from " << trgstart << " to " << trgstop << " , total recorded trig number: " << total << endl;
 
         continue;
+        */
 
         if (datList1.size() > 0)
         {
-            ReadRICHData2Root(datList1, GenPath(RICH, RAW, fFolder), 0);
-            GenerateRICHPed(GenPath(RICH, RAW, fFolder), GenPath(RICH, PED, fFolder), boardList1, chipList1, 0);
+            //ReadRICHData2Root(datList1, GenPath(RICH, RAW, fFolder), 0);
+            //GenerateRICHPed(GenPath(RICH, RAW, fFolder), GenPath(RICH, PED, fFolder), boardList1, chipList1, 0);
         }
 
         if (datList2.size() > 0)
         {
-            ReadTrackAGTData2Root(datList2, GenPath(TrackerAGET, RAW, fFolder), 0);
-            GenerateAGETPed(GenPath(TrackerAGET, RAW, fFolder), GenPath(TrackerAGET, PED, fFolder), boardList2, chipList2, 0);
+            //ReadTrackAGTData2Root(datList2, GenPath(TrackerAGET, RAW, fFolder), 0);
+            //GenerateAGETPed(GenPath(TrackerAGET, RAW, fFolder), GenPath(TrackerAGET, PED, fFolder), boardList2, chipList2, 0);
         }
 
         if (datList3.size() > 0)
-            ReadTrackVMMData2Root(datList3, GenPath(TrackerVMM, RAW, fFolder), 0);
+            ReadTrackVMMData2Root(datList3, GenPath(TrackerVMM, RAW, fFolder), 1);
     }
 }

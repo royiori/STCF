@@ -8,6 +8,8 @@ MyBeamTestTrackAGET::MyBeamTestTrackAGET(int _id, int nx, int ny, double wx, dou
     fAllHit = 0;
     fHit[0] = 0;
     fHit[1] = 0;
+    fPed[0] = 0;
+    fPed[1] = 0;
     fCharge = 0;
 }
 
@@ -44,6 +46,10 @@ void MyBeamTestTrackAGET::ReadMapFile()
     mapFp.close();
 }
 
+void MyBeamTestTrackAGET::GenPedMap()
+{
+    fPed[0]
+}
 //______________________________________________________________________________
 // Combine数据
 void MyBeamTestTrackAGET::ReadDSTRoot(TString fPath)
@@ -164,8 +170,10 @@ bool MyBeamTestTrackAGET::FillDistribution(int i, MyBeamTestHitData *eventList)
     {
         fAllHit = new TH2F(Form("AHit%d", id), Form("All hits for %s", name.Data()), 128, 0, 128, 128, 0, 128);
         fAllHit2 = new TH2F(Form("AHit_2%d", id), Form("All hits for %s", name.Data()), 150, -30 + pos[0], 30 + pos[0], 150, -30 + pos[1], 30 + pos[1]);
-        fHit[0] = new TH1F(Form("HitX%d", id), "X Strip hits for single event", 128, 0, 128);
-        fHit[1] = new TH1F(Form("HitY%d", id), "Y Strip hits for single event", 128, 0, 128);
+        fHit[0] = new TH1F(Form("HitX%d", id), Form("X Strip hits for single event", name.Data()), 128, 0, 128);
+        fHit[1] = new TH1F(Form("HitY%d", id), Form("Y Strip hits for single event", name.Data()), 128, 0, 128);
+        fPed[0] = new TH1F(Form("PedX%d", id), Form("X Strip pedestal", name.Data()), 128, 0, 128);
+        fPed[1] = new TH1F(Form("PedY%d", id), Form("Y Strip pedestal", name.Data()), 128, 0, 128);
         fCharge = new TH1F(Form("Charg%d", id), Form("Charge distribution of %s", name.Data()), 200, 0, 10000);
 
         fAllHit->SetXTitle("channel");

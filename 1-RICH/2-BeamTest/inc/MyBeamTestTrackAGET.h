@@ -33,6 +33,7 @@ public:
     virtual void DrawDetector(TGeoManager *geom, TGeoVolume *top, TGeoMedium *med);
     virtual pair<double, double> MapPosition(int bd, int chip, int channel);
     virtual void AbsPosition(pair<double, double> epos, double *absPos);
+    virtual void GenPedMap();
 
     //分布
     virtual bool FillDistribution(int i, MyBeamTestHitData *hit);
@@ -48,6 +49,7 @@ private:
     TH2F *fAllHit;
     TH2F *fAllHit2;
     TH1F *fHit[2];
+    TH1F *fPed[2];
     TH1F *fCharge;
 };
 

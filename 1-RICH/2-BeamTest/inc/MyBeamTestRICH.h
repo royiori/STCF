@@ -31,6 +31,7 @@ public:
     virtual void DrawHits(TGeoManager *geom, TGeoVolume *stop, TGeoMedium *med, MyBeamTestHitData *hit);
     virtual pair<double, double> MapPosition(int bd, int chip, int channel);
     virtual void AbsPosition(pair<double, double> epos, double *absPos);
+    virtual void GenPedMap() {};
 
     //分布
     virtual bool FillDistribution(int i, MyBeamTestHitData *hit);
@@ -44,6 +45,7 @@ public:
 private:
     TH2F *fAllHit;
     TH2F *fAllHit2;
+    TH2F *fPed;
     TH1F *fCharge;
 };
 

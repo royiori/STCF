@@ -241,7 +241,8 @@ public:
     void SetPedRMS(int ibd, int ichip, int ichan, double nr) { pedRMS[CalID(ibd, ichip, ichan)] = nr; }
     double GetPedMean(int board, int chip, int chan) { return pedMean[CalID(IndexBD(board), IndexChip(chip), chan)]; }
     double GetPedRMS(int board, int chip, int chan) { return pedRMS[CalID(IndexBD(board), IndexChip(chip), chan)]; }
-
+    virtual void GenPedMap() = 0;
+    
     //
     // 纯虚函数：作图
     virtual void DrawHits(TGeoManager *geom, TGeoVolume *stop, TGeoMedium *med, MyBeamTestHitData *hit) = 0;

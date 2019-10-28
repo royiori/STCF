@@ -804,7 +804,7 @@ void AnalysisRICH(vector<int> uselist, int target, vector<MyBeamTestData *> detl
             double Xr = -1 * (x - foot[0]);
             double Yr = sqrt(pow(y - foot[1], 2) + pow(z - foot[2], 2)) * (foot[1] - y) / fabs(y - foot[1]);
             //cout<<(y - foot[1]) / fabs(y - foot[1])<<endl;
-            if (Yr > -40 || y < 40)
+            if (Yr > 40)
                 continue;
             double rec = ReconstructRICHByBeta(Xr, Yr);
             fFootmap->SetPoint(fFootmap->GetN() + 1, foot[0], foot[1]);
@@ -1093,8 +1093,8 @@ void DrawReconstruction(TString cname, int target)
     fRec2->SetYTitle("Entries");
     fRec2->Fit("gaus");
     cc->cd(2);
-    gRec->SetTitle("Reconstruction 2D map");
-    gRec->Draw("pcol");
+    //gRec->SetTitle("Reconstruction 2D map");
+    //gRec->Draw("pcol");
     cc->cd(7);
     fHitmap->Draw("colz");
     cc->cd(3);
@@ -1156,6 +1156,8 @@ void checkCMBRoot()
     gRec->GetYaxis()->SetTitle("Y");
     fFootmap = new TGraph(); //new TH2F("fFootmap", "foot map for RICH",  40, -40 / 2 * 5, 40 / 2 * 5, 40, -40 / 2 * 5, 40 / 2 * 5);
     fHitmap = new TH2F("fHitmap", "Real Position hit map", 40, -40 / 2 * 5, 40 / 2 * 5, 40, -40 / 2 * 5, 40 / 2 * 5);
+    fHitmap->GetXaxis()->SetTitle("X");
+    fHitmap->GetYaxis()->SetTitle("Y");
 
     //事例填图
     for (int i = 0; i < NDET; i++)
@@ -1164,8 +1166,11 @@ void checkCMBRoot()
         {
             nbin = (i == RICHid) ? 32 : 128;
             fhitmap[i][j] = new TH2F(Form("fhitmap%d_%d", i, j), Form("hit map for %s", detName[i]), nbin, 0, nbin, nbin, 0, nbin);
+            fhitmap[i][j]->GetXaxis()->SetTitle("X");
+            fhitmap[i][j]->GetYaxis()->SetTitle("Y");
 
-            nbin = (i == RICHid || i == T06id) ? 25 : 5;
+            nbin = (i == T06id) ? 25 : 5;
+            nbin = (i == RICHid) ? 25 : nbin;
             fDeviation[i][j] = new TH1F(Form("fdev%d_%d", i, j), Form("Deviation of Track %s for %s", detName[i], xyName[j]), 100, -1 * nbin, nbin);
             fDeviation[i][j]->SetXTitle(Form("%s(mm)", xyName[j]));
             fDeviation[i][j]->SetYTitle("Entries");
@@ -1187,9 +1192,20 @@ void checkCMBRoot()
         fNCluster2D[i] = new TH2F(Form("fnclu2%d", i), Form("Number of cluster of %s", detName[i]), 10, 0, 10, 10, 0, 10);
 
         fPeakingTime[i] = new TH1F(Form("fT%d", i), Form("Peaking time of %s", detName[i]), 100, 200, 300);
+        fPeakingTime[i]->GetXaxis()->SetTitle("T");
+        fPeakingTime[i]->GetYaxis()->SetTitle("Entries");
+
         fCharge[i] = new TH1F(Form("fQ%d", i), Form("Charge of %s", detName[i]), 256, 0, 4096);
+        fCharge[i]->GetXaxis()->SetTitle("Q");
+        fCharge[i]->GetYaxis()->SetTitle("Entries");
+
         fTotCharge[i] = new TH1F(Form("ftotQ%d", i), Form("Total charge of %s", detName[i]), 256, 0, 4096 * 5);
+        fTotCharge[i]->GetXaxis()->SetTitle("Q");
+        fTotCharge[i]->GetYaxis()->SetTitle("Entries");
+
         fQT[i] = new TH2F(Form("fQT%d", i), Form("Q vs. T of %s", detName[i]), 256, 0, 4096, 100, 200, 300);
+        fQT[i]->GetXaxis()->SetTitle("Q");
+        fQT[i]->GetYaxis()->SetTitle("T");
     }
 
     //--------------------------
