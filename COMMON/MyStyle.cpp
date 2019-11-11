@@ -27,7 +27,7 @@ void MyStyle::Draw1DHistVector(vector<TH1 *> hvec, double Min, double Max)
     if (hvec[0] == NULL)
         return;
 
-    SetHist1Theme(hvec);
+    SetHist1Theme();
 
     gH1 = (TH1F *)hvec[0]->Clone(Form("__tmpH1__%d", (int)gRandom->Uniform() * 1000));
     gH1List.push_back(gH1);
@@ -85,7 +85,7 @@ void MyStyle::Draw2DHistVector(vector<TH2 *> hvec)
     if (hvec[0] == NULL)
         return;
 
-    SetHist2Theme(hvec);
+    SetHist2Theme();
 
     gH2 = (TH2F *)hvec[0]->Clone(Form("__tmpH2__%d", (int)gRandom->Uniform() * 1000));
     gH2List.push_back(gH2);
@@ -152,17 +152,17 @@ void MyStyle::DrawGraphs(TGraph *g1, TGraph *g2, TGraph *g3, TGraph *g4, TGraph 
     SetGraph(g8);
     SetGraph(g9);
     SetGraph(g10);
-    DrawGraphVector(gPresetGph);
+    DrawPresetGraph();
 }
 
-void MyStyle::DrawGraphVector(vector<TGraph *> gvec)
+void MyStyle::DrawPresetGraph()
 {
-    if (gvec[0] == NULL)
+    if (gPresetGph[0] == NULL)
         return;
 
-    SetGraphTheme(gvec);
+    SetGraphTheme();
 
-    gG = (TGraph*)gvec[0]->Clone();
+    gG = (TGraph*)gPresetGph[0]->Clone();
     gGList.push_back(gG);
 
     if (CP == MATHEMATIC_STYLE)
@@ -198,10 +198,10 @@ void MyStyle::DrawGraphVector(vector<TGraph *> gvec)
 
     double min = gG->GetYaxis()->GetXmin();
     double max = gG->GetYaxis()->GetXmax();
-    for (int i = 0; i < (int)gvec.size(); i++)
-        min = (min > gvec[i]->GetYaxis()->GetXmin()) ? gvec[i]->GetYaxis()->GetXmin() : min;
-    for (int i = 0; i < (int)gvec.size(); i++)
-        max = (max < gvec[i]->GetYaxis()->GetXmax()) ? gvec[i]->GetYaxis()->GetXmax() : max;
+    for (int i = 0; i < (int)gPresetGph.size(); i++)
+        min = (min > gPresetGph[i]->GetYaxis()->GetXmin()) ? gPresetGph[i]->GetYaxis()->GetXmin() : min;
+    for (int i = 0; i < (int)gPresetGph.size(); i++)
+        max = (max < gPresetGph[i]->GetYaxis()->GetXmax()) ? gPresetGph[i]->GetYaxis()->GetXmax() : max;
 
     gG->SetTitle(Title);
     gG->GetXaxis()->SetTitle(Label[0]);
@@ -209,14 +209,14 @@ void MyStyle::DrawGraphVector(vector<TGraph *> gvec)
     gG->GetYaxis()->SetRangeUser(min, max);
     gG->Draw(Option + "a");
 
-    for (int i = 1; i < (int)gvec.size(); i++)
-        MyDraw(gvec[i], Option + TString("same"));
+    for (int i = 1; i < (int)gPresetGph.size(); i++)
+        MyDraw(gPresetGph[i], Option + TString("same"));
 
-    if (gvec[1] == NULL)
+    if (gPresetGph[1] == NULL)
         return;
     TLegend *leg = new TLegend(0.8, 0.7, 1.0, 0.8);
-    for (int i = 0; i < (int)gvec.size(); i++) 
-        MyAddLegend(leg, gvec[i], Legends[i], Option + TString("l"));
+    for (int i = 0; i < (int)gPresetGph.size(); i++) 
+        MyAddLegend(leg, gPresetGph[i], Legends[i], Option + TString("l"));
     leg->SetFillColor(0);
     leg->SetBorderSize(0);
     leg->Draw("same");

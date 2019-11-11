@@ -46,7 +46,7 @@ double findA(double theta0, double thetac, double phi)
     if (b < 0 || c == 0)
         return 0;
 
-    a *= fabs(cc) / c0 / c0 * sqrt(b) + 2 * sp * t0;
+    a *= cc / c0 / c0 * sqrt(b) + 2 * sp * t0;
     a /= c;
     return a;
 }
@@ -492,1000 +492,6 @@ void MyCommonRICH::UpdateThetaCExp(MyRICHDetector *det, double lambda)
         det->fThetaCReal.push_back(CherenkovAng(Beta(det->momentum, det->mass), rlist[i]));
 }
 
-//______________________________________________________________________________
-/// 计算从某个辐射体发出来的光子数
-double MyCommonRICH::PhotonGenFromRad(MyRICHDetector *det, int irad, int absFlag)
-{
-    if (det == 0)
-        return 0;
-
-    //1.初始化
-    TF1 *fRhoFcn = new TF1("fRhoFcn", findRho, 0, 2 * TMath::Pi(), 100);
-
-    vector<double> thklist;
-    vector<double> reflist;
-    vector<double> abslist;
-    vector<double> lenlist;
-
-    double beta = Beta(det->momentum, det->mass);
-    double tbase = det->CalZ0(irad);
-    double theta0 = det->theta0;
-    thklist = GetThickList(det, irad);
-
-    double detPh = 0;
-
-    //2. 在波长范围循环
-    for (int ilamb = 0; ilamb < det->nLambda; ilamb++)
-    {
-        double lambda = det->lambdaMin + (ilamb + 0.5) * det->lambdaStep;
-        double QE = gDb->GetDetQEValue(det->PCDetector, lambda);
-        if (QE == 0)
-            continue;
-
-        //2.1 根据波长初始化变量
-        reflist = GetRefIndList(det, irad, lambda);
-        abslist = GetAbsLenList(det, irad, lambda);
-        double n0 = reflist[0];
-        double t0 = thklist[0];
-
-        double thetac = CherenkovAng(beta, n0);
-        double density = dNdLdLambda(lambda, beta, n0);
-        SetFcnParameters(fRhoFcn, 0, theta0, thetac, thklist, reflist);
-
-        //2.2 在辐射体内循环发光点位置
-        for (int ilen = 0; ilen < (int)t0 / det->trkStep; ilen++)
-        {
-            double z0 = (ilen + 0.5) * det->trkStep;
-            fRhoFcn->SetParameter(0, z0);
-
-            double Z0 = -1 * tbase - z0; //全局坐标系
-            double X0 = 0;
-            double Y0 = Z0 * tan(theta0);
-
-            //3. 在出射角范围内循环
-            for (int iphi = 0; iphi < det->nphi; iphi++)
-            {
-                // 3. findRho是在极坐标系下求解，此时极坐标系下的中心点为发光点位置，因此在计算时用的有效发光长度 l0 = t0 - z0
-                //                  极坐标与+X夹角为phi，求解的结果转换到全局坐标系有：
-                //                      Xr = rho * cos(phi); Yr = rho * sin(phi) + Y0
-                double phi = iphi * det->phiStep;
-                double rho = fRhoFcn->Eval(phi);
-                if (rho == 0 || rho != rho)
-                    continue;
-                GetFcnParameters(fRhoFcn, lenlist);
-
-                // 全局坐标系下的圆心坐标
-                double Xr = rho * cos(phi) + X0;
-                double Yr = rho * sin(phi) + Y0;
-
-                //  产生的光子数
-                double weight = density * det->trkStep * det->phiStep * det->lambdaStep * QE / 2 / TMath::Pi();
-
-                // 考虑辐射体的吸收
-                double coeff = 1.;
-                for (int ii = 0; ii < (int)lenlist.size(); ii++)
-                {
-                    if (absFlag == 0)
-                        continue;
-
-                    double len = lenlist[ii];
-                    double abs = abslist[ii];
-                    if (ii == (int)lenlist.size() - 1)
-                        for (int jj = ii; jj < (int)abslist.size(); jj++)
-                            coeff *= exp(-1 * len / abslist[jj]);
-                    else
-                        coeff *= exp(-1 * len / abs);
-                }
-                weight *= coeff;
-                detPh += weight;
-
-                det->GetHitMap()->Fill(Xr, Yr, weight);
-                det->GetDetHitMap(irad)->Fill(Xr, Yr, weight);
-                det->GetWaveLengthHist()->Fill(lambda, weight);
-            }
-        }
-    }
-
-    delete fRhoFcn;
-    return detPh;
-}
-
-//---- 被GuiAction调用的函数
-/// 计算所有辐射体发射出来的光子数分布图
-void MyCommonRICH::GenerateDetRing(MyRICHDetector *det, int verbose)
-{
-    if (det == 0)
-        det = gDet;
-
-    //清除已经生成的图像
-    det->GetHitMap(1);
-    det->GetWaveLengthHist(1);
-    det->Gen2DRingListForEachRad();
-
-    double totPh = 0;
-    for (int irad = 0; irad < det->nRadLayer; irad++)
-    {
-        double detPh = PhotonGenFromRadWithAbs(det, irad);
-        if (verbose)
-            cout << "-- Detector " << irad << " " << det->sRadLayer[irad] << " generates " << detPh << " ph." << endl;
-
-        totPh += detPh;
-    }
-
-    if (verbose)
-        cout << "Total photon from " << det->particle << ", p=" << det->momentum << "GeV/c, theta0=" << det->Theta0 << " : nPh=" << totPh << endl;
-}
-
-//---- 被GuiAction调用的函数
-/// 生成mu/pi/k/p四种粒子的光子数分布图
-void MyCommonRICH::GenerateMultiParticleRICHRings()
-{
-    ResizeDetList(gDet->nhypo);
-    cout << "\n---------------------------";
-    for (int i = 0; i < gDet->nhypo; i++)
-    {
-        cout << "\n-- generating: " << endl;
-        gDetList[i] = new MyRICHDetector(*gDet, i + 1);
-        gDetList[i]->SetParticleGun(SHYPO[i], GetMass(SHYPO[i]));
-        GenerateDetRing(gDetList[i]);
-    }
-}
-
-//---- 被GuiAction调用的函数 -- hitmap --
-/// 根据momentum/theta范围生成四种粒子的光子数hitmap分布图
-void GetMomentumScanRange(long ip, int &ibegin, int &iend)
-{
-    MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
-
-    int NTHREAD = gMyCommonRICH->GetNThread();
-    int epoch = gMyCommonRICH->GetEpoch();
-    int np = gDet->np;
-
-    ibegin = -1;
-    iend = -1;
-
-    //0. ip的范围为【0，NTHREAD-1】
-    //1. EPoch!=-1: 扫描Epoch指定的动量段
-    if (epoch != -1)
-    {
-        if (epoch > np || epoch + 1 > np)
-            return;
-        ibegin = epoch;
-        iend = epoch + 1;
-        return;
-    }
-
-    //2. EPoch==-1: NTHREAD > np，如NTHREAD为4， np为2， 则只分2个线程。此时ip取值>=2的时候不扫描
-    //              NTHREAD <= np, 分段扫描
-    int nthread = (NTHREAD < np) ? NTHREAD : np;
-    ibegin = ip * np / nthread;
-    iend = (ip + 1) * np / nthread;
-    if (ibegin > np || iend > np)
-    {
-        ibegin = -1;
-        iend = -1;
-    }
-}
-
-void *GenerateTheScanHitMapsHandler(void *ptr)
-{
-    long ip = (long)ptr;
-    int ibegin, iend;
-
-    MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
-    vector<vector<vector<MyRICHDetector *>>> gScanDetList = gMyCommonRICH->GetScanDetector();
-
-    GetMomentumScanRange(ip, ibegin, iend);
-
-    if (ibegin == -1 || iend == -1)
-        return 0;
-
-    for (int imom = ibegin; imom < iend; imom++)
-    {
-        // 1. 循环生成hitmap
-        for (int ithe = 0; ithe < gDet->nthe0; ithe++)
-            for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
-            {
-                gMyCommonRICH->GenerateDetRing(imom, ithe, ihypo);
-            }
-
-        // 2. 保存root文件
-        gMyCommonRICH->SaveHitFile(imom);
-    }
-
-    return 0;
-}
-
-void MyCommonRICH::GenerateDetRing(int imom, int ithe, int ihypo)
-{
-    double mom = gDet->pMin + imom * gDet->pStep;
-    double Theta0 = gDet->The0Min + ithe * gDet->The0Step;
-    cout << "-- generating : [" << imom << " " << ithe << " " << ihypo << "]: "
-         << "mom=" << mom << "GeV/c, theta0=" << Theta0 << ", pid=" << SHYPO[ihypo] << endl;
-    gScanDetList[imom][ithe][ihypo]->SetParticleGun(SHYPO[ihypo], gMyCommonRICH->GetMass(SHYPO[ihypo]));
-    gScanDetList[imom][ithe][ihypo]->SetParticleGun(mom, Theta0);
-    GenerateDetRing(gScanDetList[imom][ithe][ihypo], 0);
-}
-
-void MyCommonRICH::GenerateTheScanHitMapsForEachDetector()
-{
-    cout << "\n---------------------------\n";
-    ResizeScanDetList(gDet->np, gDet->nthe0, gDet->nhypo);
-    int nthread = (NThread < gDet->np) ? NThread : gDet->np;
-
-    TThread *thread[nthread];
-
-    for (int i = 0; i < nthread; i++)
-        thread[i] = new TThread(Form("thit%d", i), GenerateTheScanHitMapsHandler, (void *)(size_t)i);
-
-    for (int i = 0; i < nthread; i++)
-        thread[i]->Run();
-
-    for (int i = 0; i < nthread; i++)
-        thread[i]->Join();
-
-    cout << "----> Hit-map generated." << endl;
-}
-
-//---- 被GuiAction调用的函数 -- hitmap --
-void MyCommonRICH::GenerateTheNPhotonMap()
-{
-    ResizeNPhMap(gDet->nhypo, gDet->nRadLayer);
-
-    for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
-    {
-        fNPhMap[ihypo] = new TH2F(Form("fNPhMap%d", ihypo), Form("Number of photon distribution for %s", SHYPO[ihypo]), gDet->np, gDet->pMin, gDet->pMax, gDet->nthe0, gDet->The0Min, gDet->The0Max);
-        fNPhMap[ihypo]->GetXaxis()->SetTitle("momentum[GeV/c]");
-        fNPhMap[ihypo]->GetYaxis()->SetTitle("#theta[degree]");
-
-        for (int irad = 0; irad < gDet->nRadLayer; irad++)
-        {
-            fNPhMapEachRad[ihypo][irad] = new TH2F(Form("fNPhMap%d_%d", ihypo, irad), Form("Number of photon distribution for %s from %s", SHYPO[ihypo], gDet->sRadLayer[irad].c_str()), gDet->np, gDet->pMin, gDet->pMax, gDet->nthe0, gDet->The0Min, gDet->The0Max);
-            fNPhMapEachRad[ihypo][irad]->GetXaxis()->SetTitle("momentum[GeV/c]");
-            fNPhMapEachRad[ihypo][irad]->GetYaxis()->SetTitle("#theta[degree]");
-        }
-
-        for (int imom = 0; imom < gDet->np; imom++)
-            for (int ithe = 0; ithe < gDet->nthe0; ithe++)
-            {
-                if (gScanDetList[imom][ithe][ihypo]->GetHitMap() != NULL)
-                    fNPhMap[ihypo]->SetBinContent(imom + 1, ithe + 1, gScanDetList[imom][ithe][ihypo]->GetHitMap()->Integral());
-
-                for (int irad = 0; irad < gDet->nRadLayer; irad++)
-                {
-                    double nph = 0;
-                    if (gScanDetList[imom][ithe][ihypo]->GetDetHitMap(irad) != NULL)
-                        nph = gScanDetList[imom][ithe][ihypo]->GetDetHitMap(irad)->Integral();
-                    fNPhMapEachRad[ihypo][irad]->SetBinContent(imom + 1, ithe + 1, nph);
-                }
-            }
-    }
-}
-
-//______________________________________________________________________________
-// 重建函数
-double MyCommonRICH::Findz0(MyRICHDetector *det, int irad, double Xr, double Yr, vector<double> thklist, vector<double> abslist)
-{
-    double L = thklist[0];
-    double tbase = det->CalZ0(irad);
-    double theta0 = det->theta0;
-    double thetaExp = det->fThetaCReal[irad];
-
-    double z0, z0Prim;
-    double X0, Y0, Z0;
-    double phi1, phi2;
-
-    z0 = L / 2.;
-    z0Prim = z0;
-    Z0 = -1 * tbase - z0;
-    X0 = 0;
-    Y0 = Z0 * tan(theta0);
-    phi1 = FindPhi(det, Xr, Yr, X0, Y0);
-    phi2 = 0;
-
-    int wdog = 0;
-    while (fabs(phi1 - phi2) > 0.001 && wdog < 100)
-    {
-        wdog++;
-        //2. 根据phi计算出射光的夹角Theta
-        double a = findA(theta0, thetaExp, phi1);
-        double Theta = atan(a / z0);
-
-        //3. 计算发光点的期望值
-        double absl = abslist[0] * cos(Theta);
-        z0Prim = L - (absl - absl * exp(L / absl) + L) / (1 - exp(L / absl));
-
-        //4. 更新期望的发光点位置Z0，这里phi也发生了变化
-        Z0 = -1 * tbase - z0Prim; //update  Z0
-        Y0 = Z0 * tan(det->theta0);
-
-        phi2 = FindPhi(det, Xr, Yr, X0, Y0);
-    }
-    if (wdog >= 100)
-    {
-        z0Prim = 0.52 * z0;
-        //cout<<"###Warning: Can't find z0 for ("<<Xr<<", "<<Yr<<") hit, using 0.5*z instead."<<endl;
-    }
-    //cout << "z0 is now: " << z0Prim << endl;
-    return z0Prim;
-}
-
-//求解phi
-double MyCommonRICH::FindPhi(MyRICHDetector *det, double Xr, double Yr, double X0, double Y0)
-{
-    //double R = sqrt((Xr - X0) * (Xr - X0) + (Yr - Y0) * (Yr - Y0));
-
-    double phi = atan((Yr - Y0) / (Xr - X0));
-
-    //if (R > det->tTransLayer)
-    {
-        phi = (phi < 0) ? phi + 2 * TMath::Pi() : phi;
-        if (Yr - Y0 < 0 && Xr - X0 < 0)
-            phi += TMath::Pi();
-        if (Yr - Y0 > 0 && Xr - X0 < 0)
-            phi -= TMath::Pi();
-    }
-    //else //对于大于30degree的才可能出现
-    //     // phi有可能出现差一个TMath::Pi()的情况
-    //     // 而且对于入射角40度开始，辐射体上界面和下界面的出光点位置 与 光子击中位置重叠，极有可能误判象限
-    //     // 最简单的方式就是两个都求解，然后找与R差别小的作为phi角
-    //{
-    //    double phi1 = phi;
-    //    double phi2 = phi1 + TMath::Pi();
-    //    double a11 = fRhoFcn->Eval(phi1);
-    //    double a12 = fRhoFcn->Eval(phi2);
-    //    phi = (fabs(a11 - R) < fabs(a12 - R)) ? phi1 : phi2;
-    //}
-
-    return phi;
-}
-
-//-----------ALICE的beta重建方法-------------------------------------------
-//  要调用这个函数，需要将下面三个vector都赋值
-//    double hypoLambda = 185;
-//    UpdateThetaCExp(det, hypoLambda);
-//    thklist = GetThickList(gDet, irad);
-//    reflist = GetRefIndList(gDet, irad, hypoLambda); //折射率选用假设的波长处的折射率
-//    abslist = GetAbsLenList(gDet, irad, hypoLambda); //折射率选用假设的波长处的折射率
-//    double recThe = ReconstructRICHByBeta(gDet, irad, Xr, Yr, thklist, reflist, abslist);
-//
-double MyCommonRICH::ReconstructRICHByBeta(MyRICHDetector *det, double irad, double Xr, double Yr, vector<double> thklist, vector<double> reflist, vector<double> abslist)
-{
-    if (det == 0)
-        return -999;
-
-    //1. 初始化
-    double theta0 = det->theta0;
-    double thetac = det->fThetaCReal[irad];
-    double beta = Beta(det->momentum, det->mass);
-    double Tg = det->tTransLayer;
-    double z0 = Findz0(det, irad, Xr, Yr, thklist, abslist);
-    double Xep = thklist[0] - z0;
-
-    //2. 求解出光角度phi
-    double tbase = det->CalZ0(irad);
-    double Z0 = -1 * tbase - z0;
-    double X0 = 0;
-    double Y0 = Z0 * tan(theta0);
-    double phi = FindPhi(gDet, Xr, Yr, X0, Y0);
-    double R = sqrt((Xr - X0) * (Xr - X0) + (Yr - Y0) * (Yr - Y0));
-
-    //fRhoFcn->SetParameters(z0, theta0, thetac);
-    //fRhoFcn->SetParameters(z0, 0, thetac);
-    //double a2 = fRhoFcn->Eval(phi);
-    //cout << "重建: z0=" << z0 << " phi=" << phi << ", theta0=" << theta0 << " thetac=" << thetac << endl;
-    //cout << "     (X0,Y0,Z0)=(" << X0 << ", " << Y0 << "," << Z0 << ")" << endl;
-    //cout << "     (Xr,Yr   )=(" << Xr << ", " << Yr << " )" << endl;
-
-    double a1 = findA(theta0, thetac, phi);
-    double theta1 = atan(a1);
-
-    //3. 求R0
-    double Rrad = Xep * tan(theta1);
-    double Rqz = 0;
-    double nSinTheta = reflist[0] * sin(theta1);
-
-    for (int i = 1; i < (int)thklist.size() - 1; i++)
-    {
-        if (nSinTheta / reflist[i] > 1)
-            return -999; //全反射
-
-        Rqz += thklist[i] * tan(asin(nSinTheta / reflist[i]));
-    }
-
-    double R0 = R - Rrad - Rqz;
-
-    /*
-    //4. 求重建的rec-theta1
-    double rthec1;
-    rthec1 = acos(1 / sqrt(1 + beta * beta / (1 + Tg * Tg / R0 / R0)));
-
-    //5. theta1->thetac
-    double rthec;
-    rthec = acos(cos(theta0) * cos(rthec1) + sin(theta0) * sin(rthec1) * sin(phi));
-
-    return rthec;
-    //return BetaThetaC(theta0, rthec1, phi, epsilon);
-    */
-
-    //4. 求重建的n
-    double theta2 = atan(R0 / Tg);
-    double nquartz2 = sin(theta2) / sin(theta1);
-    double rthec = acos(1 / nquartz2 / beta);
-    return rthec;
-}
-
-//-----------利用求解投影a来重建的算法-------------------------------------------
-//  对每一个[X, Y]的击中进行重建，假设：发光点在辐射体中心处 & 波长185nm
-//  返回为假设从该辐射体中心处发185nm的光对应的切伦科夫辐射角。无解则为-999
-//  要调用这个函数，需要将下面三个vector都赋值
-//    double hypoLambda = 185;
-//    thklist = GetThickList(gDet, irad);
-//    reflist = GetRefIndList(gDet, irad, hypoLambda); //折射率选用假设的波长处的折射率
-//    abslist = GetAbsLenList(gDet, irad, hypoLambda);
-//    double recThe = ReconstructRICHBySolver(gDet, irad, Xr, Yr, thetac);
-//
-/* 
-double MyCommonRICH::ReconstructRICHBySolver(MyRICHDetector *det, double irad, double Xc, double Yc)
-{
-    if (det == 0)
-        return -999;
-
-    vector<double>thklist;
-    vector<double>reflist;
-    vector<double>abslist;
-
-           thklist.clear();
-        reflist.clear();
-        abslist.clear();
-        thklist = GetThickList(det, irad);
-        reflist = GetRefIndList(det, irad, hypoLambda); //折射率选用假设的波长处的折射率
-        abslist = GetAbsLenList(det, irad, hypoLambda); //吸收系数用假设的波长处的折射率
-
-
-    //1. 假设发光点在中心处，计算phi
-    double L = thklist[0];
-    double tbase = det->CalZ0(irad);
-    double thetaExp = det->fThetaCReal[irad];
-
-    double z0, z0Prim = 0.52 * L;
-    double X0, Y0, Z0;
-    double phi1, phi2;
-
-    z0 = L / 2.;
-    Z0 = -1 * tbase - z0;
-    X0 = 0;
-    Y0 = Z0 * tan(det->theta0);
-    phi1 = atan((Yc - Y0) / (Xc - X0));
-    phi2 = 0;
-
-    while (fabs(phi1 - phi2) > 0.001)
-    {
-        //2. 根据phi计算出射光的夹角Theta
-        double a = findA(det->theta0, thetaExp, phi1);
-        double Theta = atan(a / 1.);
-
-        //3. 计算发光点的期望值
-        double absl = abslist[0] * cos(Theta);
-        z0Prim = L - (absl - absl * exp(L / absl) + L) / (1 - exp(L / absl));
-
-        //4. 更新期望的发光点位置Z0，这里phi也发生了变化
-        Z0 = -1 * tbase - z0Prim; //update  Z0
-        Y0 = Z0 * tan(det->theta0);
-
-        phi2 = atan((Yc - Y0) / (Xc - X0));
-    }
-    cout << "z0 is now: " << z0Prim << endl;
-
-    fRhoFcn->SetParameters(z0, det->theta0);
-
-    return SolverThetaC(fRhoFcn, Xc, Yc, X0, Y0, thetaExp, epsilon);
-}
-*/
-
-// 根据辐射体的光击中分布，求解中心值偏差及展宽的分布图
-void MyCommonRICH::ReconstructRICHDetector(MyRICHDetector *det)
-{
-    if (det == 0)
-        det = gDet;
-
-    if (det->fHitMap == 0)
-        return;
-
-    //1. 初始化
-    double hypoLambda = 185;
-    det->GetRecMap(1);
-    det->Gen2DRecRingListForEachRad();
-    UpdateThetaCExp(det, hypoLambda);
-
-    vector<double> thklist;
-    vector<double> reflist;
-    vector<double> abslist;
-
-    //2. 在辐射体产生的光子分布里循环
-    double Xr, Yr;
-    for (int irad = 0; irad < det->nRadLayer; irad++)
-    {
-        double muPhoton = det->fHitMapEachRad[irad]->Integral();
-        if (muPhoton == 0)
-            continue;
-
-        cout << "-->" << det->particle << " " << det->momentum << " " << det->theta0 << " rad:" << irad << " ph=" << muPhoton << " realTh=" << det->fThetaCReal[irad] << endl;
-
-        thklist.clear();
-        reflist.clear();
-        thklist = GetThickList(det, irad);
-        reflist = GetRefIndList(det, irad, hypoLambda);
-        abslist = GetAbsLenList(det, irad, hypoLambda);
-
-        //2.1 光子期望值循环
-        for (int iph = 1; iph < 50; iph++)
-        {
-            //2.2 进行NEvent个事例数
-            for (int i = 0; i < nEvent; i++)
-            {
-                //2.3 单个Event里会有iph个光子
-                double avgth = 0;
-                for (int j = 0; j < iph; j++)
-                {
-                    det->fHitMapEachRad[irad]->GetRandom2(Xr, Yr);
-                    Xr = int(Xr / det->pixel) * det->pixel + det->pixel / 2;
-                    Yr = int(Yr / det->pixel) * det->pixel + det->pixel / 2;
-                    double theta = ReconstructRICHByBeta(det, irad, Xr, Yr, thklist, reflist, abslist);
-                    avgth += theta;
-                }
-                avgth /= iph;
-
-                det->fRecMap->Fill(iph, avgth);
-                det->fRecMapEachRad[irad]->Fill(iph, avgth);
-            }
-        }
-    }
-}
-
-//---- 被GuiAction调用的函数 -- reconstruct --
-/// 生成momentum/theta范围的重建中心值偏差及展宽的分布图, 必须先完成GenerateTheScanHitMapsForEachDetector
-void *ReconstructionHandle(void *ptr)
-{
-    MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
-
-    long ip = (long)ptr;
-    int ibegin, iend;
-    GetMomentumScanRange(ip, ibegin, iend);
-
-    if (ibegin == -1 || iend == -1)
-        return 0;
-
-    for (int imom = ibegin; imom < iend; imom++)
-        for (int ithe = 0; ithe < (int)gDet->nthe0; ithe++)
-            for (int ihypo = 0; ihypo < (int)gDet->nhypo; ihypo++)
-                gMyCommonRICH->ReconstructRICHDetector(imom, ithe, ihypo);
-
-    return 0;
-}
-
-bool MyCommonRICH::ReconstructForEachDetector()
-{
-    if (GetDetScanNumber() == 0)
-    {
-        cout << "--> Must generate the hitmap first before performing the reconstruction." << endl;
-        return false;
-    }
-
-    int nthread = (NThread < gDet->np) ? NThread : gDet->np;
-
-    TThread *thread[nthread];
-    cout << "----> Applying " << nthread << " thread to perform reconstruction." << endl;
-    for (int i = 0; i < nthread; i++)
-        thread[i] = new TThread(Form("trec%d", i), ReconstructionHandle, (void *)(size_t)i);
-
-    for (int i = 0; i < nthread; i++)
-        thread[i]->Run();
-
-    for (int i = 0; i < nthread; i++)
-        thread[i]->Join();
-
-    cout << "----> Recontruction finished." << endl;
-    return true;
-}
-
-//---- 被GuiAction调用的函数, 生成相应的histogram
-void MyCommonRICH::GenerateRecOffsetSigmaMap()
-{
-    //
-    cout << "-->Generating the offset & sigma map." << endl;
-    ResizeRecMap(gDet->nhypo, gDet->nRadLayer, gDet->np, gDet->nthe0, gDet->NPhoton);
-
-    // 1. 拟合重建结果
-    int p0 = (Epoch == -1) ? 0 : Epoch;
-    int p1 = (Epoch == -1) ? gDet->np : Epoch + 1;
-    if (p0 > gDet->np || p1 > gDet->np)
-        return;
-
-    for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
-    {
-        for (int irad = 0; irad < gDet->nRadLayer; irad++)
-        {
-            for (int imom = p0; imom < p1; imom++)
-                for (int ithe = 0; ithe < gDet->nthe0; ithe++)
-                    for (int iph = 1; iph < gDet->NPhoton; iph++)
-                    {
-                        TH1D *fproj = GenRecMap(ihypo, irad, imom, ithe, iph);
-                        double mean = (fproj->Integral() == 0) ? 0 : fproj->GetFunction("gaus")->GetParameter(1);
-                        double sigm = (fproj->Integral() == 0) ? 0 : fproj->GetFunction("gaus")->GetParameter(2);
-                        double merr = (fproj->Integral() == 0) ? 0 : fproj->GetFunction("gaus")->GetParError(1);
-                        double serr = (fproj->Integral() == 0) ? 0 : fproj->GetFunction("gaus")->GetParError(2);
-                        if (fproj->Integral() != 0 && fproj->GetFunction("gaus")->GetNDF() == 0)
-                        {
-                            mean = (fproj->Integral() == 0) ? 0 : fproj->GetMean();
-                            sigm = (fproj->Integral() == 0) ? 0 : fproj->GetRMS();
-                            merr = (fproj->Integral() == 0) ? 0 : fproj->GetMeanError();
-                            serr = (fproj->Integral() == 0) ? 0 : fproj->GetRMSError();
-                        }
-                        fRecOffList[ihypo][irad][imom][ithe][iph] = mean;
-                        fRecSigList[ihypo][irad][imom][ithe][iph] = sigm;
-                        fRecOffErrList[ihypo][irad][imom][ithe][iph] = merr;
-                        fRecSigErrList[ihypo][irad][imom][ithe][iph] = serr;
-                        //fRecMap[ihypo][irad][imom][ithe][iph] = fproj;
-                    }
-        }
-    }
-
-    for (int imom = p0; imom < p1; imom++)
-    {
-        gMyCommonRICH->SaveHitFile(imom);
-        SaveRecFile(imom);
-    }
-    cout << "-->the offset & sigma maps are generated." << endl;
-}
-
-//---- 被GuiAction调用的函数, 生成相应的histogram
-void MyCommonRICH::GenerateRecHistograms(TString particle, int irad, int imom, int ithe, int iph)
-{
-    //1. clear
-    fOffsetMap = (TH2F *)gDirectory->Get("_offset_");
-    if (fOffsetMap != 0)
-        delete fOffsetMap;
-
-    fSigmaMap = (TH2F *)gDirectory->Get("_sigma_");
-    if (fSigmaMap != 0)
-        delete fSigmaMap;
-
-    for (int i = 0; i < (int)fOffsetVsNphPlot.size(); i++)
-        delete fOffsetVsNphPlot[i];
-    for (int i = 0; i < (int)fOffsetVsMomPlot.size(); i++)
-        delete fOffsetVsMomPlot[i];
-    for (int i = 0; i < (int)fOffsetVsThetaPlot.size(); i++)
-        delete fOffsetVsThetaPlot[i];
-
-    for (int i = 0; i < (int)fSigmaVsNphPlot.size(); i++)
-        delete fSigmaVsNphPlot[i];
-    for (int i = 0; i < (int)fSigmaVsMomPlot.size(); i++)
-        delete fSigmaVsMomPlot[i];
-    for (int i = 0; i < (int)fSigmaVsThetaPlot.size(); i++)
-        delete fSigmaVsThetaPlot[i];
-
-    fOffsetVsNphPlot.resize(gDet->nhypo);
-    fOffsetVsMomPlot.resize(gDet->nhypo);
-    fOffsetVsThetaPlot.resize(gDet->nhypo);
-    fSigmaVsNphPlot.resize(gDet->nhypo);
-    fSigmaVsMomPlot.resize(gDet->nhypo);
-    fSigmaVsThetaPlot.resize(gDet->nhypo);
-
-    //2. define histograms
-    int ihypo = GetHypoID(particle);
-    double mom = gScanDetList[imom][ithe][0]->momentum;
-    double the = gScanDetList[imom][ithe][0]->Theta0;
-    TString rad = gDet->sRadLayer[irad];
-
-    fOffsetMap = new TH2F("_offset_", Form("offset map for %s from radiator %s with %d photons", particle.Data(), rad.Data(), iph), gDet->np, gDet->pMin, gDet->pMax, gDet->nthe0, gDet->The0Min, gDet->The0Max);
-    fOffsetMap->SetXTitle("Momentum(GeV/c)");
-    fOffsetMap->SetYTitle("#theta_0(degree)");
-
-    fSigmaMap = new TH2F("_sigma_", Form("sigma map for %s from radiator %s with %d photons", particle.Data(), rad.Data(), iph), gDet->np, gDet->pMin, gDet->pMax, gDet->nthe0, gDet->The0Min, gDet->The0Max);
-    fSigmaMap->SetXTitle("Momentum(GeV/c)");
-    fSigmaMap->SetYTitle("#theta_0(degree)");
-    for (int i = 0; i < gDet->nhypo; i++)
-    {
-        fOffsetVsNphPlot[i] = new TH1F(Form("_offvnph_%d", i), Form("Offset vs. Nphoton for %s[%.1fGeV/c, %.1f#circ] from radiator %s", particle.Data(), mom, the, rad.Data()), gDet->NPhoton, 0, gDet->NPhoton);
-        fSigmaVsNphPlot[i] = new TH1F(Form("_sigvnph_%d", i), Form("Sigma vs. Nphoton for %s[%.1fGeV/c, %.1f#circ] from radiator %s", particle.Data(), mom, the, rad.Data()), gDet->NPhoton, 0, gDet->NPhoton);
-
-        fOffsetVsMomPlot[i] = new TH1F(Form("_offvmom_%d", i), Form("Offset vs. Momentum for %s[%.1f#circ] from radiator %s using %d photons", particle.Data(), the, rad.Data(), iph), gDet->np, gDet->pMin, gDet->pMax);
-        fSigmaVsMomPlot[i] = new TH1F(Form("_sigvmom_%d", i), Form("Sigma vs. Momentum for %s[%.1f#circ] from radiator %s using %d photons", particle.Data(), the, rad.Data(), iph), gDet->np, gDet->pMin, gDet->pMax);
-
-        fOffsetVsThetaPlot[i] = new TH1F(Form("_offvthe_%d", i), Form("Offset vs. Momentum for %s[%.1fGeV/c] from radiator %s using %d photons", particle.Data(), mom, rad.Data(), iph), gDet->nthe0, gDet->The0Min, gDet->The0Max);
-        fSigmaVsThetaPlot[i] = new TH1F(Form("_sigvthe_%d", i), Form("Sigma vs. Momentum for %s[%.1fGeV/c] from radiator %s using %d photons", particle.Data(), mom, rad.Data(), iph), gDet->nthe0, gDet->The0Min, gDet->The0Max);
-    }
-
-    //3. fill histograms
-    for (int jmom = 0; jmom < gDet->np; jmom++)
-        for (int jthe = 0; jthe < gDet->nthe0; jthe++)
-        {
-            fOffsetMap->SetBinContent(jmom + 1, jthe + 1, fRecOffList[ihypo][irad][jmom][jthe][iph]);
-            fOffsetMap->SetBinError(jmom + 1, jthe + 1, fRecOffErrList[ihypo][irad][jmom][jthe][iph]);
-            fSigmaMap->SetBinContent(jmom + 1, jthe + 1, fRecSigList[ihypo][irad][jmom][jthe][iph]);
-            fSigmaMap->SetBinError(jmom + 1, jthe + 1, fRecSigErrList[ihypo][irad][jmom][jthe][iph]);
-        }
-
-    for (int iihypo = 0; iihypo < gDet->nhypo; iihypo++)
-    {
-        for (int iiph = 0; iiph < gDet->NPhoton; iiph++)
-        {
-            fOffsetVsNphPlot[iihypo]->SetBinContent(iiph + 1, fRecOffList[iihypo][irad][imom][ithe][iiph]);
-            fOffsetVsNphPlot[iihypo]->SetBinError(iiph + 1, fRecOffErrList[iihypo][irad][imom][ithe][iiph]);
-            fSigmaVsNphPlot[iihypo]->SetBinContent(iiph + 1, fRecSigList[iihypo][irad][imom][ithe][iiph]);
-            fSigmaVsNphPlot[iihypo]->SetBinError(iiph + 1, fRecSigErrList[iihypo][irad][imom][ithe][iiph]);
-        }
-        fNphFcn->SetParLimits(0, 0, 2 * fRecSigList[iihypo][irad][imom][ithe][1]);
-        fNphFcn->SetParLimits(1, 0, 2 * fRecSigList[iihypo][irad][imom][ithe][gDet->NPhoton - 2]);
-        fSigmaVsNphPlot[iihypo]->Fit("fNphFcn");
-        for (int iimom = 0; iimom < gDet->np; iimom++)
-        {
-            fOffsetVsMomPlot[iihypo]->SetBinContent(iimom + 1, fRecOffList[iihypo][irad][iimom][ithe][iph]);
-            fOffsetVsMomPlot[iihypo]->SetBinError(iimom + 1, fRecOffErrList[iihypo][irad][iimom][ithe][iph]);
-            fSigmaVsMomPlot[iihypo]->SetBinContent(iimom + 1, fRecSigList[iihypo][irad][iimom][ithe][iph]);
-            fSigmaVsMomPlot[iihypo]->SetBinError(iimom + 1, fRecSigErrList[iihypo][irad][iimom][ithe][iph]);
-        }
-        for (int iithe = 0; iithe < gDet->nthe0; iithe++)
-        {
-            fOffsetVsThetaPlot[iihypo]->SetBinContent(iithe + 1, fRecOffList[iihypo][irad][imom][iithe][iph]);
-            fOffsetVsThetaPlot[iihypo]->SetBinError(iithe + 1, fRecOffErrList[iihypo][irad][imom][iithe][iph]);
-            fSigmaVsThetaPlot[iihypo]->SetBinContent(iithe + 1, fRecSigList[iihypo][irad][imom][iithe][iph]);
-            fSigmaVsThetaPlot[iihypo]->SetBinError(iithe + 1, fRecSigErrList[iihypo][irad][imom][iithe][iph]);
-        }
-    }
-}
-
-//______________________________________________________________________________
-// 计算在当前det的hypothesis下的prob大小
-double MyCommonRICH::CalPIDProb(MyRICHDetector *det, vector<pair<double, double>> hit, double &chi2, double &ndf)
-{
-    int ihypo = GetHypoID(det->particle);
-    int imom = GetMomID(det->momentum);
-    int ithe = GetThetaID(det->Theta0);
-
-    double hypoLambda = 185;
-    UpdateThetaCExp(det, hypoLambda);
-
-    vector<vector<double>> recList; //[nrad][第n个光子重建的切伦科夫角]
-    recList.resize(det->nRadLayer);
-
-    for (int i = 0; i < (int)hit.size(); i++)
-    {
-        int fromRad = -1;    //光从哪个辐射体发出的
-        double recThe = 999; //重建的切伦科夫角
-        double recDis = 999; //重建的切伦科夫角和真值的差
-
-        for (int irad = 0; irad < det->nRadLayer; irad++)
-        {
-            vector<double> thklist = GetThickList(det, irad);
-            vector<double> reflist = GetRefIndList(det, irad, hypoLambda); //折射率选用假设的波长处的折射率
-            vector<double> abslist = GetAbsLenList(det, irad, hypoLambda);
-
-            double rectmp = ReconstructRICHByBeta(det, irad, hit[i].first, hit[i].second, thklist, reflist, abslist);
-            //double rectmp = ReconstructRICHBySolver(det, irad, hit[i].first, hit[i].second);
-            if (fabs(rectmp - det->fThetaCReal[irad]) < recDis)
-            {
-                fromRad = irad;
-                recThe = rectmp;
-                recDis = fabs(rectmp - det->fThetaCReal[irad]);
-            }
-        }
-
-        if (fromRad == -1)
-            continue;
-        //if (fRecSigList[ihypo][fromRad][imom][ithe][1] == 0) continue;
-        //recList[fromRad].push_back(pow(recThe - fRecOffList[ihypo][fromRad][imom][ithe][1], 2) / pow(fRecSigList[ihypo][fromRad][imom][ithe][1], 2));
-        recList[fromRad].push_back(recThe);
-    }
-
-    ndf = 0;
-    chi2 = 0;
-    for (int irad = 0; irad < det->nRadLayer; irad++)
-    {
-        double avg = 0;
-        int nph = recList[irad].size();
-        if (nph <= 0 || fRecSigList[ihypo][irad][imom][ithe][nph] == 0)
-            continue;
-        ndf++;
-
-        for (int i = 0; i < nph; i++)
-            avg += recList[irad][i];
-        avg /= nph;
-
-        chi2 += pow((avg - fRecOffList[ihypo][irad][imom][ithe][nph]) / fRecSigList[ihypo][irad][imom][ithe][nph], 2);
-    }
-
-    return TMath::Prob(chi2, ndf);
-}
-
-//根据击中位置坐标判断粒子种类
-int MyCommonRICH::PIDProb(vector<MyRICHDetector *> detlist, vector<pair<double, double>> hit, vector<double> chilist, vector<double> ndflist)
-{
-    int iprob = -1;
-    double mprob = -1;
-    double chi2, ndf;
-
-
-    //计算那种hypothesis具有最大的prob
-    for (int ihypo = 0; ihypo < (int)detlist.size(); ihypo++)
-    {
-        double prob = CalPIDProb(detlist[ihypo], hit, chi2, ndf);
-        if (prob > mprob)
-        {
-            mprob = prob;
-            iprob = ihypo;
-        }
-        chilist[ihypo] = chi2;
-        ndflist[ihypo] = ndf;
-    }
-    return iprob;
-}
-
-
-void MyCommonRICH::CalculatePIDForDetector(MyRICHDetector *det)
-{
-    if (det == 0)
-        det = gDet;
-
-    int ihypo = GetHypoID(det->particle);
-    int imom = GetMomID(det->momentum);
-    int ithe = GetThetaID(det->Theta0);
-
-    if (det->fHitMap == 0)
-        return;
-
-    TH2F *fhm = det->GetHitMap();
-    double muPhoton = fhm->Integral();
-    if (muPhoton < 1)
-    {
-        for (int jhypo = 0; jhypo < gDet->nhypo; jhypo++)
-            gMyCommonRICH->SetPIDEff(imom, ithe, ihypo, jhypo, 0);
-        return;
-    }
-
-    vector<double> pideff;
-    vector<double> chilist;
-    vector<double> ndflist;
-    pideff.resize(gDet->nhypo);
-    chilist.resize(gDet->nhypo);
-    ndflist.resize(gDet->nhypo);
-    for (int jhypo = 0; jhypo < gDet->nhypo; jhypo++)
-        pideff[jhypo] = 0;
-
-    vector<pair<double, double>> hit;
-    int nEvent = gMyCommonRICH->GetNevent();
-
-    for (int i = 0; i < nEvent; i++)
-    {
-        double nPh = gRandom->Poisson(muPhoton);
-
-        hit.clear();
-        for (int iph = 0; iph < nPh; iph++)
-        {
-            double Xr, Yr;
-            fhm->GetRandom2(Xr, Yr);
-            Xr = int(Xr / det->pixel) * det->pixel + det->pixel / 2;
-            Yr = int(Yr / det->pixel) * det->pixel + det->pixel / 2;
-            hit.push_back(make_pair(Xr, Yr));
-        }
-
-        int pid = gMyCommonRICH->PIDProb(gScanDetList[imom][ithe], hit, chilist, ndflist);
-        gMyCommonRICH->FillChiSquare(imom, ithe, ihypo, chilist, ndflist);
-        pideff[pid]++;
-    }
-
-    for (int jhypo = 0; jhypo < gDet->nhypo; jhypo++)
-        gMyCommonRICH->SetPIDEff(imom, ithe, ihypo, jhypo, pideff[jhypo] / nEvent);
-
-    return;
-}
-
-//计算PID效率和误判率
-void *CalPIDEfficiencyHandle(void *ptr)
-{
-    MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
-
-    long ip = (long)ptr;
-    int ibegin, iend;
-    GetMomentumScanRange(ip, ibegin, iend);
-
-    if (ibegin == -1 || iend == -1)
-        return 0;
-
-    for (int imom = ibegin; imom < iend; imom++)
-        for (int ithe = 0; ithe < gDet->nthe0; ithe++)
-            for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
-                gMyCommonRICH->CalculatePIDForDetector(imom, ithe, ihypo);
-
-    for (int imom = ibegin; imom < iend; imom++)
-        gMyCommonRICH->SavePidFile(imom);
-
-    return 0;
-}
-
-bool MyCommonRICH::CalPIDEfficiency()
-{
-    //if (fRecSigList.size() == 0)
-    //    return false;
-
-    ResizePIDEffMap(gDet->np, gDet->nthe0, gDet->nhypo);
-
-    int nthread = (NThread < gDet->np) ? NThread : gDet->np;
-
-    TThread *thread[nthread];
-    cout << "----> Applying " << nthread << " thread to perform PID calculation." << endl;
-    for (int i = 0; i < nthread; i++)
-        thread[i] = new TThread(Form("tpid%d", i), CalPIDEfficiencyHandle, (void *)(size_t)i);
-
-    for (int i = 0; i < nthread; i++)
-        thread[i]->Run();
-
-    for (int i = 0; i < nthread; i++)
-        thread[i]->Join();
-
-    cout << "----> PID efficiency calculation finished." << endl;
-    return true;
-}
-
-void MyCommonRICH::GeneratePIDHistograms(TString particle, int imom, int ithe)
-{
-    //1. clear
-    for (int i = 0; i < (int)fPIDMap.size(); i++)
-        delete fPIDMap[i];
-    for (int i = 0; i < (int)fPIDVsMomPlot.size(); i++)
-        delete fPIDVsMomPlot[i];
-    for (int i = 0; i < (int)fPIDVsThetaPlot.size(); i++)
-        delete fPIDVsThetaPlot[i];
-
-    fPIDMap.resize(gDet->nhypo);
-    fPIDVsMomPlot.resize(gDet->nhypo);
-    fPIDVsThetaPlot.resize(gDet->nhypo);
-
-    //2. define histograms
-    int ihypo = GetHypoID(particle);
-    double mom = gScanDetList[imom][ithe][0]->momentum;
-    double the = gScanDetList[imom][ithe][0]->Theta0;
-
-    for (int i = 0; i < gDet->nhypo; i++)
-    {
-        fPIDMap[i] = new TH2F(Form("_pid%d_", i), Form("PID efficiency map for %s identified as %s", particle.Data(), SHYPO[i]), gDet->np, gDet->pMin, gDet->pMax, gDet->nthe0, gDet->The0Min, gDet->The0Max);
-        fPIDMap[i]->SetXTitle("Momentum(GeV/c)");
-        fPIDMap[i]->SetYTitle("#theta_0(degree)");
-
-        fPIDVsMomPlot[i] = new TH1F(Form("_pidvmom_%d", i), Form("PID efficiency vs. Momentum for %s[%.1f#circ] identified as %s", particle.Data(), the, SHYPO[i]), gDet->np, gDet->pMin, gDet->pMax);
-        fPIDVsMomPlot[i]->SetXTitle("Momentum(GeV/c)");
-        fPIDVsMomPlot[i]->SetYTitle("PID Efficiency(%)");
-
-        fPIDVsThetaPlot[i] = new TH1F(Form("_pidvthe_%d", i), Form("PID efficiency vs. Momentum for %s[%.1fGeV/c] identified as %s", particle.Data(), mom, SHYPO[i]), gDet->nthe0, gDet->The0Min, gDet->The0Max);
-        fPIDVsThetaPlot[i]->SetXTitle("#theta_0(degree)");
-        fPIDVsThetaPlot[i]->SetYTitle("PID Efficiency(%)");
-    }
-
-    //3. fill histograms
-    for (int jmom = 0; jmom < gDet->np; jmom++)
-        for (int jthe = 0; jthe < gDet->nthe0; jthe++)
-            for (int jhypo = 0; jhypo < gDet->nhypo; jhypo++)
-                fPIDMap[jhypo]->SetBinContent(jmom + 1, jthe + 1, fPidEffList[jmom][jthe][ihypo][jhypo]);
-
-    for (int jhypo = 0; jhypo < gDet->nhypo; jhypo++)
-    {
-
-        for (int iimom = 0; iimom < gDet->np; iimom++)
-        {
-            fPIDVsMomPlot[jhypo]->SetBinContent(iimom + 1, fPidEffList[iimom][ithe][ihypo][jhypo]);
-            fPIDVsMomPlot[jhypo]->SetBinError(iimom + 1, 1. / sqrt(nEvent));
-        }
-        for (int iithe = 0; iithe < gDet->nthe0; iithe++)
-        {
-            fPIDVsThetaPlot[jhypo]->SetBinContent(iithe + 1, fPidEffList[imom][iithe][ihypo][jhypo]);
-            fPIDVsThetaPlot[jhypo]->SetBinError(iithe + 1, 1. / sqrt(nEvent));
-        }
-    }
-}
-
-//______________________________________________________________________________
-/// FILE IO functions
 int MyCommonRICH::LoadRings(const char *fname)
 {
     // return: -1 文件不存在
@@ -1502,7 +508,6 @@ int MyCommonRICH::LoadRings(const char *fname)
     headName.Remove(headName.Index(".root"), 5);
 
     TH1::AddDirectory(kFALSE);
-    TH2::AddDirectory(kFALSE);
     if (LoadDetFile() < 0)
         return -1;
 
@@ -1515,7 +520,7 @@ int MyCommonRICH::LoadRings(const char *fname)
     if (LoadPidFile() < 0)
         return 3;
 
-    cout << "----> All files are loaded. " << endl;
+    cout << "----> Total entries loaded. " << endl;
     return 4;
 }
 
@@ -1557,7 +562,6 @@ int MyCommonRICH::LoadDetFile()
     T->GetEntry(ientry++);
     gDirectory->cd();
     gDet->BuildFrom(*det, -1, 1);
-    gDet->SetDirectory();
 
     //1.2 gDetList
     ResizeDetList(gDet->nhypo);
@@ -1565,7 +569,6 @@ int MyCommonRICH::LoadDetFile()
     {
         T->GetEntry(ientry++);
         gDetList[i] = new MyRICHDetector(*det, -1, 1);
-        gDetList[i]->SetDirectory();
     }
     f.Close();
 
@@ -1606,10 +609,7 @@ int MyCommonRICH::LoadHitFile()
     //
     ResizeScanDetList(gDet->np, gDet->nthe0, gDet->nhypo, 0);
 
-    int ibegin, iend;
-    GetMomentumScanRange(0, ibegin, iend);
-
-    for (int imom = ibegin; imom < iend; imom++)
+    for (int imom = 0; imom < gDet->np; imom++)
     {
         TString hitFile = headName;
         hitFile += TString(Form("_imom_%d.root", imom));
@@ -1626,13 +626,12 @@ int MyCommonRICH::LoadHitFile()
         T->SetBranchAddress("det", &detector);
         int ientry = 0;
 
-        cout << "----> Loading imom=" << imom << " from " << hitFile << endl;
+        cout << "Loading " << imom << " from " << hitFile << endl;
         for (int ithe = 0; ithe < gDet->nthe0; ithe++)
             for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
             {
                 T->GetEntry(ientry++);
                 gScanDetList[imom][ithe][ihypo] = new MyRICHDetector(*detector, -1, 1);
-                gScanDetList[imom][ithe][ihypo]->SetDirectory();
             }
 
         f.Close();
@@ -1670,10 +669,7 @@ int MyCommonRICH::LoadRecFile()
     //
     ResizeRecMap(gDet->nhypo, gDet->nRadLayer, gDet->np, gDet->nthe0, gDet->NPhoton);
 
-    int ibegin, iend;
-    GetMomentumScanRange(0, ibegin, iend);
-
-    for (int imom = ibegin; imom < iend; imom++)
+    for (int imom = 0; imom < gDet->np; imom++)
     {
         TString recFile = headName;
         recFile += TString(Form("_rec_%d.root", imom));
@@ -1702,7 +698,7 @@ int MyCommonRICH::LoadRecFile()
         T1->SetBranchAddress("The0Max", &The0Max);
         T1->GetEntry(0);
 
-        cout << "----> Loading REC file: nHypo=" << nhyp << ", nRadiator=" << nrad << ", nMomentum=" << nmom << ", nTheta0=" << nthe << ", nPhoton=" << nph << endl;
+        cout << "---->Reading REC file: nHypo=" << nhyp << ", nRadiator=" << nrad << ", nMomentum=" << nmom << ", nTheta0=" << nthe << ", nPhoton=" << nph << endl;
         if ((nhyp != gDet->nhypo) || (nrad != gDet->nRadLayer) || (nmom != gDet->np) ||
             (nthe != gDet->nthe0) || (nph != gDet->NPhoton))
         {
@@ -1930,17 +926,977 @@ void MyCommonRICH::SavePidFile(int imom)
                 T2->Fill();
             }
     T2->Write();
+    f.Close();
+}
 
-    f.cd();
-    for (int ithe = 0; ithe < gDet->nthe0; ithe++)
-        for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
-            for (int jhypo = 0; jhypo < gDet->nhypo; jhypo++)
+//______________________________________________________________________________
+/// 计算从某个辐射体发出来的光子数
+double MyCommonRICH::PhotonGenFromRad(MyRICHDetector *det, int irad, int absFlag)
+{
+    if (det == 0)
+        return 0;
+
+    //1.初始化
+    TF1 *fRhoFcn = new TF1("fRhoFcn", findRho, 0, 2 * TMath::Pi(), 100);
+
+    vector<double> thklist;
+    vector<double> reflist;
+    vector<double> abslist;
+    vector<double> lenlist;
+
+    double beta = Beta(det->momentum, det->mass);
+    double tbase = det->CalZ0(irad);
+    double theta0 = det->theta0;
+    thklist = GetThickList(det, irad);
+
+    double detPh = 0;
+
+    //2. 在波长范围循环
+    for (int ilamb = 0; ilamb < det->nLambda; ilamb++)
+    {
+        double lambda = det->lambdaMin + (ilamb + 0.5) * det->lambdaStep;
+        double QE = gDb->GetDetQEValue(det->PCDetector, lambda);
+        if (QE == 0)
+            continue;
+
+        //2.1 根据波长初始化变量
+        reflist = GetRefIndList(det, irad, lambda);
+        abslist = GetAbsLenList(det, irad, lambda);
+        double n0 = reflist[0];
+        double t0 = thklist[0];
+
+        double thetac = CherenkovAng(beta, n0);
+        double density = dNdLdLambda(lambda, beta, n0);
+        SetFcnParameters(fRhoFcn, 0, theta0, thetac, thklist, reflist);
+
+        //2.2 在辐射体内循环发光点位置
+        for (int ilen = 0; ilen < (int)t0 / det->trkStep; ilen++)
+        {
+            double z0 = (ilen + 0.5) * det->trkStep;
+            fRhoFcn->SetParameter(0, z0);
+
+            double Z0 = -1 * tbase - z0; //全局坐标系
+            double X0 = 0;
+            double Y0 = Z0 * tan(theta0);
+
+            //3. 在出射角范围内循环
+            for (int iphi = 0; iphi < det->nphi; iphi++)
             {
-                fPidChiHist[imom][ithe][ihypo][jhypo][0]->Write();
-                fPidChiHist[imom][ithe][ihypo][jhypo][1]->Write();
+                // 3. findRho是在极坐标系下求解，此时极坐标系下的中心点为发光点位置，因此在计算时用的有效发光长度 l0 = t0 - z0
+                //                  极坐标与+X夹角为phi，求解的结果转换到全局坐标系有：
+                //                      Xr = rho * cos(phi); Yr = rho * sin(phi) + Y0
+                double phi = iphi * det->phiStep;
+                double rho = fRhoFcn->Eval(phi);
+                if (rho == 0 || rho != rho)
+                    continue;
+                GetFcnParameters(fRhoFcn, lenlist);
+
+                // 全局坐标系下的圆心坐标
+                double Xr = rho * cos(phi) + X0;
+                double Yr = rho * sin(phi) + Y0;
+
+                //  产生的光子数
+                double weight = density * det->trkStep * det->phiStep * det->lambdaStep * QE / 2 / TMath::Pi();
+
+                // 考虑辐射体的吸收
+                double coeff = 1.;
+                for (int ii = 0; ii < (int)lenlist.size(); ii++)
+                {
+                    if (absFlag == 0)
+                        continue;
+
+                    double len = lenlist[ii];
+                    double abs = abslist[ii];
+                    if (ii == (int)lenlist.size() - 1)
+                        for (int jj = ii; jj < (int)abslist.size(); jj++)
+                            coeff *= exp(-1 * len / abslist[jj]);
+                    else
+                        coeff *= exp(-1 * len / abs);
+                }
+                weight *= coeff;
+                detPh += weight;
+
+                det->GetHitMap()->Fill(Xr, Yr, weight);
+                det->GetDetHitMap(irad)->Fill(Xr, Yr, weight);
+                det->GetWaveLengthHist()->Fill(lambda, weight);
+            }
+        }
+    }
+
+    delete fRhoFcn;
+    return detPh;
+}
+
+//---- 被GuiAction调用的函数
+/// 计算所有辐射体发射出来的光子数分布图
+void MyCommonRICH::GenerateDetRing(MyRICHDetector *det, int verbose)
+{
+    if (det == 0)
+        det = gDet;
+
+    //清除已经生成的图像
+    det->GetHitMap(1);
+    det->GetWaveLengthHist(1);
+    det->Gen2DRingListForEachRad();
+
+    double totPh = 0;
+    for (int irad = 0; irad < det->nRadLayer; irad++)
+    {
+        double detPh = PhotonGenFromRadWithAbs(det, irad);
+        if (verbose)
+            cout << "-- Detector " << irad << " " << det->sRadLayer[irad] << " generates " << detPh << " ph." << endl;
+
+        totPh += detPh;
+    }
+
+    if (verbose)
+        cout << "Total photon from " << det->particle << ", p=" << det->momentum << "GeV/c, theta0=" << det->Theta0 << " : nPh=" << totPh << endl;
+}
+
+//---- 被GuiAction调用的函数
+/// 生成mu/pi/k/p四种粒子的光子数分布图
+void MyCommonRICH::GenerateMultiParticleRICHRings()
+{
+    ResizeDetList(gDet->nhypo);
+    cout << "\n---------------------------";
+    for (int i = 0; i < gDet->nhypo; i++)
+    {
+        cout << "\n-- generating: " << endl;
+        gDetList[i] = new MyRICHDetector(*gDet, i + 1);
+        gDetList[i]->SetParticleGun(SHYPO[i], GetMass(SHYPO[i]));
+        GenerateDetRing(gDetList[i]);
+    }
+}
+
+//---- 被GuiAction调用的函数 -- hitmap --
+/// 根据momentum/theta范围生成四种粒子的光子数hitmap分布图
+void GetMomentumScanRange(long ip, int &ibegin, int &iend)
+{
+    MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
+
+    int NTHREAD = gMyCommonRICH->GetNThread();
+    int epoch = gMyCommonRICH->GetEpoch();
+    int np = gDet->np;
+
+    ibegin = -1;
+    iend = -1;
+
+    //0. ip的范围为【0，NTHREAD-1】
+    //1. EPoch!=-1: 扫描Epoch指定的动量段
+    if (epoch != -1)
+    {
+        if (epoch > np || epoch + 1 > np)
+            return;
+        ibegin = epoch;
+        iend = epoch + 1;
+        return;
+    }
+
+    //2. EPoch==-1: NTHREAD > np，如NTHREAD为4， np为2， 则只分2个线程。此时ip取值>=2的时候不扫描
+    //              NTHREAD <= np, 分段扫描
+    int nthread = (NTHREAD < np) ? NTHREAD : np;
+    ibegin = ip * np / nthread;
+    iend = (ip + 1) * np / nthread;
+    if (ibegin > np || iend > np)
+    {
+        ibegin = -1;
+        iend = -1;
+    }
+}
+
+void *GenerateTheScanHitMapsHandler(void *ptr)
+{
+    long ip = (long)ptr;
+    int ibegin, iend;
+
+    MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
+    vector<vector<vector<MyRICHDetector *>>> gScanDetList = gMyCommonRICH->GetScanDetector();
+
+    GetMomentumScanRange(ip, ibegin, iend);
+
+    if (ibegin == -1 || iend == -1)
+        return 0;
+
+    for (int imom = ibegin; imom < iend; imom++)
+    {
+        // 1. 循环生成hitmap
+        for (int ithe = 0; ithe < gDet->nthe0; ithe++)
+            for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
+            {
+                gMyCommonRICH->GenerateDetRing(imom, ithe, ihypo);
             }
 
-    f.Close();
+        // 2. 保存root文件
+        gMyCommonRICH->SaveHitFile(imom);
+    }
+
+    return 0;
+}
+
+void MyCommonRICH::GenerateDetRing(int imom, int ithe, int ihypo)
+{
+    double mom = gDet->pMin + imom * gDet->pStep;
+    double Theta0 = gDet->The0Min + ithe * gDet->The0Step;
+    cout << "-- generating : [" << imom << " " << ithe << " " << ihypo << "]" << endl;
+    gScanDetList[imom][ithe][ihypo]->SetParticleGun(SHYPO[ihypo], gMyCommonRICH->GetMass(SHYPO[ihypo]));
+    gScanDetList[imom][ithe][ihypo]->SetParticleGun(mom, Theta0);
+    GenerateDetRing(gScanDetList[imom][ithe][ihypo], 0);
+}
+
+void MyCommonRICH::GenerateTheScanHitMapsForEachDetector()
+{
+    cout << "\n---------------------------\n";
+
+    ResizeScanDetList(gDet->np, gDet->nthe0, gDet->nhypo);
+
+    int nthread = (NThread < gDet->np) ? NThread : gDet->np;
+
+    TThread *thread[nthread];
+
+    for (int i = 0; i < nthread; i++)
+        thread[i] = new TThread(Form("thit%d", i), GenerateTheScanHitMapsHandler, (void *)(size_t)i);
+
+    for (int i = 0; i < nthread; i++)
+        thread[i]->Run();
+
+    for (int i = 0; i < nthread; i++)
+        thread[i]->Join();
+
+    cout << "----> Hit-map generated." << endl;
+}
+
+//---- 被GuiAction调用的函数 -- hitmap --
+void MyCommonRICH::GenerateTheNPhotonMap()
+{
+    ResizeNPhMap(gDet->nhypo, gDet->nRadLayer);
+
+    for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
+    {
+        fNPhMap[ihypo] = new TH2F(Form("fNPhMap%d", ihypo), Form("Number of photon distribution for %s", SHYPO[ihypo]), gDet->np, gDet->pMin, gDet->pMax, gDet->nthe0, gDet->The0Min, gDet->The0Max);
+        fNPhMap[ihypo]->GetXaxis()->SetTitle("momentum[GeV/c]");
+        fNPhMap[ihypo]->GetYaxis()->SetTitle("#theta[degree]");
+
+        for (int irad = 0; irad < gDet->nRadLayer; irad++)
+        {
+            fNPhMapEachRad[ihypo][irad] = new TH2F(Form("fNPhMap%d_%d", ihypo, irad), Form("Number of photon distribution for %s from %s", SHYPO[ihypo], gDet->sRadLayer[irad].c_str()), gDet->np, gDet->pMin, gDet->pMax, gDet->nthe0, gDet->The0Min, gDet->The0Max);
+            fNPhMapEachRad[ihypo][irad]->GetXaxis()->SetTitle("momentum[GeV/c]");
+            fNPhMapEachRad[ihypo][irad]->GetYaxis()->SetTitle("#theta[degree]");
+        }
+
+        for (int imom = 0; imom < gDet->np; imom++)
+            for (int ithe = 0; ithe < gDet->nthe0; ithe++)
+            {
+                if (gScanDetList[imom][ithe][ihypo]->GetHitMap() != NULL)
+                    fNPhMap[ihypo]->SetBinContent(imom + 1, ithe + 1, gScanDetList[imom][ithe][ihypo]->GetHitMap()->Integral());
+
+                for (int irad = 0; irad < gDet->nRadLayer; irad++)
+                {
+                    double nph = 0;
+                    if (gScanDetList[imom][ithe][ihypo]->GetDetHitMap(irad) != NULL)
+                        nph = gScanDetList[imom][ithe][ihypo]->GetDetHitMap(irad)->Integral();
+                    fNPhMapEachRad[ihypo][irad]->SetBinContent(imom + 1, ithe + 1, nph);
+                }
+            }
+    }
+}
+
+//______________________________________________________________________________
+// 重建函数
+double MyCommonRICH::Findz0(MyRICHDetector *det, int irad, double Xr, double Yr, vector<double> thklist, vector<double> abslist)
+{
+    double L = thklist[0];
+    double tbase = det->CalZ0(irad);
+    double theta0 = det->theta0;
+    double thetaExp = det->fThetaCReal[irad];
+
+    double z0, z0Prim;
+    double X0, Y0, Z0;
+    double phi1, phi2;
+
+    z0 = L / 2.;
+    z0Prim = z0;
+    Z0 = -1 * tbase - z0;
+    X0 = 0;
+    Y0 = Z0 * tan(theta0);
+    phi1 = FindPhi(det, Xr, Yr, X0, Y0);
+    phi2 = 0;
+
+    int wdog = 0;
+    while (fabs(phi1 - phi2) > 0.001 && wdog < 100)
+    {
+        wdog++;
+        //2. 根据phi计算出射光的夹角Theta
+        double a = findA(theta0, thetaExp, phi1);
+        double Theta = atan(a / z0);
+
+        //3. 计算发光点的期望值
+        double absl = abslist[0] * cos(Theta);
+        z0Prim = L - (absl - absl * exp(L / absl) + L) / (1 - exp(L / absl));
+
+        //4. 更新期望的发光点位置Z0，这里phi也发生了变化
+        Z0 = -1 * tbase - z0Prim; //update  Z0
+        Y0 = Z0 * tan(det->theta0);
+
+        phi2 = FindPhi(det, Xr, Yr, X0, Y0);
+    }
+    if (wdog >= 100)
+    {
+        z0Prim = 0.52 * z0;
+        //cout<<"###Warning: Can't find z0 for ("<<Xr<<", "<<Yr<<") hit, using 0.5*z instead."<<endl;
+    }
+    //cout << "z0 is now: " << z0Prim << endl;
+    return z0Prim;
+}
+
+//求解phi
+double MyCommonRICH::FindPhi(MyRICHDetector *det, double Xr, double Yr, double X0, double Y0)
+{
+    //double R = sqrt((Xr - X0) * (Xr - X0) + (Yr - Y0) * (Yr - Y0));
+
+    double phi = atan((Yr - Y0) / (Xr - X0));
+
+    //if (R > det->tTransLayer)
+    {
+        phi = (phi < 0) ? phi + 2 * TMath::Pi() : phi;
+        if (Yr - Y0 < 0 && Xr - X0 < 0)
+            phi += TMath::Pi();
+        if (Yr - Y0 > 0 && Xr - X0 < 0)
+            phi -= TMath::Pi();
+    }
+    //else //对于大于30degree的才可能出现
+    //     // phi有可能出现差一个TMath::Pi()的情况
+    //     // 而且对于入射角40度开始，辐射体上界面和下界面的出光点位置 与 光子击中位置重叠，极有可能误判象限
+    //     // 最简单的方式就是两个都求解，然后找与R差别小的作为phi角
+    //{
+    //    double phi1 = phi;
+    //    double phi2 = phi1 + TMath::Pi();
+    //    double a11 = fRhoFcn->Eval(phi1);
+    //    double a12 = fRhoFcn->Eval(phi2);
+    //    phi = (fabs(a11 - R) < fabs(a12 - R)) ? phi1 : phi2;
+    //}
+
+    return phi;
+}
+
+//-----------ALICE的beta重建方法-------------------------------------------
+//  要调用这个函数，需要将下面三个vector都赋值
+//    double hypoLambda = 185;
+//    UpdateThetaCExp(det, hypoLambda);
+//    thklist = GetThickList(gDet, irad);
+//    reflist = GetRefIndList(gDet, irad, hypoLambda); //折射率选用假设的波长处的折射率
+//    abslist = GetAbsLenList(gDet, irad, hypoLambda); //折射率选用假设的波长处的折射率
+//    double recThe = ReconstructRICHByBeta(gDet, irad, Xr, Yr, thklist, reflist, abslist);
+//
+double MyCommonRICH::ReconstructRICHByBeta(MyRICHDetector *det, double irad, double Xr, double Yr, vector<double> thklist, vector<double> reflist, vector<double> abslist)
+{
+    if (det == 0)
+        return -999;
+
+    //1. 初始化
+    double theta0 = det->theta0;
+    double thetac = det->fThetaCReal[irad];
+    double beta = Beta(det->momentum, det->mass);
+    double Tg = det->tTransLayer;
+    double z0 = Findz0(det, irad, Xr, Yr, thklist, abslist);
+    double Xep = thklist[0] - z0;
+
+    //2. 求解出光角度phi
+    double tbase = det->CalZ0(irad);
+    double Z0 = -1 * tbase - z0;
+    double X0 = 0;
+    double Y0 = Z0 * tan(theta0);
+    double phi = FindPhi(gDet, Xr, Yr, X0, Y0);
+    double R = sqrt((Xr - X0) * (Xr - X0) + (Yr - Y0) * (Yr - Y0));
+
+    //fRhoFcn->SetParameters(z0, theta0, thetac);
+    //fRhoFcn->SetParameters(z0, 0, thetac);
+    //double a2 = fRhoFcn->Eval(phi);
+    //cout << "重建: z0=" << z0 << " phi=" << phi << ", theta0=" << theta0 << " thetac=" << thetac << endl;
+    //cout << "     (X0,Y0,Z0)=(" << X0 << ", " << Y0 << "," << Z0 << ")" << endl;
+    //cout << "     (Xr,Yr   )=(" << Xr << ", " << Yr << " )" << endl;
+
+    double a1 = findA(theta0, thetac, phi);
+    double theta1 = atan(a1);
+
+    //3. 求R0
+    double Rrad = Xep * tan(theta1);
+    double Rqz = 0;
+    double nSinTheta = reflist[0] * sin(theta1);
+
+    //！！注意！！全反射的情况就是简单将Rqz设为0，并没有返回-999
+    //！！注意！！这样直接导致R0变大，从而导致重建的thetac变小，极限为acos(1/beta)。
+    for (int i = 1; i < (int)thklist.size() - 1; i++)
+    {
+        if (nSinTheta / reflist[i] > 1)
+            continue;
+        Rqz += thklist[i] * tan(asin(nSinTheta / reflist[i]));
+    }
+
+    double R0 = R - Rrad - Rqz;
+
+    //4. 求重建的rec-theta1
+    double rthec1;
+    rthec1 = acos(1 / sqrt(1 + beta * beta / (1 + Tg * Tg / R0 / R0)));
+
+    //5. theta1->thetac
+    double rthec;
+    rthec = acos(cos(theta0) * cos(rthec1) + sin(theta0) * sin(rthec1) * sin(phi));
+
+    return rthec;
+    //return BetaThetaC(theta0, rthec1, phi, epsilon);
+}
+
+//-----------利用求解投影a来重建的算法-------------------------------------------
+//  对每一个[X, Y]的击中进行重建，假设：发光点在辐射体中心处 & 波长185nm
+//  返回为假设从该辐射体中心处发185nm的光对应的切伦科夫辐射角。无解则为-999
+//  要调用这个函数，需要将下面三个vector都赋值
+//    double hypoLambda = 185;
+//    thklist = GetThickList(gDet, irad);
+//    reflist = GetRefIndList(gDet, irad, hypoLambda); //折射率选用假设的波长处的折射率
+//    abslist = GetAbsLenList(gDet, irad, hypoLambda);
+//    double recThe = ReconstructRICHBySolver(gDet, irad, Xr, Yr, thetac);
+//
+/* 
+double MyCommonRICH::ReconstructRICHBySolver(MyRICHDetector *det, double irad, double Xc, double Yc)
+{
+    if (det == 0)
+        return -999;
+
+    vector<double>thklist;
+    vector<double>reflist;
+    vector<double>abslist;
+
+           thklist.clear();
+        reflist.clear();
+        abslist.clear();
+        thklist = GetThickList(det, irad);
+        reflist = GetRefIndList(det, irad, hypoLambda); //折射率选用假设的波长处的折射率
+        abslist = GetAbsLenList(det, irad, hypoLambda); //吸收系数用假设的波长处的折射率
+
+
+    //1. 假设发光点在中心处，计算phi
+    double L = thklist[0];
+    double tbase = det->CalZ0(irad);
+    double thetaExp = det->fThetaCReal[irad];
+
+    double z0, z0Prim = 0.52 * L;
+    double X0, Y0, Z0;
+    double phi1, phi2;
+
+    z0 = L / 2.;
+    Z0 = -1 * tbase - z0;
+    X0 = 0;
+    Y0 = Z0 * tan(det->theta0);
+    phi1 = atan((Yc - Y0) / (Xc - X0));
+    phi2 = 0;
+
+    while (fabs(phi1 - phi2) > 0.001)
+    {
+        //2. 根据phi计算出射光的夹角Theta
+        double a = findA(det->theta0, thetaExp, phi1);
+        double Theta = atan(a / 1.);
+
+        //3. 计算发光点的期望值
+        double absl = abslist[0] * cos(Theta);
+        z0Prim = L - (absl - absl * exp(L / absl) + L) / (1 - exp(L / absl));
+
+        //4. 更新期望的发光点位置Z0，这里phi也发生了变化
+        Z0 = -1 * tbase - z0Prim; //update  Z0
+        Y0 = Z0 * tan(det->theta0);
+
+        phi2 = atan((Yc - Y0) / (Xc - X0));
+    }
+    cout << "z0 is now: " << z0Prim << endl;
+
+    fRhoFcn->SetParameters(z0, det->theta0);
+
+    return SolverThetaC(fRhoFcn, Xc, Yc, X0, Y0, thetaExp, epsilon);
+}
+*/
+
+// 根据辐射体的光击中分布，求解中心值偏差及展宽的分布图
+void MyCommonRICH::ReconstructRICHDetector(MyRICHDetector *det)
+{
+    if (det == 0)
+        det = gDet;
+
+    if (det->fHitMap == 0)
+        return;
+
+    //1. 初始化
+    double hypoLambda = 185;
+    det->GetRecMap(1);
+    det->Gen2DRecRingListForEachRad();
+    UpdateThetaCExp(det, hypoLambda);
+
+    vector<double> thklist;
+    vector<double> reflist;
+    vector<double> abslist;
+
+    //2. 在辐射体产生的光子分布里循环
+    double Xr, Yr;
+    for (int irad = 0; irad < det->nRadLayer; irad++)
+    {
+        double muPhoton = det->fHitMapEachRad[irad]->Integral();
+        if (muPhoton == 0)
+            continue;
+
+        cout << "-->" << det->particle << " " << det->momentum << " " << det->theta0 << " rad:" << irad << " ph=" << muPhoton << " realTh=" << det->fThetaCReal[irad] << endl;
+
+        thklist.clear();
+        reflist.clear();
+        thklist = GetThickList(det, irad);
+        reflist = GetRefIndList(det, irad, hypoLambda);
+        abslist = GetAbsLenList(det, irad, hypoLambda);
+
+        //2.1 光子期望值循环
+        for (int iph = 1; iph < 50; iph++)
+        {
+            //2.2 进行NEvent个事例数
+            for (int i = 0; i < nEvent; i++)
+            {
+                //2.3 单个Event里会有iph个光子
+                double avgth = 0;
+                for (int j = 0; j < iph; j++)
+                {
+                    det->fHitMapEachRad[irad]->GetRandom2(Xr, Yr);
+                    Xr = int(Xr / det->pixel) * det->pixel + det->pixel / 2;
+                    Yr = int(Yr / det->pixel) * det->pixel + det->pixel / 2;
+                    double theta = ReconstructRICHByBeta(det, irad, Xr, Yr, thklist, reflist, abslist);
+                    avgth += theta;
+                }
+                avgth /= iph;
+
+                det->fRecMap->Fill(iph, avgth);
+                det->fRecMapEachRad[irad]->Fill(iph, avgth);
+            }
+        }
+    }
+}
+
+//---- 被GuiAction调用的函数 -- reconstruct --
+/// 生成momentum/theta范围的重建中心值偏差及展宽的分布图, 必须先完成GenerateTheScanHitMapsForEachDetector
+void *ReconstructionHandle(void *ptr)
+{
+    MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
+
+    long ip = (long)ptr;
+    int ibegin, iend;
+    GetMomentumScanRange(ip, ibegin, iend);
+
+    if (ibegin == -1 || iend == -1)
+        return 0;
+
+    for (int imom = ibegin; imom < iend; imom++)
+        for (int ithe = 0; ithe < (int)gDet->nthe0; ithe++)
+            for (int ihypo = 0; ihypo < (int)gDet->nhypo; ihypo++)
+                gMyCommonRICH->ReconstructRICHDetector(imom, ithe, ihypo);
+
+    return 0;
+}
+
+bool MyCommonRICH::ReconstructForEachDetector()
+{
+    if (GetDetScanNumber() == 0)
+    {
+        cout << "--> Must generate the hitmap first before performing the reconstruction." << endl;
+        return false;
+    }
+
+    int nthread = (NThread < gDet->np) ? NThread : gDet->np;
+
+    TThread *thread[nthread];
+
+    for (int i = 0; i < nthread; i++)
+        thread[i] = new TThread(Form("trec%d", i), ReconstructionHandle, (void *)(size_t)i);
+
+    for (int i = 0; i < nthread; i++)
+        thread[i]->Run();
+
+    for (int i = 0; i < nthread; i++)
+        thread[i]->Join();
+
+    cout << "----> Recontruction finished." << endl;
+    return true;
+}
+
+//---- 被GuiAction调用的函数, 生成相应的histogram
+void MyCommonRICH::GenerateRecOffsetSigmaMap()
+{
+    //
+    cout << "-->Generating the offset & sigma map." << endl;
+    ResizeRecMap(gDet->nhypo, gDet->nRadLayer, gDet->np, gDet->nthe0, gDet->NPhoton);
+
+    // 1. 拟合重建结果
+    int p0 = (Epoch == -1) ? 0 : Epoch;
+    int p1 = (Epoch == -1) ? gDet->np : Epoch + 1;
+    if (p0 > gDet->np || p1 > gDet->np)
+        return;
+
+    for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
+    {
+        for (int irad = 0; irad < gDet->nRadLayer; irad++)
+        {
+            for (int imom = p0; imom < p1; imom++)
+                for (int ithe = 0; ithe < gDet->nthe0; ithe++)
+                    for (int iph = 1; iph < gDet->NPhoton; iph++)
+                    {
+                        TH1D *fproj = GenRecMap(ihypo, irad, imom, ithe, iph);
+                        double mean = (fproj->Integral() == 0) ? 0 : fproj->GetFunction("gaus")->GetParameter(1);
+                        double sigm = (fproj->Integral() == 0) ? 0 : fproj->GetFunction("gaus")->GetParameter(2);
+                        double merr = (fproj->Integral() == 0) ? 0 : fproj->GetFunction("gaus")->GetParError(1);
+                        double serr = (fproj->Integral() == 0) ? 0 : fproj->GetFunction("gaus")->GetParError(2);
+                        if (fproj->Integral() != 0 && fproj->GetFunction("gaus")->GetNDF() == 0)
+                        {
+                            mean = (fproj->Integral() == 0) ? 0 : fproj->GetMean();
+                            sigm = (fproj->Integral() == 0) ? 0 : fproj->GetRMS();
+                            merr = (fproj->Integral() == 0) ? 0 : fproj->GetMeanError();
+                            serr = (fproj->Integral() == 0) ? 0 : fproj->GetRMSError();
+                        }
+                        fRecOffList[ihypo][irad][imom][ithe][iph] = mean;
+                        fRecSigList[ihypo][irad][imom][ithe][iph] = sigm;
+                        fRecOffErrList[ihypo][irad][imom][ithe][iph] = merr;
+                        fRecSigErrList[ihypo][irad][imom][ithe][iph] = serr;
+                        //fRecMap[ihypo][irad][imom][ithe][iph] = fproj;
+                    }
+        }
+    }
+
+    for (int imom = p0; imom < p1; imom++)
+    {
+        gMyCommonRICH->SaveHitFile(imom);
+        SaveRecFile(imom);
+    }
+}
+
+//---- 被GuiAction调用的函数, 生成相应的histogram
+void MyCommonRICH::GenerateRecHistograms(TString particle, int irad, int imom, int ithe, int iph)
+{
+    //1. clear
+    fOffsetMap = (TH2F *)gDirectory->Get("_offset_");
+    if (fOffsetMap != 0)
+        delete fOffsetMap;
+
+    fSigmaMap = (TH2F *)gDirectory->Get("_sigma_");
+    if (fSigmaMap != 0)
+        delete fSigmaMap;
+
+    for (int i = 0; i < (int)fOffsetVsNphPlot.size(); i++)
+        delete fOffsetVsNphPlot[i];
+    for (int i = 0; i < (int)fOffsetVsMomPlot.size(); i++)
+        delete fOffsetVsMomPlot[i];
+    for (int i = 0; i < (int)fOffsetVsThetaPlot.size(); i++)
+        delete fOffsetVsThetaPlot[i];
+
+    for (int i = 0; i < (int)fSigmaVsNphPlot.size(); i++)
+        delete fSigmaVsNphPlot[i];
+    for (int i = 0; i < (int)fSigmaVsMomPlot.size(); i++)
+        delete fSigmaVsMomPlot[i];
+    for (int i = 0; i < (int)fSigmaVsThetaPlot.size(); i++)
+        delete fSigmaVsThetaPlot[i];
+
+    fOffsetVsNphPlot.resize(gDet->nhypo);
+    fOffsetVsMomPlot.resize(gDet->nhypo);
+    fOffsetVsThetaPlot.resize(gDet->nhypo);
+    fSigmaVsNphPlot.resize(gDet->nhypo);
+    fSigmaVsMomPlot.resize(gDet->nhypo);
+    fSigmaVsThetaPlot.resize(gDet->nhypo);
+
+    //2. define histograms
+    int ihypo = GetHypoID(particle);
+    double mom = gScanDetList[imom][ithe][0]->momentum;
+    double the = gScanDetList[imom][ithe][0]->Theta0;
+    TString rad = gDet->sRadLayer[irad];
+
+    fOffsetMap = new TH2F("_offset_", Form("offset map for %s from radiator %s with %d photons", particle.Data(), rad.Data(), iph), gDet->np, gDet->pMin, gDet->pMax, gDet->nthe0, gDet->The0Min, gDet->The0Max);
+    fOffsetMap->SetXTitle("Momentum(GeV/c)");
+    fOffsetMap->SetYTitle("#theta_0(degree)");
+
+    fSigmaMap = new TH2F("_sigma_", Form("sigma map for %s from radiator %s with %d photons", particle.Data(), rad.Data(), iph), gDet->np, gDet->pMin, gDet->pMax, gDet->nthe0, gDet->The0Min, gDet->The0Max);
+    fSigmaMap->SetXTitle("Momentum(GeV/c)");
+    fSigmaMap->SetYTitle("#theta_0(degree)");
+    for (int i = 0; i < gDet->nhypo; i++)
+    {
+        fOffsetVsNphPlot[i] = new TH1F(Form("_offvnph_%d", i), Form("Offset vs. Nphoton for %s[%.1fGeV/c, %.1f#circ] from radiator %s", particle.Data(), mom, the, rad.Data()), gDet->NPhoton, 0, gDet->NPhoton);
+        fSigmaVsNphPlot[i] = new TH1F(Form("_sigvnph_%d", i), Form("Sigma vs. Nphoton for %s[%.1fGeV/c, %.1f#circ] from radiator %s", particle.Data(), mom, the, rad.Data()), gDet->NPhoton, 0, gDet->NPhoton);
+
+        fOffsetVsMomPlot[i] = new TH1F(Form("_offvmom_%d", i), Form("Offset vs. Momentum for %s[%.1f#circ] from radiator %s using %d photons", particle.Data(), the, rad.Data(), iph), gDet->np, gDet->pMin, gDet->pMax);
+        fSigmaVsMomPlot[i] = new TH1F(Form("_sigvmom_%d", i), Form("Sigma vs. Momentum for %s[%.1f#circ] from radiator %s using %d photons", particle.Data(), the, rad.Data(), iph), gDet->np, gDet->pMin, gDet->pMax);
+
+        fOffsetVsThetaPlot[i] = new TH1F(Form("_offvthe_%d", i), Form("Offset vs. Momentum for %s[%.1fGeV/c] from radiator %s using %d photons", particle.Data(), mom, rad.Data(), iph), gDet->nthe0, gDet->The0Min, gDet->The0Max);
+        fSigmaVsThetaPlot[i] = new TH1F(Form("_sigvthe_%d", i), Form("Sigma vs. Momentum for %s[%.1fGeV/c] from radiator %s using %d photons", particle.Data(), mom, rad.Data(), iph), gDet->nthe0, gDet->The0Min, gDet->The0Max);
+    }
+
+    //3. fill histograms
+    for (int jmom = 0; jmom < gDet->np; jmom++)
+        for (int jthe = 0; jthe < gDet->nthe0; jthe++)
+        {
+            fOffsetMap->SetBinContent(jmom + 1, jthe + 1, fRecOffList[ihypo][irad][jmom][jthe][iph]);
+            fOffsetMap->SetBinError(jmom + 1, jthe + 1, fRecOffErrList[ihypo][irad][jmom][jthe][iph]);
+            fSigmaMap->SetBinContent(jmom + 1, jthe + 1, fRecSigList[ihypo][irad][jmom][jthe][iph]);
+            fSigmaMap->SetBinError(jmom + 1, jthe + 1, fRecSigErrList[ihypo][irad][jmom][jthe][iph]);
+        }
+
+    for (int iihypo = 0; iihypo < gDet->nhypo; iihypo++)
+    {
+        for (int iiph = 0; iiph < gDet->NPhoton; iiph++)
+        {
+            fOffsetVsNphPlot[iihypo]->SetBinContent(iiph + 1, fRecOffList[iihypo][irad][imom][ithe][iiph]);
+            fOffsetVsNphPlot[iihypo]->SetBinError(iiph + 1, fRecOffErrList[iihypo][irad][imom][ithe][iiph]);
+            fSigmaVsNphPlot[iihypo]->SetBinContent(iiph + 1, fRecSigList[iihypo][irad][imom][ithe][iiph]);
+            fSigmaVsNphPlot[iihypo]->SetBinError(iiph + 1, fRecSigErrList[iihypo][irad][imom][ithe][iiph]);
+        }
+        fNphFcn->SetParLimits(0, 0, 2 * fRecSigList[iihypo][irad][imom][ithe][1]);
+        fNphFcn->SetParLimits(1, 0, 2 * fRecSigList[iihypo][irad][imom][ithe][gDet->NPhoton - 2]);
+        fSigmaVsNphPlot[iihypo]->Fit("fNphFcn");
+        for (int iimom = 0; iimom < gDet->np; iimom++)
+        {
+            fOffsetVsMomPlot[iihypo]->SetBinContent(iimom + 1, fRecOffList[iihypo][irad][iimom][ithe][iph]);
+            fOffsetVsMomPlot[iihypo]->SetBinError(iimom + 1, fRecOffErrList[iihypo][irad][iimom][ithe][iph]);
+            fSigmaVsMomPlot[iihypo]->SetBinContent(iimom + 1, fRecSigList[iihypo][irad][iimom][ithe][iph]);
+            fSigmaVsMomPlot[iihypo]->SetBinError(iimom + 1, fRecSigErrList[iihypo][irad][iimom][ithe][iph]);
+        }
+        for (int iithe = 0; iithe < gDet->nthe0; iithe++)
+        {
+            fOffsetVsThetaPlot[iihypo]->SetBinContent(iithe + 1, fRecOffList[iihypo][irad][imom][iithe][iph]);
+            fOffsetVsThetaPlot[iihypo]->SetBinError(iithe + 1, fRecOffErrList[iihypo][irad][imom][iithe][iph]);
+            fSigmaVsThetaPlot[iihypo]->SetBinContent(iithe + 1, fRecSigList[iihypo][irad][imom][iithe][iph]);
+            fSigmaVsThetaPlot[iihypo]->SetBinError(iithe + 1, fRecSigErrList[iihypo][irad][imom][iithe][iph]);
+        }
+    }
+}
+
+//______________________________________________________________________________
+// 计算在当前det的hypothesis下的prob大小
+double MyCommonRICH::CalPIDProb(MyRICHDetector *det, vector<pair<double, double>> hit)
+{
+    int ihypo = GetHypoID(det->particle);
+    int imom = GetMomID(det->momentum);
+    int ithe = GetThetaID(det->Theta0);
+
+    double hypoLambda = 185;
+    UpdateThetaCExp(det, hypoLambda);
+
+    vector<vector<double>> recList; //[nrad][第n个光子重建的切伦科夫角]
+    recList.resize(det->nRadLayer);
+
+    for (int i = 0; i < (int)hit.size(); i++)
+    {
+        int fromRad = -1;    //光从哪个辐射体发出的
+        double recThe = 999; //重建的切伦科夫角
+        double recDis = 999; //重建的切伦科夫角和真值的差
+
+        for (int irad = 0; irad < det->nRadLayer; irad++)
+        {
+            vector<double> thklist = GetThickList(det, irad);
+            vector<double> reflist = GetRefIndList(det, irad, hypoLambda); //折射率选用假设的波长处的折射率
+            vector<double> abslist = GetAbsLenList(det, irad, hypoLambda);
+
+            double rectmp = ReconstructRICHByBeta(det, irad, hit[i].first, hit[i].second, thklist, reflist, abslist);
+            //double rectmp = ReconstructRICHBySolver(det, irad, hit[i].first, hit[i].second);
+            if (fabs(rectmp - det->fThetaCReal[irad]) < recDis)
+            {
+                fromRad = irad;
+                recThe = rectmp;
+                recDis = fabs(rectmp - det->fThetaCReal[irad]);
+            }
+        }
+
+        if (fromRad == -1)
+            continue;
+        //if (fRecSigList[ihypo][fromRad][imom][ithe][1] == 0) continue;
+        //recList[fromRad].push_back(pow(recThe - fRecOffList[ihypo][fromRad][imom][ithe][1], 2) / pow(fRecSigList[ihypo][fromRad][imom][ithe][1], 2));
+        recList[fromRad].push_back(recThe);
+    }
+
+    int ndf = 0;
+    double chi2 = 0;
+    for (int irad = 0; irad < det->nRadLayer; irad++)
+    {
+        double avg = 0;
+        int nph = recList[irad].size();
+        if (nph <= 0 || fRecSigList[ihypo][irad][imom][ithe][nph] == 0)
+            continue;
+        ndf++;
+
+        for (int i = 0; i < nph; i++)
+            avg += recList[irad][i];
+        avg /= nph;
+
+        chi2 += pow((avg - fRecOffList[ihypo][irad][imom][ithe][nph]) / fRecSigList[ihypo][irad][imom][ithe][nph], 2);
+    }
+
+    return TMath::Prob(chi2, ndf);
+}
+
+//根据击中位置坐标判断粒子种类
+int MyCommonRICH::PIDProb(vector<MyRICHDetector *> detlist, vector<pair<double, double>> hit)
+{
+    int iprob = -1;
+    double mprob = -1;
+
+    //计算那种hypothesis具有最大的prob
+    for (int ihypo = 0; ihypo < (int)detlist.size(); ihypo++)
+    {
+        double prob = CalPIDProb(detlist[ihypo], hit);
+        if (prob > mprob)
+        {
+            mprob = prob;
+            iprob = ihypo;
+        }
+    }
+    return iprob;
+}
+
+//计算PID效率和误判率
+void *CalPIDEfficiencyHandle(void *ptr)
+{
+    long ip = (long)ptr;
+
+    int nEvent = gMyCommonRICH->GetNevent();
+    MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
+    vector<vector<vector<MyRICHDetector *>>> gScanDetList = gMyCommonRICH->GetScanDetector();
+
+    int NTHREAD = gMyCommonRICH->GetNThread();
+    int nthread = (NTHREAD < gDet->np) ? NTHREAD : gDet->np;
+    int ibegin = ip * gDet->np / nthread;
+    int iend = (ip + 1) * gDet->np / nthread;
+
+    vector<pair<double, double>> hit;
+    vector<double> pideff;
+    for (int imom = ibegin; imom < iend; imom++)
+    {
+        for (int ithe = 0; ithe < gDet->nthe0; ithe++)
+            for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
+            {
+                MyRICHDetector *det = gScanDetList[imom][ithe][ihypo];
+                TH2F *fhm = det->GetHitMap();
+                double muPhoton = fhm->Integral();
+
+                if (muPhoton < 1)
+                {
+                    for (int jhypo = 0; jhypo < gDet->nhypo; jhypo++)
+                        gMyCommonRICH->SetPIDEff(imom, ithe, ihypo, jhypo, 0);
+                    continue;
+                }
+
+                pideff.clear();
+                pideff.resize(gDet->nhypo);
+                for (int jhypo = 0; jhypo < gDet->nhypo; jhypo++)
+                    pideff[jhypo] = 0;
+
+                for (int i = 0; i < nEvent; i++)
+                {
+                    double nPh = gRandom->Poisson(muPhoton);
+
+                    hit.clear();
+                    for (int iph = 0; iph < nPh; iph++)
+                    {
+                        double Xr, Yr;
+                        fhm->GetRandom2(Xr, Yr);
+                        Xr = int(Xr / det->pixel) * det->pixel + det->pixel / 2;
+                        Yr = int(Yr / det->pixel) * det->pixel + det->pixel / 2;
+                        hit.push_back(make_pair(Xr, Yr));
+                    }
+
+                    int pid = gMyCommonRICH->PIDProb(gScanDetList[imom][ithe], hit);
+                    pideff[pid]++;
+                }
+
+                for (int jhypo = 0; jhypo < gDet->nhypo; jhypo++)
+                    gMyCommonRICH->SetPIDEff(imom, ithe, ihypo, jhypo, pideff[jhypo] / nEvent);
+            }
+    }
+    return 0;
+}
+
+bool MyCommonRICH::CalPIDEfficiency()
+{
+    //if (fRecSigList.size() == 0)
+    //    return false;
+
+    ResizePIDEffMap(gDet->np, gDet->nthe0, gDet->nhypo);
+
+    int nthread = (NThread < gDet->np) ? NThread : gDet->np;
+
+    TThread *thread[nthread];
+
+    for (int i = 0; i < nthread; i++)
+        thread[i] = new TThread(Form("tpid%d", i), CalPIDEfficiencyHandle, (void *)(size_t)i);
+
+    for (int i = 0; i < nthread; i++)
+        thread[i]->Run();
+
+    for (int i = 0; i < nthread; i++)
+        thread[i]->Join();
+
+    cout << "----> PID efficiency calculation finished." << endl;
+
+    int p0 = (Epoch == -1) ? 0 : Epoch;
+    int p1 = (Epoch == -1) ? gDet->np : Epoch + 1;
+    if (p0 > gDet->np || p1 > gDet->np)
+        return false;
+
+    for (int imom = p0; imom < p1; imom++)
+        SavePidFile(imom);
+
+    return true;
+}
+
+void MyCommonRICH::GeneratePIDHistograms(TString particle, int imom, int ithe)
+{
+    //1. clear
+    for (int i = 0; i < (int)fPIDMap.size(); i++)
+        delete fPIDMap[i];
+    for (int i = 0; i < (int)fPIDVsMomPlot.size(); i++)
+        delete fPIDVsMomPlot[i];
+    for (int i = 0; i < (int)fPIDVsThetaPlot.size(); i++)
+        delete fPIDVsThetaPlot[i];
+
+    fPIDMap.resize(gDet->nhypo);
+    fPIDVsMomPlot.resize(gDet->nhypo);
+    fPIDVsThetaPlot.resize(gDet->nhypo);
+
+    //2. define histograms
+    int ihypo = GetHypoID(particle);
+    double mom = gScanDetList[imom][ithe][0]->momentum;
+    double the = gScanDetList[imom][ithe][0]->Theta0;
+
+    for (int i = 0; i < gDet->nhypo; i++)
+    {
+        fPIDMap[i] = new TH2F(Form("_pid%d_", i), Form("PID efficiency map for %s identified as %s", particle.Data(), SHYPO[i]), gDet->np, gDet->pMin, gDet->pMax, gDet->nthe0, gDet->The0Min, gDet->The0Max);
+        fPIDMap[i]->SetXTitle("Momentum(GeV/c)");
+        fPIDMap[i]->SetYTitle("#theta_0(degree)");
+
+        fPIDVsMomPlot[i] = new TH1F(Form("_pidvmom_%d", i), Form("PID efficiency vs. Momentum for %s[%.1f#circ] identified as %s", particle.Data(), the, SHYPO[i]), gDet->np, gDet->pMin, gDet->pMax);
+        fPIDVsMomPlot[i]->SetXTitle("Momentum(GeV/c)");
+        fPIDVsMomPlot[i]->SetYTitle("PID Efficiency(%)");
+
+        fPIDVsThetaPlot[i] = new TH1F(Form("_pidvthe_%d", i), Form("PID efficiency vs. Momentum for %s[%.1fGeV/c] identified as %s", particle.Data(), mom, SHYPO[i]), gDet->nthe0, gDet->The0Min, gDet->The0Max);
+        fPIDVsThetaPlot[i]->SetXTitle("#theta_0(degree)");
+        fPIDVsThetaPlot[i]->SetYTitle("PID Efficiency(%)");
+    }
+
+    //3. fill histograms
+    for (int jmom = 0; jmom < gDet->np; jmom++)
+        for (int jthe = 0; jthe < gDet->nthe0; jthe++)
+            for (int jhypo = 0; jhypo < gDet->nhypo; jhypo++)
+                fPIDMap[jhypo]->SetBinContent(jmom + 1, jthe + 1, fPidEffList[jmom][jthe][ihypo][jhypo]);
+
+    for (int jhypo = 0; jhypo < gDet->nhypo; jhypo++)
+    {
+
+        for (int iimom = 0; iimom < gDet->np; iimom++)
+        {
+            fPIDVsMomPlot[jhypo]->SetBinContent(iimom + 1, fPidEffList[iimom][ithe][ihypo][jhypo]);
+            fPIDVsMomPlot[jhypo]->SetBinError(iimom + 1, 1. / sqrt(nEvent));
+        }
+        for (int iithe = 0; iithe < gDet->nthe0; iithe++)
+        {
+            fPIDVsThetaPlot[jhypo]->SetBinContent(iithe + 1, fPidEffList[imom][iithe][ihypo][jhypo]);
+            fPIDVsThetaPlot[jhypo]->SetBinError(iithe + 1, 1. / sqrt(nEvent));
+        }
+    }
 }
 
 //______________________________________________________________________________

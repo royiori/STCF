@@ -620,18 +620,10 @@ void MyGuiActionClass::DoReadBatchFile(const char *fname, const char *sepoch)
 
     rootfile.ReplaceAll(".txt", ".root");
     gMyCommonRICH->SaveRings(rootfile);
-    if (gMyCommonRICH->LoadHitFile() == -1) //设定hitmap只生成一次，一般不需要多次生成
-    {
-        gMyCommonRICH->GenerateTheScanHitMapsForEachDetector(); //hitmap.root 
-    }
-
-    //if (gMyCommonRICH->LoadRecFile() == -1) // 如果没有修改rec的算法，那么可以直接读上一次生成的rec.root文件
-    {
-        gMyCommonRICH->ReconstructForEachDetector(); // call reconstruction algorithm
-        gMyCommonRICH->GenerateRecOffsetSigmaMap();  // fit hitmap.root & save hitmap.root again + save rec.map
-    }
-
-    gMyCommonRICH->CalPIDEfficiency(); // save pid.map
+    gMyCommonRICH->GenerateTheScanHitMapsForEachDetector(); //hitmap.root
+    gMyCommonRICH->ReconstructForEachDetector();
+    gMyCommonRICH->GenerateRecOffsetSigmaMap();
+    gMyCommonRICH->CalPIDEfficiency();
 }
 
 void MyGuiActionClass::DoSaveDetFile(const char *fname)
