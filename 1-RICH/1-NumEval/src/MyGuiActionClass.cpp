@@ -625,7 +625,7 @@ void MyGuiActionClass::DoReadBatchFile(const char *fname, const char *sepoch)
         gMyCommonRICH->GenerateTheScanHitMapsForEachDetector(); //hitmap.root 
     }
 
-    //if (gMyCommonRICH->LoadRecFile() == -1) // 如果没有修改rec的算法，那么可以直接读上一次生成的rec.root文件
+    if (gMyCommonRICH->LoadRecFile() == -1) // 如果没有修改rec的算法，那么可以直接读上一次生成的rec.root文件
     {
         gMyCommonRICH->ReconstructForEachDetector(); // call reconstruction algorithm
         gMyCommonRICH->GenerateRecOffsetSigmaMap();  // fit hitmap.root & save hitmap.root again + save rec.map

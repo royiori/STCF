@@ -41,7 +41,7 @@ MyDatabaseClass::MyDatabaseClass(const char *path)
     nDetector = (int)DetectorList.size();
     DetQEGraph.resize(nDetector);
 
-    // read data
+    // read data，注意检查路径
     //TString datpath = gSystem->WorkingDirectory() + TString("/database/");
     TString datpath = TString(path) + TString("/database/");
     for (int i = 0; i < nMaterial; i++)

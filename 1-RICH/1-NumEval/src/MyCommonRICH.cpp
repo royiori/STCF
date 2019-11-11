@@ -2069,7 +2069,4 @@ void MyCommonRICH::DrawFCN(int irad)
     cout << "output thetac = " << BetaThetaC(theta0, theta1, phi, epsilon) << endl;
     cout << "calculate = " << calthe << endl
          << endl;
-
-    //double recThe2 = ReconstructRICHBySolver(gDet, irad, Xr, Yr);
-    //cout << "光子重建的参数方法-Solver： thetac2=" << recThe2 << " " << epsilon << endl;
 }

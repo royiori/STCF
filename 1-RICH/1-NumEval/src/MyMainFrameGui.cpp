@@ -66,7 +66,7 @@ MyMainFrameGui::MyMainFrameGui(const TGWindow *p, int w, int h) : TGMainFrame(p,
         fTab0->Resize(fTab0->GetDefaultSize());
         fVFrame2->AddFrame(fTab0, LayoutXY);
 
-        // 2.1 page0
+        // 2.1 page0-0
         for (int i = 0; i < gMyGuiActionClass->GetNTabPage(); i++)
         {
             TGCompositeFrame *fTabPage = fTab0->AddTab(gMyGuiActionClass->GetTabPageName(i));
