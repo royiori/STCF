@@ -374,9 +374,18 @@ private:
             det.fHitMapEachRad[i] = (TH2F *)fHitMapEachRad[i]->Clone(Form("fHitMapEachRad%d_%d", det.id, i));
         for (int i = 0; i < (int)fRecMapEachRad.size(); i++)
             det.fRecMapEachRad[i] = (TH2F *)fRecMapEachRad[i]->Clone(Form("fRecMapEachRad%d_%d", det.id, i));
+    }
 
-        //det.fHitMap->SetDirectory(0);
-        //det.fWaveLengthHist->SetDirectory(0);
+public:
+    void SetDirectory()
+    {
+        if (fHitMap != 0) fHitMap->SetDirectory(0);
+        if (fRecMap != 0) fRecMap->SetDirectory(0);
+        if (fWaveLengthHist != 0) fWaveLengthHist->SetDirectory(0);
+        for (int i = 0; i < (int)fHitMapEachRad.size(); i++)
+            fHitMapEachRad[i]->SetDirectory(0);
+        for (int i = 0; i < (int)fRecMapEachRad.size(); i++)
+            fRecMapEachRad[i]->SetDirectory(0);
     }
 
     ClassDef(MyRICHDetector, 1)

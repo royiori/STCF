@@ -20,6 +20,7 @@ MyDatabaseClass::MyDatabaseClass(const char *path)
     MaterialList.push_back("Aerogel108");
     MaterialList.push_back("Aerogel109");
     MaterialList.push_back("Aerogel110");
+    MaterialList.push_back("Aerogel1028");
     MaterialList.push_back("Ar");
     MaterialList.push_back("N2");
     MaterialList.push_back("CH4");

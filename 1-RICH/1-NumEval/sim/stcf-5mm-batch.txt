@@ -59,13 +59,13 @@ ShowPhoton: 25
 trkStep: 0.100000
 
 # Number of Step for phi [0~2pi] * 360
-nPhi: 4
+nPhi: 1
 
 # Solver precision
 Precision: 0.001000
 
 # nEvents for reconstruction the resolution
-nEvent: 10000
+nEvent: 10
 
 #---------------------------
 #    Others

@@ -85,7 +85,8 @@ public:
    void DrawGraphs(TGraph *g1, TGraph *g2=NULL, TGraph *g3=NULL, TGraph *g4=NULL, TGraph *g5=NULL, TGraph *g6=NULL, TGraph *g7=NULL, TGraph *g8=NULL, TGraph *g9=NULL, TGraph *g10=NULL);
    void SetGraph(TGraph *g) { if(g!=NULL) gPresetGph.push_back(g); }
    void ClearPresetGraphs() { gPresetGph.clear(); }
-   void DrawPresetGraph();
+   void DrawGraphVector(vector<TGraph *>gvec);
+   void DrawPresetGraph() { DrawGraphVector(gPresetGph); }
 
    void SetGraphTheme(TGraph *g1, TGraph *g2=NULL, TGraph*g3=NULL, TGraph*g4=NULL, TGraph*g5=NULL, TGraph*g6=NULL, TGraph*g7=NULL);
 
@@ -102,9 +103,9 @@ private:
    void MyAddLegend(TLegend* leg, TH2* f, TString text, TString opt) { if(f!=NULL) leg->AddEntry(f, text, opt); }
    void MyAddLegend(TLegend* leg, TGraph* g, TString text, TString opt) { if(g!=NULL) leg->AddEntry(g, text, opt); }
 
-   void SetHist1Theme() { UpdateTheme(); for (int i = 0; i < (int)gPresetH1.size(); i++) SetTheme(gPresetH1[i], i); }
-   void SetHist2Theme() { UpdateTheme(); for (int i = 0; i < (int)gPresetH2.size(); i++) SetTheme(gPresetH2[i], i); }
-   void SetGraphTheme() { UpdateTheme(); for (int i = 0; i < (int)gPresetGph.size(); i++) SetTheme(gPresetGph[i], i); }
+   void SetHist1Theme(vector<TH1 *> hvec) { UpdateTheme(); for (int i = 0; i < (int)hvec.size(); i++) SetTheme(hvec[i], i); }
+   void SetHist2Theme(vector<TH2 *> hvec) { UpdateTheme(); for (int i = 0; i < (int)hvec.size(); i++) SetTheme(hvec[i], i); }
+   void SetGraphTheme(vector<TGraph *> hvec) { UpdateTheme(); for (int i = 0; i < (int)hvec.size(); i++) SetTheme(hvec[i], i); }
    void SetTheme(TH1 *hist, int id);
    void SetTheme(TH2 *hist, int id);
    void SetTheme(TGraph *graph, int id);

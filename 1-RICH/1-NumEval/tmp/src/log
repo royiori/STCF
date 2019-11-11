@@ -1,0 +1,471 @@
+275a276,277
+>     NThread = 4;
+>     Epoch = -1; //-1指扫描全范围
+540c542,543
+<     SaveDetFile();
+---
+>     if (Epoch == -1 || Epoch == 0)
+>         SaveDetFile();
+667,668c670
+<     TString recFile = headName;
+<     recFile += TString("_rec.root");
+---
+>     ResizeRecMap(gDet->nhypo, gDet->nRadLayer, gDet->np, gDet->nthe0, gDet->NPhoton);
+670,672c672,675
+<     TFile f(recFile);
+<     if (!f.IsOpen())
+<         return -1;
+---
+>     for (int imom = 0; imom < gDet->np; imom++)
+>     {
+>         TString recFile = headName;
+>         recFile += TString(Form("_rec_%d.root", imom));
+674,675c677,679
+<     TTree *T1 = (TTree *)f.Get("Configure");
+<     TTree *T2 = (TTree *)f.Get("RecTree");
+---
+>         TFile f(recFile);
+>         if (!f.IsOpen())
+>             return -1;
+677,678c681,682
+<     if (T1 == NULL)
+<         return -1;
+---
+>         TTree *T1 = (TTree *)f.Get("Configure");
+>         TTree *T2 = (TTree *)f.Get("RecTree");
+680,681c684,685
+<     int nhyp, nrad, nmom, nthe, nph;
+<     double pMin, pMax, The0Min, The0Max;
+---
+>         if (T1 == NULL)
+>             return -1;
+683,701c687,688
+<     T1->SetBranchAddress("nhyp", &nhyp);
+<     T1->SetBranchAddress("nrad", &nrad);
+<     T1->SetBranchAddress("nmom", &nmom);
+<     T1->SetBranchAddress("nthe", &nthe);
+<     T1->SetBranchAddress("nph", &nph);
+<     T1->SetBranchAddress("pMin", &pMin);
+<     T1->SetBranchAddress("pMax", &pMax);
+<     T1->SetBranchAddress("The0Min", &The0Min);
+<     T1->SetBranchAddress("The0Max", &The0Max);
+<     T1->GetEntry(0);
+< 
+<     cout << "---->Reading REC file: nHypo=" << nhyp << ", nRadiator=" << nrad << ", nMomentum=" << nmom << ", nTheta0=" << nthe << ", nPhoton=" << nph << endl;
+<     if ((nhyp != gDet->nhypo) || (nrad != gDet->nRadLayer) || (nmom != gDet->np) ||
+<         (nthe != gDet->nthe0) || (nph != gDet->NPhoton) ||
+<         (T2->GetEntries() != nhyp * nrad * nmom * nthe * nph))
+<     {
+<         cout << "##### This map doesn't math with the hitmap, please check this data file is the right one or not." << endl;
+<         return -1;
+<     }
+---
+>         int nhyp, nrad, nmom, nthe, nph;
+>         double pMin, pMax, The0Min, The0Max;
+703,709c690,707
+<     if (pMin != gDet->pMin || pMax != gDet->pMax || The0Min != gDet->The0Min || The0Max != gDet->The0Max)
+<     {
+<         cout << "##### This map doesn't math with the global detector settings(pMin/pMax/the0Min/the0Max), please check this data file is the right one or not." << endl;
+<         cout << "##### Read values are momentum: (" << pMin << ", " << pMax << "), theta: (" << The0Min << ", " << The0Max << ")" << endl;
+<         cout << "##### gDet values are momentum: (" << gDet->pMin << ", " << gDet->pMax << "), theta: (" << gDet->The0Min << ", " << gDet->The0Max << ")" << endl;
+<         return -1;
+<     }
+---
+>         T1->SetBranchAddress("nhyp", &nhyp);
+>         T1->SetBranchAddress("nrad", &nrad);
+>         T1->SetBranchAddress("nmom", &nmom);
+>         T1->SetBranchAddress("nthe", &nthe);
+>         T1->SetBranchAddress("nph", &nph);
+>         T1->SetBranchAddress("pMin", &pMin);
+>         T1->SetBranchAddress("pMax", &pMax);
+>         T1->SetBranchAddress("The0Min", &The0Min);
+>         T1->SetBranchAddress("The0Max", &The0Max);
+>         T1->GetEntry(0);
+> 
+>         cout << "---->Reading REC file: nHypo=" << nhyp << ", nRadiator=" << nrad << ", nMomentum=" << nmom << ", nTheta0=" << nthe << ", nPhoton=" << nph << endl;
+>         if ((nhyp != gDet->nhypo) || (nrad != gDet->nRadLayer) || (nmom != gDet->np) ||
+>             (nthe != gDet->nthe0) || (nph != gDet->NPhoton))
+>         {
+>             cout << "##### This map doesn't match with the hitmap, please check this data file is the right one or not." << endl;
+>             return -1;
+>         }
+711,712c709,715
+<     if (T2 == NULL)
+<         return -1;
+---
+>         if (pMin != gDet->pMin || pMax != gDet->pMax || The0Min != gDet->The0Min || The0Max != gDet->The0Max)
+>         {
+>             cout << "##### This map doesn't math with the global detector settings(pMin/pMax/the0Min/the0Max), please check this data file is the right one or not." << endl;
+>             cout << "##### Read values are momentum: (" << pMin << ", " << pMax << "), theta: (" << The0Min << ", " << The0Max << ")" << endl;
+>             cout << "##### gDet values are momentum: (" << gDet->pMin << ", " << gDet->pMax << "), theta: (" << gDet->The0Min << ", " << gDet->The0Max << ")" << endl;
+>             return -1;
+>         }
+714c717,718
+<     ResizeRecMap(nhyp, nrad, nmom, nthe, nph);
+---
+>         if (T2 == NULL)
+>             return -1;
+716,721c720,725
+<     double mean, merr;
+<     double sigm, serr;
+<     T2->SetBranchAddress("mean", &mean);
+<     T2->SetBranchAddress("merr", &merr);
+<     T2->SetBranchAddress("sigm", &sigm);
+<     T2->SetBranchAddress("serr", &serr);
+---
+>         double mean, merr;
+>         double sigm, serr;
+>         T2->SetBranchAddress("mean", &mean);
+>         T2->SetBranchAddress("merr", &merr);
+>         T2->SetBranchAddress("sigm", &sigm);
+>         T2->SetBranchAddress("serr", &serr);
+723,726c727,729
+<     int ientry = 0;
+<     for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
+<         for (int irad = 0; irad < gDet->nRadLayer; irad++)
+<             for (int imom = 0; imom < gDet->np; imom++)
+---
+>         int ientry = 0;
+>         for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
+>             for (int irad = 0; irad < gDet->nRadLayer; irad++)
+735a739,740
+>         f.Close();
+>     }
+740c745
+< void MyCommonRICH::SaveRecFile()
+---
+> void MyCommonRICH::SaveRecFile(int imom)
+743c748
+<     recFile += TString("_rec.root");
+---
+>     recFile += TString(Form("_rec_%d.root", imom));
+789,799c794,803
+<             for (int imom = 0; imom < gDet->np; imom++)
+<                 for (int ithe = 0; ithe < gDet->nthe0; ithe++)
+<                     for (int iph = 0; iph < gDet->NPhoton; iph++)
+<                     {
+<                         mean = fRecOffList[ihypo][irad][imom][ithe][iph];
+<                         merr = fRecOffErrList[ihypo][irad][imom][ithe][iph];
+<                         sigm = fRecSigList[ihypo][irad][imom][ithe][iph];
+<                         serr = fRecSigErrList[ihypo][irad][imom][ithe][iph];
+<                         T2->Fill();
+<                         ientry++;
+<                     }
+---
+>             for (int ithe = 0; ithe < gDet->nthe0; ithe++)
+>                 for (int iph = 0; iph < gDet->NPhoton; iph++)
+>                 {
+>                     mean = fRecOffList[ihypo][irad][imom][ithe][iph];
+>                     merr = fRecOffErrList[ihypo][irad][imom][ithe][iph];
+>                     sigm = fRecSigList[ihypo][irad][imom][ithe][iph];
+>                     serr = fRecSigErrList[ihypo][irad][imom][ithe][iph];
+>                     T2->Fill();
+>                     ientry++;
+>                 }
+809,810c813
+<     TString pidFile = headName;
+<     pidFile += TString("_pid.root");
+---
+>     ResizePIDEffMap(gDet->np, gDet->nthe0, gDet->nhypo);
+812,814c815,818
+<     TFile f(pidFile);
+<     if (!f.IsOpen())
+<         return -1;
+---
+>     for (int imom = 0; imom < gDet->np; imom++)
+>     {
+>         TString pidFile = headName;
+>         pidFile += TString(Form("_pid_%d.root", imom));
+816,817c820,822
+<     TTree *T1 = (TTree *)f.Get("Configure");
+<     TTree *T2 = (TTree *)f.Get("PidTree");
+---
+>         TFile f(pidFile);
+>         if (!f.IsOpen())
+>             return -1;
+819,820c824,825
+<     if (T1 == NULL)
+<         return -1;
+---
+>         TTree *T1 = (TTree *)f.Get("Configure");
+>         TTree *T2 = (TTree *)f.Get("PidTree");
+822,823c827,828
+<     int nhyp, nrad, nmom, nthe, nph;
+<     double pMin, pMax, The0Min, The0Max;
+---
+>         if (T1 == NULL)
+>             return -1;
+825,842c830,831
+<     T1->SetBranchAddress("nhyp", &nhyp);
+<     T1->SetBranchAddress("nrad", &nrad);
+<     T1->SetBranchAddress("nmom", &nmom);
+<     T1->SetBranchAddress("nthe", &nthe);
+<     T1->SetBranchAddress("nph", &nph);
+<     T1->SetBranchAddress("pMin", &pMin);
+<     T1->SetBranchAddress("pMax", &pMax);
+<     T1->SetBranchAddress("The0Min", &The0Min);
+<     T1->SetBranchAddress("The0Max", &The0Max);
+<     T1->GetEntry(0);
+< 
+<     cout << "---->Reading PID root: nHypo=" << nhyp << ", nRadiator=" << nrad << ", nMomentum=" << nmom << ", nTheta0=" << nthe << ", nPhoton=" << nph << endl;
+<     if ((nhyp != gDet->nhypo) || (nrad != gDet->nRadLayer) || (nmom != gDet->np) ||
+<         (nthe != gDet->nthe0) || (nph != gDet->NPhoton))
+<     {
+<         cout << "##### This map doesn't math with the hitmap, please check this data file is the right one or not." << endl;
+<         return -1;
+<     }
+---
+>         int nhyp, nrad, nmom, nthe, nph;
+>         double pMin, pMax, The0Min, The0Max;
+844,850c833,850
+<     if (pMin != gDet->pMin || pMax != gDet->pMax || The0Min != gDet->The0Min || The0Max != gDet->The0Max)
+<     {
+<         cout << "##### This map doesn't math with the global detector settings(pMin/pMax/the0Min/the0Max), please check this data file is the right one or not." << endl;
+<         cout << "##### Read values are momentum: (" << pMin << ", " << pMax << "), theta: (" << The0Min << ", " << The0Max << ")" << endl;
+<         cout << "##### gDet values are momentum: (" << gDet->pMin << ", " << gDet->pMax << "), theta: (" << gDet->The0Min << ", " << gDet->The0Max << ")" << endl;
+<         return -1;
+<     }
+---
+>         T1->SetBranchAddress("nhyp", &nhyp);
+>         T1->SetBranchAddress("nrad", &nrad);
+>         T1->SetBranchAddress("nmom", &nmom);
+>         T1->SetBranchAddress("nthe", &nthe);
+>         T1->SetBranchAddress("nph", &nph);
+>         T1->SetBranchAddress("pMin", &pMin);
+>         T1->SetBranchAddress("pMax", &pMax);
+>         T1->SetBranchAddress("The0Min", &The0Min);
+>         T1->SetBranchAddress("The0Max", &The0Max);
+>         T1->GetEntry(0);
+> 
+>         cout << "---->Reading PID root: nHypo=" << nhyp << ", nRadiator=" << nrad << ", nMomentum=" << nmom << ", nTheta0=" << nthe << ", nPhoton=" << nph << endl;
+>         if ((nhyp != gDet->nhypo) || (nrad != gDet->nRadLayer) || (nmom != gDet->np) ||
+>             (nthe != gDet->nthe0) || (nph != gDet->NPhoton))
+>         {
+>             cout << "##### This map doesn't match with the hitmap, please check this data file is the right one or not." << endl;
+>             return -1;
+>         }
+852,853c852,858
+<     if (T2 == NULL)
+<         return -1;
+---
+>         if (pMin != gDet->pMin || pMax != gDet->pMax || The0Min != gDet->The0Min || The0Max != gDet->The0Max)
+>         {
+>             cout << "##### This map doesn't math with the global detector settings(pMin/pMax/the0Min/the0Max), please check this data file is the right one or not." << endl;
+>             cout << "##### Read values are momentum: (" << pMin << ", " << pMax << "), theta: (" << The0Min << ", " << The0Max << ")" << endl;
+>             cout << "##### gDet values are momentum: (" << gDet->pMin << ", " << gDet->pMax << "), theta: (" << gDet->The0Min << ", " << gDet->The0Max << ")" << endl;
+>             return -1;
+>         }
+855c860,861
+<     ResizePIDEffMap(nmom, nthe, nhyp);
+---
+>         if (T2 == NULL)
+>             return -1;
+857,858c863,864
+<     double pideff;
+<     T2->SetBranchAddress("pideff", &pideff);
+---
+>         double pideff;
+>         T2->SetBranchAddress("pideff", &pideff);
+860,861c866
+<     int ientry = 0;
+<     for (int imom = 0; imom < gDet->np; imom++)
+---
+>         int ientry = 0;
+869c874,875
+< 
+---
+>         f.Close();
+>     }
+873c879
+< void MyCommonRICH::SavePidFile()
+---
+> void MyCommonRICH::SavePidFile(int imom)
+875,877c881,883
+<     TString recFile = headName;
+<     recFile += TString("_pid.root");
+<     TFile f(recFile, "recreate");
+---
+>     TString pidFile = headName;
+>     pidFile += TString(Form("_pid_%d.root", imom));
+>     TFile f(pidFile, "recreate");
+915,922c921,927
+<     for (int imom = 0; imom < gDet->np; imom++)
+<         for (int ithe = 0; ithe < gDet->nthe0; ithe++)
+<             for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
+<                 for (int jhypo = 0; jhypo < gDet->nhypo; jhypo++)
+<                 {
+<                     pideff = fPidEffList[imom][ithe][ihypo][jhypo];
+<                     T2->Fill();
+<                 }
+---
+>     for (int ithe = 0; ithe < gDet->nthe0; ithe++)
+>         for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
+>             for (int jhypo = 0; jhypo < gDet->nhypo; jhypo++)
+>             {
+>                 pideff = fPidEffList[imom][ithe][ihypo][jhypo];
+>                 T2->Fill();
+>             }
+1066,1068c1071,1106
+< //---- 被GuiAction调用的函数
+< /// 根据momentum/theta范围生成四种粒子的光子数分布图
+< //
+---
+> //---- 被GuiAction调用的函数 -- hitmap --
+> /// 根据momentum/theta范围生成四种粒子的光子数hitmap分布图
+> void GetMomentumScanRange(long ip, int &ibegin, int &iend)
+> {
+>     MyRICHDetector *gDet = gMyCommonRICH->GetDetector();
+> 
+>     int NTHREAD = gMyCommonRICH->GetNThread();
+>     int epoch = gMyCommonRICH->GetEpoch();
+>     int np = gDet->np;
+> 
+>     ibegin = -1;
+>     iend = -1;
+> 
+>     //0. ip的范围为【0，NTHREAD-1】
+>     //1. EPoch!=-1: 扫描Epoch指定的动量段
+>     if (epoch != -1)
+>     {
+>         if (epoch > np || epoch + 1 > np)
+>             return;
+>         ibegin = epoch;
+>         iend = epoch + 1;
+>         return;
+>     }
+> 
+>     //2. EPoch==-1: NTHREAD > np，如NTHREAD为4， np为2， 则只分2个线程。此时ip取值>=2的时候不扫描
+>     //              NTHREAD <= np, 分段扫描
+>     int nthread = (NTHREAD < np) ? NTHREAD : np;
+>     ibegin = ip * np / nthread;
+>     iend = (ip + 1) * np / nthread;
+>     if (ibegin > np || iend > np)
+>     {
+>         ibegin = -1;
+>         iend = -1;
+>     }
+> }
+> 
+1071a1110
+>     int ibegin, iend;
+1076,1078c1115,1118
+<     int nthread = (NTHREAD < gDet->np) ? NTHREAD : gDet->np;
+<     int ibegin = ip * gDet->np / nthread;
+<     int iend = (ip + 1) * gDet->np / nthread;
+---
+>     GetMomentumScanRange(ip, ibegin, iend);
+> 
+>     if (ibegin == -1 || iend == -1)
+>         return 0;
+1112c1152
+<     int nthread = (NTHREAD < gDet->np) ? NTHREAD : gDet->np;
+---
+>     int nthread = (NThread < gDet->np) ? NThread : gDet->np;
+1128c1168
+< //---- 被GuiAction调用的函数
+---
+> //---- 被GuiAction调用的函数 -- hitmap --
+1289c1329,1330
+<             return -999;
+---
+>             return -999; //全反射
+>     
+1443c1484
+< //---- 被GuiAction调用的函数
+---
+> //---- 被GuiAction调用的函数 -- reconstruct --
+1447,1448d1487
+<     long ip = (long)ptr;
+< 
+1451,1453c1490,1495
+<     int nthread = (NTHREAD < gDet->np) ? NTHREAD : gDet->np;
+<     int ibegin = ip * gDet->np / nthread;
+<     int iend = (ip + 1) * gDet->np / nthread;
+---
+>     long ip = (long)ptr;
+>     int ibegin, iend;
+>     GetMomentumScanRange(ip, ibegin, iend);
+> 
+>     if (ibegin == -1 || iend == -1)
+>         return 0;
+1471c1513
+<     int nthread = (NTHREAD < gDet->np) ? NTHREAD : gDet->np;
+---
+>     int nthread = (NThread < gDet->np) ? NThread : gDet->np;
+1495a1538,1542
+>     int p0 = (Epoch == -1) ? 0 : Epoch;
+>     int p1 = (Epoch == -1) ? gDet->np : Epoch + 1;
+>     if (p0 > gDet->np || p1 > gDet->np)
+>         return;
+> 
+1500c1547
+<             for (int imom = 0; imom < gDet->np; imom++)
+---
+>             for (int imom = p0; imom < p1; imom++)
+1525c1572,1573
+<     for (int imom = 0; imom < gDet->np; imom++)
+---
+>     for (int imom = p0; imom < p1; imom++)
+>     {
+1527,1556c1575
+<     SaveRecFile();
+< }
+< 
+< void MyCommonRICH::GenerateRecOffsetSigmaMap2()
+< {   
+<     TFile fp("res.root", "recreate");
+<     for (int ihypo = 0; ihypo < gDet->nhypo; ihypo++)
+<     {   
+<         for (int imom = 0; imom < gDet->np; imom++)
+<         {   
+<             for (int ithe = 0; ithe < gDet->nthe0; ithe++)
+<             {   
+< 		MyRICHDetector *det = GetDetScan(imom, ithe, ihypo);
+< 
+<                 for (int irad = 0; irad < gDet->nRadLayer; irad++)
+<                 {
+< 		    double nph = det->GetDetHitMap(irad)->Integral();
+<                     TH1D *fbase = new TH1D(Form("Rec%d_%d_%d_%d", ihypo, imom, ithe, irad),Form("%f", nph), 360, 0, TMath::Pi() / 2);
+< 
+<                     for (int iph = 1; iph < gDet->NPhoton; iph++)
+<                     {   
+<                         TH1D *fproj = det->fRecMapEachRad[irad]->ProjectionY("", iph + 1, iph + 1);
+< 			fproj->Scale(TMath::Poisson(iph, nph)/nEvent);
+< 			fbase->Add(fproj);
+<                     }
+< 		    fp.cd();
+< 		    fbase->Write();
+<                 }
+<             }
+<         }
+---
+>         SaveRecFile(imom);
+1558,1559c1577
+<  
+<     fp.Close();
+---
+>     cout << "-->the offset & sigma maps are generated." << endl;
+1562d1579
+< 
+1750a1768
+>     int NTHREAD = gMyCommonRICH->GetNThread();
+1810c1828
+<     int nthread = (NTHREAD < gDet->np) ? NTHREAD : gDet->np;
+---
+>     int nthread = (NThread < gDet->np) ? NThread : gDet->np;
+1825c1843,1850
+<     SavePidFile();
+---
+>     int p0 = (Epoch == -1) ? 0 : Epoch;
+>     int p1 = (Epoch == -1) ? gDet->np : Epoch + 1;
+>     if (p0 > gDet->np || p1 > gDet->np)
+>         return false;
+> 
+>     for (int imom = p0; imom < p1; imom++)
+>         SavePidFile(imom);
+> 
+2014c2039
+< }
+---
+> }
+\ No newline at end of file
