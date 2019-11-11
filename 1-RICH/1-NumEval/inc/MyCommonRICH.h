@@ -243,9 +243,11 @@ public:
     double FindPhi(MyRICHDetector *det, double Xc, double Yc, double X0, double Y0);
 
     // pid efficiency 
+    void CalculatePIDForDetector(MyRICHDetector *det = 0);
+    void CalculatePIDForDetector(int imom, int ithe, int ihypo) { CalculatePIDForDetector(gScanDetList[imom][ithe][ihypo]); }
     bool CalPIDEfficiency();
-    int PIDProb(vector<MyRICHDetector *> detlist, vector<pair<double, double>> hit);
-    double CalPIDProb(MyRICHDetector *det, vector<pair<double, double>> hit);
+    int PIDProb(vector<MyRICHDetector *> detlist, vector<pair<double, double>> hit, vector<double> chilist, vector<double> ndflist);
+    double CalPIDProb(MyRICHDetector *det, vector<pair<double, double>> hit, double &chi2, double &ndf);
 
     void DrawFCN(int irad);
 
@@ -289,7 +291,8 @@ private:
     vector<vector<vector<vector<vector<double>>>>> fRecOffErrList; //为重建的角度填图， 用高斯拟合得offset和sigma, [粒子种类][辐射体][动量][角度][光子数]
     vector<vector<vector<vector<vector<double>>>>> fRecSigErrList; //为重建的角度填图， 用高斯拟合得offset和sigma, [粒子种类][辐射体][动量][角度][光子数]
 
-    vector<vector<vector<vector<double>>>> fPidEffList; //[imom][ithe][ihypo][pidhypo]
+    vector<vector<vector<vector<double>>>> fPidEffList;         //[imom][ithe][ihypo][pidhypo]
+    vector<vector<vector<vector<vector<TH1F *>>>>> fPidChiHist; //[imom][ithe][ihypo][pidhypo][ndf]
 public:
     void SetPIDEff(int imom, int ithe, int ihypo, int jhypo, double eff) { fPidEffList[imom][ithe][ihypo][jhypo] = eff; }
 
@@ -444,17 +447,40 @@ private:
     void ResizePIDEffMap(int nmom, int nthe, int hypo)
     {
         fPidEffList.clear();
+        fPidChiHist.clear();
 
         fPidEffList.resize(nmom);
+        fPidChiHist.resize(nmom);
         for (int imom = 0; imom < nmom; imom++)
         {
             fPidEffList[imom].resize(nthe);
+            fPidChiHist[imom].resize(nthe);
             for (int ithe = 0; ithe < nthe; ithe++)
             {
                 fPidEffList[imom][ithe].resize(hypo);
+                fPidChiHist[imom][ithe].resize(hypo);
                 for (int ihypo = 0; ihypo < hypo; ihypo++)
+                {
                     fPidEffList[imom][ithe][ihypo].resize(hypo);
+                    fPidChiHist[imom][ithe][ihypo].resize(hypo);
+                    for (int jhypo = 0; jhypo < hypo; jhypo++)
+                    {
+                        fPidChiHist[imom][ithe][ihypo][jhypo].resize(2);
+                        fPidChiHist[imom][ithe][ihypo][jhypo][0] = new TH1F(Form("pidChi%d_%d_%d_%d_1", imom, ithe, ihypo, jhypo), "pid chi^2 distribution for ndf=1", 100, 0, 10);
+                        fPidChiHist[imom][ithe][ihypo][jhypo][1] = new TH1F(Form("pidChi%d_%d_%d_%d_2", imom, ithe, ihypo, jhypo), "pid chi^2 distribution for ndf=2", 100, 0, 10);
+                    }
+                }
             }
+        }
+    }
+
+    void FillChiSquare(int imom, int ithe, int ihypo, vector<double> chilist, vector<double> ndflist)
+    {
+        for (int jhypo = 0; jhypo < (int)chilist.size(); jhypo++)
+        {
+            int ndf = ndflist[jhypo];
+            if (0 < ndf && ndf < 2)
+                fPidChiHist[imom][ithe][ihypo][jhypo][ndf]->Fill(chilist[jhypo]);
         }
     }
 };
