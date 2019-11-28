@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <bitset>
 #include "TFile.h"
 #include "TTree.h"
 #include "TString.h"
@@ -130,10 +131,10 @@ void ReadRICHData2Root(vector<TString> datList, TString fRawName, int force)
     int boardstart = 0;
     int chipstart = 0;
     int type;
-    bool headerFlag;
-    bool trailerFlag;
-    double counting;
-    unsigned short triggerType;
+    //bool headerFlag;
+    //bool trailerFlag;
+    double counting = 0;
+    //unsigned short triggerType;
     int badNumber = 0;
     int event;
     UShort_t board;
@@ -178,7 +179,7 @@ void ReadRICHData2Root(vector<TString> datList, TString fRawName, int force)
             memblock = AGETExchange(memblock);
             if (memblock == 0xeeee)
             {
-                headerFlag = 1;
+                //headerFlag = 1;
                 counting = 0;
                 event = 0; // reset
                            //cout << "header" << endl;
@@ -199,8 +200,8 @@ void ReadRICHData2Root(vector<TString> datList, TString fRawName, int force)
                         bdList.push_back(board);
                 }
                 chip = (((memblock & 0x00f0) >> 4) - chipstart); //cout << "chip number = " << chip << endl;
-                triggerType = (memblock & 0x000f);               //cout << "trigger type = " << triggerType << endl;
-                                                                 //cout << "fixed number" << endl;// counting = 1;
+                //triggerType = (memblock & 0x000f);               //cout << "trigger type = " << triggerType << endl;
+                //                                                 //cout << "fixed number" << endl;// counting = 1;
             }
             else if (counting > 1 && counting < 6)
             {
@@ -223,7 +224,7 @@ void ReadRICHData2Root(vector<TString> datList, TString fRawName, int force)
             //else if (counting > 9 && counting < 521)
             else if (memblock == 0xffff)
             {
-                trailerFlag = 1;
+                //trailerFlag = 1;
                 if (wave.size() == 512)
                 {
                     fTree->Fill();
@@ -443,10 +444,10 @@ void ReadTrackAGTData2Root(vector<TString> datList, TString fRawName, int force)
     int boardstart = 0;
     int chipstart = 0;
     int type;
-    bool headerFlag;
-    bool trailerFlag;
-    double counting;
-    unsigned short triggerType;
+    //bool headerFlag;
+    //bool trailerFlag;
+    double counting = 0;
+    //unsigned short triggerType;
     int badNumber = 0;
     int event;
     UShort_t board;
@@ -491,7 +492,7 @@ void ReadTrackAGTData2Root(vector<TString> datList, TString fRawName, int force)
             memblock = AGETExchange(memblock);
             if (memblock == 0xeeee)
             {
-                headerFlag = 1;
+                //headerFlag = 1;
                 counting = 0;
                 event = 0; // reset
                            //cout << "header" << endl;
@@ -514,8 +515,8 @@ void ReadTrackAGTData2Root(vector<TString> datList, TString fRawName, int force)
                 }
 
                 chip = (((memblock & 0x00f0) >> 4) - chipstart); //cout << "chip number = " << chip << endl;
-                triggerType = (memblock & 0x000f);               //cout << "trigger type = " << triggerType << endl;
-                                                                 //cout << "fixed number" << endl;// counting = 1;
+                //triggerType = (memblock & 0x000f);               //cout << "trigger type = " << triggerType << endl;
+                //                                                 //cout << "fixed number" << endl;// counting = 1;
             }
             else if (counting > 1 && counting < 6)
             {
@@ -538,7 +539,7 @@ void ReadTrackAGTData2Root(vector<TString> datList, TString fRawName, int force)
             //else if (counting > 9 && counting < 521)
             else if (memblock == 0xffff)
             {
-                trailerFlag = 1;
+                //trailerFlag = 1;
                 if (wave.size() == 512)
                 {
                     fTree->Fill();

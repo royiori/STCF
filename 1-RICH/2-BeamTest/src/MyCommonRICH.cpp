@@ -2157,13 +2157,13 @@ void MyCommonRICH::DrawFCN(int irad)
                 double Xr = forg3->GetXaxis()->GetBinCenter(i);
                 double Yr = forg3->GetYaxis()->GetBinCenter(j);
                 double rec = ReconstructRICHByBeta(gDet, irad, Xr, Yr, thklist, reflist, abslist, 0);
-                if (isnan(rec))
-                    rec = -1;
-                else
-                {
-                    //cout << i << " " << j << ":  rad=" << irad << " (" << Xr << ", " << Yr << ")" << endl;
-                    //cout << " rec=" << rec << endl;
-                }
+                //if (isnan(rec))
+                //    rec = -1;
+                //else
+                //{
+                //    //cout << i << " " << j << ":  rad=" << irad << " (" << Xr << ", " << Yr << ")" << endl;
+                //    //cout << " rec=" << rec << endl;
+                //}
                 g2d->SetPoint(ipoint++, Xr, Yr, rec);
             }
         }
