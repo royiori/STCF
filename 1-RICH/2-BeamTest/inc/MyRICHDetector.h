@@ -66,6 +66,13 @@ public:
         }
         return "";
     }
+    double GetTotalRadLength()
+    {
+        double totl = 0;
+        for (auto &rad : tRadLayer)
+            totl += rad;
+        return totl;
+    }
 
     int nTransLayer; // 只有一层传输层，但是这层里可以是多个气体的混合
     double tTransLayer;
@@ -78,6 +85,8 @@ public:
         pTransLayer = p;
         sTransLayer = s;
     }
+    double GetTotalTransLength() { return tTransLayer; }
+    double GetTotalLength() { return GetTotalRadLength() + GetTotalTransLength(); }
 
     int nImpurities;            // 传输层里的杂质成分
     vector<double> pImpurities; //ppm
@@ -257,7 +266,7 @@ public:
 
         if (fRecMap != 0)
             delete fRecMap;
-        fRecMap = new TH2F(Form("fRecMap%d", id), Form("Reconstructed Cherenkov Ring for %s @ [%.1f GeV/c, %.1f#circ]", particle.Data(), momentum, Theta0), NPhoton, 0, NPhoton, 360*4, 0, TMath::Pi() / 3);
+        fRecMap = new TH2F(Form("fRecMap%d", id), Form("Reconstructed Cherenkov Ring for %s @ [%.1f GeV/c, %.1f#circ]", particle.Data(), momentum, Theta0), NPhoton, 0, NPhoton, 360 * 4, 0, TMath::Pi() / 3);
         fRecMap->GetXaxis()->SetTitle("Number of photon");
         fRecMap->GetYaxis()->SetTitle("Reconstructed Theta_c[rad]");
         return fRecMap;

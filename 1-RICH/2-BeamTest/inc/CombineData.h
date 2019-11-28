@@ -849,10 +849,6 @@ void ReadTrackVMMData2Root(vector<TString> datList, TString fRawName, int force)
     if ((int)datList.size() == 0)
         return;
 
-    bool headerFlag;
-    bool trailerFlag;
-    double counting;
-
     int type;
     int event;
     UShort_t board = 0;
@@ -864,7 +860,6 @@ void ReadTrackVMMData2Root(vector<TString> datList, TString fRawName, int force)
 
     int length = sizeof(unsigned char);
     unsigned short memblock = 0;
-    unsigned int buffer = 0;
     vector<unsigned short> memlist;
 
     if (force != 1)

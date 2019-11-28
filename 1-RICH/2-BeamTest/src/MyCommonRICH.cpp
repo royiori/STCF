@@ -654,6 +654,14 @@ void MyCommonRICH::SaveDetFile()
 
     T->Write();
     f.Close();
+
+    TFile fhist(headName+"_hist.root", "recreate");
+    if (!fhist.IsOpen())
+        return;
+    
+    gDet->GetHitMap()->Write();
+    fhist.Close();
+
 }
 
 int MyCommonRICH::LoadHitFile()

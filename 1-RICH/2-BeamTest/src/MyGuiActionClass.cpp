@@ -736,6 +736,7 @@ void MyGuiActionClass::DoShowSpecRICH(TString cmdStr)
     //1. 阳极上看到的光子击中
     gMyMainFrameGui->SwitchCanvas(1);
     gMyCommonRICH->DrawDetHitMap("colz");
+    gMyCommonRICH->DrawBeamHit();
     gMyMainFrameGui->UpdateCanvas(1);
     //sleep(1);
 

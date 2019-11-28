@@ -1010,7 +1010,7 @@ void MyCommonRICH::ReconstructRICHDetector(MyRICHDetector *det)
         if (muPhoton == 0)
             continue;
 
-        cout << "-->" << det->particle << " " << det->momentum << " " << det->theta0 << " rad:" << irad << " ph=" << muPhoton << " realTh=" << det->fThetaCReal[irad] << endl;
+        cout << "-->" << det->particle << " mom=" << det->momentum << " theta0=" << det->theta0 << " rad:" << irad << " ph=" << muPhoton << " realTh=" << det->fThetaCReal[irad] << endl;
 
         thklist.clear();
         reflist.clear();
@@ -1058,8 +1058,11 @@ void *ReconstructionHandle(void *ptr)
 
     for (int imom = ibegin; imom < iend; imom++)
         for (int ithe = 0; ithe < (int)gDet->nthe0; ithe++)
+        {
+            gMyCommonRICH->Log(Form("--> scan mom=%d, theta0=%d", imom, ithe));
             for (int ihypo = 0; ihypo < (int)gDet->nhypo; ihypo++)
                 gMyCommonRICH->ReconstructRICHDetector(imom, ithe, ihypo);
+        }
 
     return 0;
 }
@@ -1074,16 +1077,24 @@ bool MyCommonRICH::ReconstructForEachDetector()
 
     int nthread = (NThread < gDet->np) ? NThread : gDet->np;
 
-    TThread *thread[nthread];
-    cout << "----> Applying " << nthread << " thread to perform reconstruction." << endl;
-    for (int i = 0; i < nthread; i++)
-        thread[i] = new TThread(Form("trec%d", i), ReconstructionHandle, (void *)(size_t)i);
+    if (nthread == 1)
+    {
+        int ptr = 0;
+        ReconstructionHandle((void *)(size_t)ptr);
+    }
+    else
+    {
+        TThread *thread[nthread];
+        cout << "----> Applying " << nthread << " thread to perform reconstruction." << endl;
+        for (int i = 0; i < nthread; i++)
+            thread[i] = new TThread(Form("trec%d", i), ReconstructionHandle, (void *)(size_t)i);
 
-    for (int i = 0; i < nthread; i++)
-        thread[i]->Run();
+        for (int i = 0; i < nthread; i++)
+            thread[i]->Run();
 
-    for (int i = 0; i < nthread; i++)
-        thread[i]->Join();
+        for (int i = 0; i < nthread; i++)
+            thread[i]->Join();
+    }
 
     cout << "----> Recontruction finished." << endl;
     return true;
@@ -1094,6 +1105,8 @@ void MyCommonRICH::GenerateRecOffsetSigmaMap()
 {
     //
     cout << "-->Generating the offset & sigma map." << endl;
+    Log("-->Generating the offset & sigma map.");
+
     ResizeRecMap(gDet->nhypo, gDet->nRadLayer, gDet->np, gDet->nthe0, gDet->NPhoton);
 
     // 1. 拟合重建结果
@@ -1137,6 +1150,7 @@ void MyCommonRICH::GenerateRecOffsetSigmaMap()
         SaveRecFile(imom);
     }
     cout << "-->the offset & sigma maps are generated." << endl;
+    Log("-->the offset & sigma maps are generated.");
 }
 
 //---- 被GuiAction调用的函数, 生成相应的histogram
@@ -1295,17 +1309,15 @@ double MyCommonRICH::CalPIDProb(MyRICHDetector *det, vector<pair<double, double>
 
         chi2 += pow((avg - fRecOffList[ihypo][irad][imom][ithe][nph]) / fRecSigList[ihypo][irad][imom][ithe][nph], 2);
     }
-
     return TMath::Prob(chi2, ndf);
 }
 
 //根据击中位置坐标判断粒子种类
-int MyCommonRICH::PIDProb(vector<MyRICHDetector *> detlist, vector<pair<double, double>> hit, vector<double> chilist, vector<double> ndflist)
+int MyCommonRICH::PIDProb(vector<MyRICHDetector *> detlist, vector<pair<double, double>> hit, vector<double> &chilist, vector<double> &ndflist)
 {
     int iprob = -1;
     double mprob = -1;
     double chi2, ndf;
-
 
     //计算那种hypothesis具有最大的prob
     for (int ihypo = 0; ihypo < (int)detlist.size(); ihypo++)
@@ -1321,7 +1333,6 @@ int MyCommonRICH::PIDProb(vector<MyRICHDetector *> detlist, vector<pair<double, 
     }
     return iprob;
 }
-
 
 void MyCommonRICH::CalculatePIDForDetector(MyRICHDetector *det)
 {
@@ -1412,17 +1423,27 @@ bool MyCommonRICH::CalPIDEfficiency()
     ResizePIDEffMap(gDet->np, gDet->nthe0, gDet->nhypo);
 
     int nthread = (NThread < gDet->np) ? NThread : gDet->np;
+        cout << "----> Applying " << nthread << " thread to perform PID calculation." << endl;
+    return true;
 
-    TThread *thread[nthread];
-    cout << "----> Applying " << nthread << " thread to perform PID calculation." << endl;
-    for (int i = 0; i < nthread; i++)
-        thread[i] = new TThread(Form("tpid%d", i), CalPIDEfficiencyHandle, (void *)(size_t)i);
+    if (nthread == 1)
+    {
+        int ptr = 0;
+        CalPIDEfficiencyHandle((void *)(size_t)ptr);
+    }
+    else
+    {
+        TThread *thread[nthread];
+        cout << "----> Applying " << nthread << " thread to perform PID calculation." << endl;
+        for (int i = 0; i < nthread; i++)
+            thread[i] = new TThread(Form("tpid%d", i), CalPIDEfficiencyHandle, (void *)(size_t)i);
 
-    for (int i = 0; i < nthread; i++)
-        thread[i]->Run();
+        for (int i = 0; i < nthread; i++)
+            thread[i]->Run();
 
-    for (int i = 0; i < nthread; i++)
-        thread[i]->Join();
+        for (int i = 0; i < nthread; i++)
+            thread[i]->Join();
+    }
 
     cout << "----> PID efficiency calculation finished." << endl;
     return true;

@@ -65,7 +65,7 @@ nPhi: 1
 Precision: 0.001000
 
 # nEvents for reconstruction the resolution
-nEvent: 10
+nEvent: 100
 
 #---------------------------
 #    Others

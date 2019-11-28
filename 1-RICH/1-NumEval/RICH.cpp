@@ -33,9 +33,9 @@ int main(int argc, char **argv)
 
     //采用batch模式
     //输入参数： 保存的文件路径及文件名
-    gMyGuiActionClass = new MyGuiActionClass(gSystem->DirName(resolved_path), BATCH);
+    //注意，在服务器上运行时，必须手动换为绝对路径！！！
+    gMyGuiActionClass = new MyGuiActionClass(gSystem->WorkingDirectory(), BATCH);//gSystem->DirName(resolved_path), BATCH);
     gMyGuiActionClass->SetNThread(1);
     gMyGuiActionClass->DoReadBatchFile(argv[1], argv[2]); //batch file
-
     return 0;
 }

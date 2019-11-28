@@ -31,6 +31,11 @@ void MyBeamTestTrackVMM::ReadMapFile()
 
         if (IndexBD(board) != -1)
         {
+            pos -= 6;
+            if (pos < 64)
+                pos += 64;
+            else
+                pos -= 64;
             mapX[IndexBD(board)][IndexChip(chip)][channel] = (pos - 6);
             //cout << name << " " << board << "(" << IndexBD(board) << ") " << chip << "(" << IndexChip(chip) << ") " << channel << "(" << channel << ") = " << pos << "(" << pos - 6 << ")" << endl;
         }
@@ -329,7 +334,7 @@ void MyBeamTestTrackVMM::AnalysisCluster(MyBeamTestData *fEvent)
     cout << endl;
     */
 
-   /*
+    /*
     TH1F *ftmp = new TH1F("ftmp", "ftmp", 128, 0, 128);
     RealBeamHit hittmp;
     hittmp.id = id;

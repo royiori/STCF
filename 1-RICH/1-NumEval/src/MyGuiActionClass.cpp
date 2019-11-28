@@ -620,18 +620,24 @@ void MyGuiActionClass::DoReadBatchFile(const char *fname, const char *sepoch)
 
     rootfile.ReplaceAll(".txt", ".root");
     gMyCommonRICH->SaveRings(rootfile);
+    gMyCommonRICH->SetLogName(sepoch);
+
     if (gMyCommonRICH->LoadHitFile() == -1) //设定hitmap只生成一次，一般不需要多次生成
     {
-        gMyCommonRICH->GenerateTheScanHitMapsForEachDetector(); //hitmap.root 
+        cout << "--> Can't find the hitmap file, regenerate it." << endl;
+        gMyCommonRICH->Log("--> Can't find the hitmap file, regenerate it.");
+        gMyCommonRICH->GenerateTheScanHitMapsForEachDetector(); //hitmap.root
     }
 
     if (gMyCommonRICH->LoadRecFile() == -1) // 如果没有修改rec的算法，那么可以直接读上一次生成的rec.root文件
     {
+        cout << "--> Can't find the rec file, regenerate it." << endl;
+        gMyCommonRICH->Log("--> Can't find the rec file, regenerate it.");
         gMyCommonRICH->ReconstructForEachDetector(); // call reconstruction algorithm
         gMyCommonRICH->GenerateRecOffsetSigmaMap();  // fit hitmap.root & save hitmap.root again + save rec.map
     }
 
-    gMyCommonRICH->CalPIDEfficiency(); // save pid.map
+    //gMyCommonRICH->CalPIDEfficiency(); // save pid.map
 }
 
 void MyGuiActionClass::DoSaveDetFile(const char *fname)
@@ -701,6 +707,7 @@ void MyGuiActionClass::DoShowSpecRICH(TString cmdStr)
     //1. 阳极上看到的光子击中
     gMyMainFrameGui->SwitchCanvas(1);
     gMyCommonRICH->DrawDetHitMap("colz");
+    gMyCommonRICH->DrawBeamHit();
     gMyMainFrameGui->UpdateCanvas(1);
     //sleep(1);
 

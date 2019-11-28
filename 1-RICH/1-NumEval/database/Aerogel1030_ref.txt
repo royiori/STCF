@@ -1,0 +1,7 @@
+#Aerogel1030 Refractive index data not input 
+# 
+#
+#
+#LABEL: Lambda,   Refractive Index
+0,     1.030
+1000., 1.030

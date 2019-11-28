@@ -20,9 +20,19 @@
 #include "TRootEmbeddedCanvas.h"
 #include "TSystem.h"
 #include "../inc/MyBeamTestDetector.h"
+#include "../inc/MyBeamTestRICH.h"
+#include "../inc/MyBeamTestTrackAGET.h"
+#include "../inc/MyBeamTestTrackVMM.h"
 #include "checkCMBRoot.h"
+#include "checkCMBRootMisc.h"
 
+#include "/usr/local/include/eigen3/Eigen/Eigen"
+#include "/Users/chad/Work/src/source/GeneralBrokenLines/cpp/include/GblTrajectory.h"
 using namespace std;
+using namespace gbl;
+using namespace Eigen;
+
+TH2D *fhmap = NULL;
 
 //----------
 //常数定义
@@ -310,7 +320,7 @@ double CalTrackPosition(int detID, int flag, double channel = 0)
     if (detID == RICHid)
         return position;
 
-    if (detID == T02id || detID == T03id || detID == T06id)
+    if (detID == T02id || detID == T03id || detID == T06id || detID==T04id || detID==T05id)
     {
         if (flag == X)
             position = Xoff[detID] + (128 / 2. - channel + 1 / 2.) * 0.4;
@@ -323,16 +333,25 @@ double CalTrackPosition(int detID, int flag, double channel = 0)
 }
 
 // 判断该cluster是否有效，若有效则给出此cluster的mean和rms, control用来控制不同探测器的不同条件
-bool IsTrackClusterEffective(vector<BeamHit> cluster, double &mean, double &rms, double &qsum, int control = 0)
+bool IsTrackClusterEffective(int id, vector<BeamHit> cluster, double &mean, double &rms, double &qsum, int control = 0)
 {
     mean = 0;
     rms = 0;
     qsum = 0;
 
     //判断是否是放电信号或噪声信号
-    for (int i = 0; i < (int)cluster.size(); i++)
-        if (cluster[i].t < 230 || cluster[i].t > 260 || cluster[i].q > 3600 || cluster[i].q < 10)
-            return false;
+    if (id == T02id || id == T03id || id == T06id)
+    {
+        for (int i = 0; i < (int)cluster.size(); i++)
+            if (cluster[i].t < 230 || cluster[i].t > 260 || cluster[i].q > 3600 || cluster[i].q < 10)
+                return false;
+    }
+    else
+    {
+        for (int i = 0; i < (int)cluster.size(); i++)
+            if (cluster[i].q > 3600 || cluster[i].q < 10)
+                return false;
+    }
 
     ftmp1->Reset();
     for (int i = 0; i < (int)cluster.size(); i++)
@@ -392,9 +411,9 @@ void FillTrackHistogram(vector<MyBeamTestData *> detlist, int detID)
                     for (int jjj = 0; jjj < (int)detector->XYbranch[Y][jj].size(); jjj++)
                         fhitmap[detID][0]->Fill(detector->XYbranch[X][ii][iii].hit.first, detector->XYbranch[Y][jj][jjj].hit.second);
 
-                if (!IsTrackClusterEffective(detector->XYbranch[X][ii], xmean, xrms, xq))
+                if (!IsTrackClusterEffective(detID, detector->XYbranch[X][ii], xmean, xrms, xq))
                     continue;
-                if (!IsTrackClusterEffective(detector->XYbranch[Y][jj], ymean, yrms, yq))
+                if (!IsTrackClusterEffective(detID, detector->XYbranch[Y][jj], ymean, yrms, yq))
                     continue;
 
                 for (int iii = 0; iii < (int)detector->XYbranch[X][ii].size(); iii++)
@@ -413,6 +432,7 @@ void FillTrackHistogram(vector<MyBeamTestData *> detlist, int detID)
             }
     }
 }
+
 void AnalysisTrack(vector<int> uselist, int target, vector<MyBeamTestData *> detlist, int xyflag)
 {
     TGraphErrors *g1 = new TGraphErrors(); //方法1: 只要是好的cluster，就使用这个信息
@@ -425,28 +445,28 @@ void AnalysisTrack(vector<int> uselist, int target, vector<MyBeamTestData *> det
     //填图
     for (int i = 0; i < (int)uselist.size(); i++)
     {
-        //作为use的track必须要有击中
+        //作为use的track必须要有两个以上的击中
         int id = -1;
         int detID = uselist[i];
         for (int j = 0; j < detlist.size(); j++)
             if (detlist[j]->id == detID)
                 id = j;
         if (id == -1)
-            return;
+            continue;
 
         MyBeamTestData *detector = detlist[id];
         vector<vector<BeamHit>> branch = detector->XYbranch[xyflag];
 
         //作为use的track的number of cluster不能太多
         if (branch.size() >= 2)
-            return;
+            continue;
 
         //填图以拟合
         double qmax = -1;
         double mmax = -1;
         for (int j = 0; j < (int)branch.size(); j++)
         {
-            if (!IsTrackClusterEffective(branch[j], mean, rms, qsum))
+            if (!IsTrackClusterEffective(id, branch[j], mean, rms, qsum))
                 continue;
 
             double xy = CalTrackPosition(detID, xyflag, mean);
@@ -496,7 +516,7 @@ void AnalysisTrack(vector<int> uselist, int target, vector<MyBeamTestData *> det
     //循环target的所有击中，求残差
     for (int j = 0; j < (int)branch.size(); j++)
     {
-        if (!IsTrackClusterEffective(branch[j], mean, rms, qsum))
+        if (!IsTrackClusterEffective(id, branch[j], mean, rms, qsum))
             continue;
 
         double xy = CalTrackPosition(target, xyflag, mean);
@@ -660,7 +680,7 @@ void AnalysisRICH(vector<int> uselist, int target, vector<MyBeamTestData *> detl
             double rmax = -1;
             for (int j = 0; j < (int)branch.size(); j++)
             {
-                if (!IsTrackClusterEffective(branch[j], mean, rms, qsum))
+                if (!IsTrackClusterEffective(id, branch[j], mean, rms, qsum))
                     continue;
 
                 mmax = (qmax < qsum) ? mean : mmax;
@@ -861,6 +881,79 @@ void AnalysisRICH(vector<int> uselist, int target, vector<MyBeamTestData *> detl
 }
 
 //---------------------------------------------------------------------------
+// 用GBL重建径迹
+inline Eigen::Matrix<double, 5, 5> Jac55new(double ds)
+{
+    Eigen::Matrix<double, 5, 5> jac = Eigen::Matrix<double, 5, 5>::Identity();
+    // jac.UnitMatrix();
+    jac(3, 1) = ds; // x = x0 + xp * ds
+    jac(4, 2) = ds; // y = y0 + yp * ds
+    return jac;
+}
+
+void GBLAnalysis(vector<int> uselist, vector<MyBeamTestData *> detlist)
+{
+    TGraphErrors *g[2];
+
+    double mean, rms, qsum;
+    for (int ixy = 0; ixy < 2; ixy++)
+    {
+        g[ixy] = new TGraphErrors();
+        int ipoint = 0;
+        for (int i = 0; i < (int)uselist.size(); i++)
+        {
+
+            //作为use的track必须要有击中
+            int id = -1;
+            int detID = uselist[i];
+            for (int j = 0; j < detlist.size(); j++)
+                if (detlist[j]->id == detID)
+                    id = j;
+            if (id == -1)
+                continue;
+
+            MyBeamTestData *detector = detlist[id];
+            vector<vector<BeamHit>> branch = detector->XYbranch[ixy];
+
+            //作为use的track的number of cluster不能太多
+            if (branch.size() >= 2)
+                continue;
+
+            //填图以拟合
+            double qmax = -1;
+            double mmax = -1;
+            double rmax = -1;
+            for (int j = 0; j < (int)branch.size(); j++)
+            {
+                if (!IsTrackClusterEffective(id, branch[j], mean, rms, qsum))
+                    continue;
+
+                mmax = (qmax < qsum) ? mean : mmax;
+                rmax = (qmax < qsum) ? rms : rmax;
+                qmax = (qmax < qsum) ? qsum : qmax;
+            }
+
+            if (mmax != -1)
+            {
+                double xy = CalTrackPosition(detID, ixy, mmax);
+                double z = CalTrackPosition(detID, Z);
+                double zerr = 0.5; //z的测量误差
+                g[ixy]->SetPoint(ipoint, z, xy);
+                g[ixy]->SetPointError(ipoint, zerr, rmax * 0.4);
+                g[ixy]->SetPoint(ipoint++, z, xy);
+            }
+        }
+
+        if (g[ixy]->GetN() < 2)
+            return;
+        g[ixy]->Fit("pol1", "q");
+    }
+
+
+}
+
+
+//---------------------------------------------------------------------------
 // 分析数据的控制流程
 void AnalysisEvent(MyBeamTestHitData *fDSTEvent)
 {
@@ -869,8 +962,8 @@ void AnalysisEvent(MyBeamTestHitData *fDSTEvent)
         FillTrackHistogram(fDSTEvent->detector, T02id);
         FillTrackHistogram(fDSTEvent->detector, T03id);
         FillTrackHistogram(fDSTEvent->detector, T06id);
-        //FillTrackHistogram(fDSTEvent->detector, T04id);
-        //FillTrackHistogram(fDSTEvent->detector, T05id);
+        FillTrackHistogram(fDSTEvent->detector, T04id);
+        FillTrackHistogram(fDSTEvent->detector, T05id);
     }
 
     if (processControl == 2 || processControl == 999)
@@ -881,6 +974,10 @@ void AnalysisEvent(MyBeamTestHitData *fDSTEvent)
         AnalysisTrack(vector<int>{T02id, T06id}, T03id, fDSTEvent->detector, Y);
         AnalysisTrack(vector<int>{T03id, T06id}, T02id, fDSTEvent->detector, X);
         AnalysisTrack(vector<int>{T03id, T06id}, T02id, fDSTEvent->detector, Y);
+        //AnalysisTrack(vector<int>{T02id, T03id, T05id, T06id}, T04id, fDSTEvent->detector, X);
+        //AnalysisTrack(vector<int>{T02id, T03id, T05id, T06id}, T04id, fDSTEvent->detector, Y);
+        AnalysisTrack(vector<int>{T02id, T03id, T06id}, T05id, fDSTEvent->detector, X);
+        AnalysisTrack(vector<int>{T02id, T03id, T06id}, T05id, fDSTEvent->detector, Y);
     }
 
     if (processControl == 3 || processControl == 4 || processControl == 6 || processControl == 999)
@@ -888,6 +985,9 @@ void AnalysisEvent(MyBeamTestHitData *fDSTEvent)
 
     if (processControl == 5 || processControl == 7 || processControl == 999)
         AnalysisRICH(vector<int>{T02id, T03id, T06id}, RICHid, fDSTEvent->detector);
+    
+    if (processControl == 8) 
+        GBLAnalysis(vector<int>{T02id, T03id, RICHid, T05id, T06id}, fDSTEvent->detector);
 }
 
 //---------------
@@ -1113,10 +1213,14 @@ void DrawReconstruction(TString cname, int target)
     cc->cd(10);
     fNClusterPhoton->Draw();
 }
+
 //---------------
 // 主函数
 void checkCMBRoot()
 {
+    TFile froot("./beamtest_hist.root");
+    fhmap = (TH2D *)froot.Get("fHitMap0");
+
     //--------------------------
     // 读取combine-dst.root
     TString fileName = "./DESY-BeamTest/" + fName + "/Combine/Combined-dst.root";
@@ -1191,7 +1295,7 @@ void checkCMBRoot()
         //nbin = (i == 0) ? 32 : 128;
         fNCluster2D[i] = new TH2F(Form("fnclu2%d", i), Form("Number of cluster of %s", detName[i]), 10, 0, 10, 10, 0, 10);
 
-        fPeakingTime[i] = new TH1F(Form("fT%d", i), Form("Peaking time of %s", detName[i]), 100, 200, 300);
+        fPeakingTime[i] = new TH1F(Form("fT%d", i), Form("Peaking time of %s", detName[i]), 100, 0, 3000);
         fPeakingTime[i]->GetXaxis()->SetTitle("T");
         fPeakingTime[i]->GetYaxis()->SetTitle("Entries");
 
@@ -1229,11 +1333,15 @@ void checkCMBRoot()
         DrawTracker("c1", T02id);
         DrawTracker("c2", T03id);
         DrawTracker("c3", T06id);
+        DrawTracker("c4", T04id);
+        DrawTracker("c5", T05id);
     }
 
     if (processControl == 2 || processControl == 999)
-        DrawDeviation("c4", vector<int>{T02id, T03id, T06id});
-
+    {
+        DrawDeviation("c1", vector<int>{T02id, T03id, T05id, T06id});
+    }
+    
     if (processControl == 3 || processControl == 4 || processControl == 6 || processControl == 999)
         DrawRICH("c5", RICHid);
 

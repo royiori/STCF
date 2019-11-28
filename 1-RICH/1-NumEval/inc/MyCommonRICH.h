@@ -3,6 +3,8 @@
 
 #include <map>
 #include <string>
+#include <time.h>
+#include <fstream>
 #include "TF1.h"
 #include "TH2.h"
 #include "TGraph.h"
@@ -10,6 +12,7 @@
 #include "TRandom.h"
 #include "TDirectory.h"
 #include "TMath.h"
+#include "TMarker.h"
 #include "MyRICHDetector.h"
 #include "MyStyle.h"
 #include "TThread.h"
@@ -157,6 +160,14 @@ public:
 
     //----------------------------
     // draw histograms
+    void DrawBeamHit()
+    {
+        double y = gDet->GetTotalLength() / tan(gDet->theta0);
+        TMarker *marker = new TMarker(0, y, 8);
+        marker->SetMarkerColor(kRed);
+        marker->Draw();
+    }
+
     void DrawDetHitMap(TString opt)
     {
         if (gDet->GetHitMap() != NULL)
@@ -246,10 +257,35 @@ public:
     void CalculatePIDForDetector(MyRICHDetector *det = 0);
     void CalculatePIDForDetector(int imom, int ithe, int ihypo) { CalculatePIDForDetector(gScanDetList[imom][ithe][ihypo]); }
     bool CalPIDEfficiency();
-    int PIDProb(vector<MyRICHDetector *> detlist, vector<pair<double, double>> hit, vector<double> chilist, vector<double> ndflist);
+    int PIDProb(vector<MyRICHDetector *> detlist, vector<pair<double, double>> hit, vector<double> &chilist, vector<double> &ndflist);
     double CalPIDProb(MyRICHDetector *det, vector<pair<double, double>> hit, double &chi2, double &ndf);
 
     void DrawFCN(int irad);
+    void SetLogName(const char *epoch)
+    {
+        logName = headName + "_" + epoch + ".log";
+        std::ofstream log;
+        log.open(logName, ios_base::app);
+
+        time_t rawtime;
+        struct tm *timeInfo;
+        char buffer[80];
+
+        time(&rawtime);
+        timeInfo = localtime(&rawtime);
+
+        strftime(buffer, 80, "%Y-%m-%d %I:%M:%S", timeInfo);
+        string dateString(buffer);
+
+        log << "--> Called at: " << dateString << endl;
+    }
+
+    void Log(const char *line)
+    {
+        std::ofstream log;
+        log.open(logName.Data(), ios_base::app);
+        log << line << endl;
+    }
 
 private:
     double ProjectToPixel(MyRICHDetector *, double xmin, double xmax, double ymin, double ymax, double lambda);
@@ -273,6 +309,8 @@ private:
 
     int nEvent;
     double epsilon;
+
+    TString logName = TString("tmp.log");
 
     //TF1 *fRhoFcn;
     TF1 *fNphFcn;
@@ -466,8 +504,8 @@ private:
                     for (int jhypo = 0; jhypo < hypo; jhypo++)
                     {
                         fPidChiHist[imom][ithe][ihypo][jhypo].resize(2);
-                        fPidChiHist[imom][ithe][ihypo][jhypo][0] = new TH1F(Form("pidChi%d_%d_%d_%d_1", imom, ithe, ihypo, jhypo), "pid chi^2 distribution for ndf=1", 100, 0, 10);
-                        fPidChiHist[imom][ithe][ihypo][jhypo][1] = new TH1F(Form("pidChi%d_%d_%d_%d_2", imom, ithe, ihypo, jhypo), "pid chi^2 distribution for ndf=2", 100, 0, 10);
+                        fPidChiHist[imom][ithe][ihypo][jhypo][0] = new TH1F(Form("pidChi%d_%d_%d_%d_1", imom, ithe, ihypo, jhypo), Form("pid chi^2 distribution for mom=%d,the=%d,ihypo=%d,jhypo=%d,ndf=1", imom, ithe, ihypo, jhypo), 100, 0, 10);
+                        fPidChiHist[imom][ithe][ihypo][jhypo][1] = new TH1F(Form("pidChi%d_%d_%d_%d_2", imom, ithe, ihypo, jhypo), Form("pid chi^2 distribution for mom=%d,the=%d,ihypo=%d,jhypo=%d,ndf=2", imom, ithe, ihypo, jhypo), 100, 0, 10);
                     }
                 }
             }

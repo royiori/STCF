@@ -10,6 +10,7 @@
 #include "TRandom.h"
 #include "TDirectory.h"
 #include "TMath.h"
+#include "TMarker.h"
 #include "MyRICHDetector.h"
 #include "MyStyle.h"
 #include "TThread.h"
@@ -166,6 +167,14 @@ public:
 
     //----------------------------
     // draw histograms
+    void DrawBeamHit()
+    {
+        double y = gDet->GetTotalLength() / tan(gDet->theta0);
+        TMarker *marker = new TMarker(0, y, 8);
+        marker->SetMarkerColor(kRed);
+        marker->Draw();
+    }
+
     void DrawDetHitMap(TString opt)
     {
         if (gDet->GetHitMap() != NULL)
