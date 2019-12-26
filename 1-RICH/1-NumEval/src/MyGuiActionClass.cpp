@@ -637,7 +637,7 @@ void MyGuiActionClass::DoReadBatchFile(const char *fname, const char *sepoch)
         gMyCommonRICH->GenerateRecOffsetSigmaMap();  // fit hitmap.root & save hitmap.root again + save rec.map
     }
 
-    //gMyCommonRICH->CalPIDEfficiency(); // save pid.map
+    gMyCommonRICH->CalPIDEfficiency(); // save pid.map
 }
 
 void MyGuiActionClass::DoSaveDetFile(const char *fname)

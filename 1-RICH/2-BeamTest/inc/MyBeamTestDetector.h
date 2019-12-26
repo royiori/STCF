@@ -299,11 +299,13 @@ public:
     TString name;
     double siz[3];
     double pos[3];
-    double rot[2];
-    double ROT[2];
+    double rot[2];       //in degree
+    double ROT[2];       //in rad
     int Nstrp[2];        //实验室系下X/Y方向的strip条数
     double strip[2];     //实验室系下X/Y方向的strip条宽，[0]为平行X轴的条的宽度，[1]为平行与Y轴的条的宽度
     double LtoAnode = 0; //阳极板与轴心的距离
+    
+    TGeoMatrix* geoMatrix;
 
     //DST数据文件指针
     TFile *fFile = 0;

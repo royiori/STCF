@@ -655,8 +655,18 @@ void GetMomentumScanRange(long ip, int &ibegin, int &iend)
         return;
     }
 
-    //2. EPoch==-1: NTHREAD > np，如NTHREAD为4， np为2， 则只分2个线程。此时ip取值>=2的时候不扫描
+    //2. EPoch==-1: GUI模式
+    if (ip < 0)
+    {
+        ibegin = 0;
+        iend = gDet->np;
+        return;
+    }
+
+    //3. EPoch==-1: GUI模式
+    //              NTHREAD > np，如NTHREAD为4， np为2， 则只分2个线程。此时ip取值>=2的时候不扫描
     //              NTHREAD <= np, 分段扫描
+
     int nthread = (NTHREAD < np) ? NTHREAD : np;
     ibegin = ip * np / nthread;
     iend = (ip + 1) * np / nthread;
@@ -854,6 +864,9 @@ double MyCommonRICH::ReconstructRICHByBeta(MyRICHDetector *det, double irad, dou
     if (det == 0)
         return -999;
 
+    if (det->GetDetHitMap(irad)->Integral() == 0)
+        return -999;
+
     //1. 初始化
     double theta0 = det->theta0;
     double thetac = det->fThetaCReal[irad];
@@ -870,23 +883,29 @@ double MyCommonRICH::ReconstructRICHByBeta(MyRICHDetector *det, double irad, dou
     double phi = FindPhi(gDet, Xr, Yr, X0, Y0);
     double R = sqrt((Xr - X0) * (Xr - X0) + (Yr - Y0) * (Yr - Y0));
 
+    double a1 = findA(theta0, thetac, phi);
+    double theta1 = atan(a1);
+
     //fRhoFcn->SetParameters(z0, theta0, thetac);
     //fRhoFcn->SetParameters(z0, 0, thetac);
     //double a2 = fRhoFcn->Eval(phi);
-    //cout << "重建: z0=" << z0 << " phi=" << phi << ", theta0=" << theta0 << " thetac=" << thetac << endl;
-    //cout << "     (X0,Y0,Z0)=(" << X0 << ", " << Y0 << "," << Z0 << ")" << endl;
-    //cout << "     (Xr,Yr   )=(" << Xr << ", " << Yr << " )" << endl;
-
-    double a1 = findA(theta0, thetac, phi);
-    double theta1 = atan(a1);
 
     //3. 求R0
     double Rrad = Xep * tan(theta1);
     double Rqz = 0;
     double nSinTheta = reflist[0] * sin(theta1);
 
+    //cout << endl;
+    //cout << "重建: z0=" << z0 << " phi=" << phi << ", theta0=" << theta0 << " thetac=" << thetac << endl;
+    //cout << "     (X0,Y0,Z0)=(" << X0 << ", " << Y0 << "," << Z0 << ")" << endl;
+    //cout << "     (Xr,Yr   )=(" << Xr << ", " << Yr << " ), R = " << sqrt(Xr * Xr + Yr * Yr) << endl;
+    //cout << "     a1 = " << a1 << ", theta1 = " << theta1 << ", Rrad = " << Rrad << endl;
+    //cout << "     nSinTheta = " << nSinTheta << ", reflist[0] = " << reflist[0] << endl;
+
     for (int i = 1; i < (int)thklist.size() - 1; i++)
     {
+        //cout << " --> i: " << i << " ref=" << reflist[i] << ", " << nSinTheta / reflist[i] << ", Rqz=" << thklist[i] * tan(asin(nSinTheta / reflist[i])) << endl;
+
         if (nSinTheta / reflist[i] > 1)
             return -999; //全反射
 
@@ -912,6 +931,8 @@ double MyCommonRICH::ReconstructRICHByBeta(MyRICHDetector *det, double irad, dou
     double theta2 = atan(R0 / Tg);
     double nquartz2 = sin(theta2) / sin(theta1);
     double rthec = acos(1 / nquartz2 / beta);
+    //cout << "     R0 = " << R0 << ", theta2 = " << theta2 << ", nquartz2 = " << nquartz2 << endl;
+    //cout << "     rthetc = " << rthec << endl;
     return rthec;
 }
 
@@ -1029,8 +1050,10 @@ void MyCommonRICH::ReconstructRICHDetector(MyRICHDetector *det)
                 for (int j = 0; j < iph; j++)
                 {
                     det->fHitMapEachRad[irad]->GetRandom2(Xr, Yr);
-                    Xr = int(Xr / det->pixel) * det->pixel + det->pixel / 2;
-                    Yr = int(Yr / det->pixel) * det->pixel + det->pixel / 2;
+                    //cout<<"Xr, Yr: "<<Xr<<","<<Yr<<" R="<<sqrt(Xr*Xr+Yr*Yr)<<endl;
+                    Xr = round(Xr / det->pixel) * det->pixel + det->pixel / 2;
+                    Yr = round(Yr / det->pixel) * det->pixel + det->pixel / 2;
+                    //cout<<"Xr, Yr: "<<Xr<<","<<Yr<<" R="<<sqrt(Xr*Xr+Yr*Yr)<<endl;
                     double theta = ReconstructRICHByBeta(det, irad, Xr, Yr, thklist, reflist, abslist);
                     avgth += theta;
                 }
@@ -1278,6 +1301,10 @@ double MyCommonRICH::CalPIDProb(MyRICHDetector *det, vector<pair<double, double>
 
             double rectmp = ReconstructRICHByBeta(det, irad, hit[i].first, hit[i].second, thklist, reflist, abslist);
             //double rectmp = ReconstructRICHBySolver(det, irad, hit[i].first, hit[i].second);
+
+            if (rectmp == -999)
+                continue;
+
             if (fabs(rectmp - det->fThetaCReal[irad]) < recDis)
             {
                 fromRad = irad;
@@ -1286,8 +1313,11 @@ double MyCommonRICH::CalPIDProb(MyRICHDetector *det, vector<pair<double, double>
             }
         }
 
+        //cout << i << ": " << recThe << "@ " << hit[i].first << ", " << hit[i].second << endl;
+
         if (fromRad == -1)
             continue;
+
         //if (fRecSigList[ihypo][fromRad][imom][ithe][1] == 0) continue;
         //recList[fromRad].push_back(pow(recThe - fRecOffList[ihypo][fromRad][imom][ithe][1], 2) / pow(fRecSigList[ihypo][fromRad][imom][ithe][1], 2));
         recList[fromRad].push_back(recThe);
@@ -1307,8 +1337,11 @@ double MyCommonRICH::CalPIDProb(MyRICHDetector *det, vector<pair<double, double>
             avg += recList[irad][i];
         avg /= nph;
 
+        cout << "ndf:" << ndf << " nph=" << nph << " avg=" << avg << " mean=" << fRecOffList[ihypo][irad][imom][ithe][nph] << " sig=" << fRecSigList[ihypo][irad][imom][ithe][nph] << endl;
         chi2 += pow((avg - fRecOffList[ihypo][irad][imom][ithe][nph]) / fRecSigList[ihypo][irad][imom][ithe][nph], 2);
     }
+    //cout << "chi=" << TMath::Prob(chi2, ndf) << "\n-----------------\n\n";
+
     return TMath::Prob(chi2, ndf);
 }
 
@@ -1369,6 +1402,7 @@ void MyCommonRICH::CalculatePIDForDetector(MyRICHDetector *det)
 
     for (int i = 0; i < nEvent; i++)
     {
+        //cout << "event: " << i << endl;
         double nPh = gRandom->Poisson(muPhoton);
 
         hit.clear();
@@ -1376,8 +1410,10 @@ void MyCommonRICH::CalculatePIDForDetector(MyRICHDetector *det)
         {
             double Xr, Yr;
             fhm->GetRandom2(Xr, Yr);
-            Xr = int(Xr / det->pixel) * det->pixel + det->pixel / 2;
-            Yr = int(Yr / det->pixel) * det->pixel + det->pixel / 2;
+            //cout<<"Xr, Yr: "<<Xr<<","<<Yr<<" R="<<sqrt(Xr*Xr+Yr*Yr)<<endl;
+            Xr = round(Xr / det->pixel) * det->pixel + det->pixel / 2;
+            Yr = round(Yr / det->pixel) * det->pixel + det->pixel / 2;
+            //cout<<"Xr, Yr: "<<Xr<<","<<Yr<<" R="<<sqrt(Xr*Xr+Yr*Yr)<<endl;
             hit.push_back(make_pair(Xr, Yr));
         }
 
@@ -1423,8 +1459,7 @@ bool MyCommonRICH::CalPIDEfficiency()
     ResizePIDEffMap(gDet->np, gDet->nthe0, gDet->nhypo);
 
     int nthread = (NThread < gDet->np) ? NThread : gDet->np;
-        cout << "----> Applying " << nthread << " thread to perform PID calculation." << endl;
-    return true;
+    cout << "----> Applying " << nthread << " thread to perform PID calculation." << endl;
 
     if (nthread == 1)
     {
@@ -1628,7 +1663,7 @@ int MyCommonRICH::LoadHitFile()
     ResizeScanDetList(gDet->np, gDet->nthe0, gDet->nhypo, 0);
 
     int ibegin, iend;
-    GetMomentumScanRange(0, ibegin, iend);
+    GetMomentumScanRange(-1, ibegin, iend);
 
     for (int imom = ibegin; imom < iend; imom++)
     {
@@ -1692,7 +1727,7 @@ int MyCommonRICH::LoadRecFile()
     ResizeRecMap(gDet->nhypo, gDet->nRadLayer, gDet->np, gDet->nthe0, gDet->NPhoton);
 
     int ibegin, iend;
-    GetMomentumScanRange(0, ibegin, iend);
+    GetMomentumScanRange(-1, ibegin, iend);
 
     for (int imom = ibegin; imom < iend; imom++)
     {

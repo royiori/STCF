@@ -19,6 +19,7 @@
 #include "TApplication.h"
 #include "TRootEmbeddedCanvas.h"
 #include "TSystem.h"
+#include "../inc/MyBeamTest.h"
 #include "../inc/MyBeamTestDetector.h"
 #include "../inc/MyBeamTestRICH.h"
 #include "../inc/MyBeamTestTrackAGET.h"
@@ -657,7 +658,6 @@ void AnalysisRICH(vector<int> uselist, int target, vector<MyBeamTestData *> detl
         int ipoint = 0;
         for (int i = 0; i < (int)uselist.size(); i++)
         {
-
             //作为use的track必须要有击中
             int id = -1;
             int detID = uselist[i];
@@ -902,7 +902,6 @@ void GBLAnalysis(vector<int> uselist, vector<MyBeamTestData *> detlist)
         int ipoint = 0;
         for (int i = 0; i < (int)uselist.size(); i++)
         {
-
             //作为use的track必须要有击中
             int id = -1;
             int detID = uselist[i];
@@ -948,8 +947,6 @@ void GBLAnalysis(vector<int> uselist, vector<MyBeamTestData *> detlist)
             return;
         g[ixy]->Fit("pol1", "q");
     }
-
-
 }
 
 
