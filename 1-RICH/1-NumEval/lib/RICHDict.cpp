@@ -55,7 +55,7 @@ namespace ROOT {
       ::MyRICHDetector *ptr = 0;
       static ::TVirtualIsAProxy* isa_proxy = new ::TInstrumentedIsAProxy< ::MyRICHDetector >(0);
       static ::ROOT::TGenericClassInfo 
-         instance("MyRICHDetector", ::MyRICHDetector::Class_Version(), "inc/MyRICHDetector.h", 14,
+         instance("MyRICHDetector", ::MyRICHDetector::Class_Version(), "inc/MyRICHDetector.h", 16,
                   typeid(::MyRICHDetector), ::ROOT::Internal::DefineBehavior(ptr, ptr),
                   &::MyRICHDetector::Dictionary, isa_proxy, 4,
                   sizeof(::MyRICHDetector) );

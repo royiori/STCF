@@ -888,7 +888,14 @@ void ReadTrackVMMData2Root(vector<TString> datList, TString fRawName, int force)
     fTree2->Write();
 
     TString fHead(datList[0]);
-    fHead.ReplaceAll("1.bin", "");
+    TString fPath;
+    while (fHead.Index("/") != -1)
+    {
+        TString ftmp = fHead;
+        fPath += ftmp.Remove(ftmp.Index("/") + 1, ftmp.Length());
+        fHead.Remove(0, fHead.Index("/") + 1);
+    }
+    //fHead.ReplaceAll("1.bin", "");
 
     //int bufferFlag = 0;
     vector<vmmTDCData *> tdcList;
@@ -897,7 +904,7 @@ void ReadTrackVMMData2Root(vector<TString> datList, TString fRawName, int force)
 
     for (int i = 0; i < (int)datList.size(); i++)
     {
-        TString fName = fHead + Form("/%d.bin", i + 1);
+        TString fName = fPath + Form("/%d.bin", i + 1);
         fstream InDat;
         InDat.open(fName, ios::in | ios::binary);
         cout << "--> Reading a new dat file-" << i << " : " << fName << endl;

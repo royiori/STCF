@@ -508,7 +508,7 @@ double MyCommonRICH::PhotonGenFromRad(MyRICHDetector *det, int irad, int absFlag
     vector<double> lenlist;
 
     double beta = Beta(det->momentum, det->mass);
-    double tbase = det->CalZ0(irad);
+    double tbase = det->GetZ0(irad);
     double theta0 = det->theta0;
     thklist = GetThickList(det, irad);
 
@@ -598,8 +598,8 @@ void MyCommonRICH::GenerateDetRing(MyRICHDetector *det, int verbose)
         det = gDet;
 
     //清除已经生成的图像
-    det->GetHitMap(1);
-    det->GetWaveLengthHist(1);
+    det->GetHitMap(ReGENERATE);
+    det->GetWaveLengthHist(ReGENERATE);
     det->Gen2DRingListForEachRad();
 
     double totPh = 0;
@@ -715,6 +715,7 @@ void MyCommonRICH::GenerateDetRing(int imom, int ithe, int ihypo)
     gScanDetList[imom][ithe][ihypo]->SetParticleGun(SHYPO[ihypo], gMyCommonRICH->GetMass(SHYPO[ihypo]));
     gScanDetList[imom][ithe][ihypo]->SetParticleGun(mom, Theta0);
     GenerateDetRing(gScanDetList[imom][ithe][ihypo], 0);
+    gScanDetList[imom][ithe][ihypo]->Calculate();
 }
 
 void MyCommonRICH::GenerateTheScanHitMapsForEachDetector()
@@ -763,10 +764,10 @@ void MyCommonRICH::GenerateTheNPhotonMap()
 
                 for (int irad = 0; irad < gDet->nRadLayer; irad++)
                 {
-                    double nph = 0;
-                    if (gScanDetList[imom][ithe][ihypo]->GetDetHitMap(irad) != NULL)
-                        nph = gScanDetList[imom][ithe][ihypo]->GetDetHitMap(irad)->Integral();
-                    fNPhMapEachRad[ihypo][irad]->SetBinContent(imom + 1, ithe + 1, nph);
+                    //double nph = 0;
+                    //if (gScanDetList[imom][ithe][ihypo]->GetDetHitMap(irad) != NULL)
+                    //    nph = gScanDetList[imom][ithe][ihypo]->GetDetHitMap(irad)->Integral();
+                    fNPhMapEachRad[ihypo][irad]->SetBinContent(imom + 1, ithe + 1, gScanDetList[imom][ithe][ihypo]->GetDetHitMapNph(irad));
                 }
             }
     }
@@ -777,7 +778,7 @@ void MyCommonRICH::GenerateTheNPhotonMap()
 double MyCommonRICH::Findz0(MyRICHDetector *det, int irad, double Xr, double Yr, vector<double> thklist, vector<double> abslist)
 {
     double L = thklist[0];
-    double tbase = det->CalZ0(irad);
+    double tbase = det->GetZ0(irad);
     double theta0 = det->theta0;
     double thetaExp = det->fThetaCReal[irad];
 
@@ -864,7 +865,7 @@ double MyCommonRICH::ReconstructRICHByBeta(MyRICHDetector *det, double irad, dou
     if (det == 0)
         return -999;
 
-    if (det->GetDetHitMap(irad)->Integral() == 0)
+    if (det->GetDetHitMapNph(irad) == 0)
         return -999;
 
     //1. 初始化
@@ -876,7 +877,7 @@ double MyCommonRICH::ReconstructRICHByBeta(MyRICHDetector *det, double irad, dou
     double Xep = thklist[0] - z0;
 
     //2. 求解出光角度phi
-    double tbase = det->CalZ0(irad);
+    double tbase = det->GetZ0(irad);
     double Z0 = -1 * tbase - z0;
     double X0 = 0;
     double Y0 = Z0 * tan(theta0);
@@ -931,8 +932,20 @@ double MyCommonRICH::ReconstructRICHByBeta(MyRICHDetector *det, double irad, dou
     double theta2 = atan(R0 / Tg);
     double nquartz2 = sin(theta2) / sin(theta1);
     double rthec = acos(1 / nquartz2 / beta);
-    //cout << "     R0 = " << R0 << ", theta2 = " << theta2 << ", nquartz2 = " << nquartz2 << endl;
-    //cout << "     rthetc = " << rthec << endl;
+    if (std::isnan(rthec))
+        return -999;
+    /*
+    {
+        cout << endl;
+        cout << "重建: z0=" << z0 << " phi=" << phi << ", theta0=" << theta0 << " thetac=" << thetac << endl;
+        cout << "     (X0,Y0,Z0)=(" << X0 << ", " << Y0 << "," << Z0 << ")" << endl;
+        cout << "     (Xr,Yr   )=(" << Xr << ", " << Yr << " ), R = " << sqrt(Xr * Xr + Yr * Yr) << endl;
+        cout << "     a1 = " << a1 << ", theta1 = " << theta1 << ", Rrad = " << Rrad << endl;
+        cout << "     nSinTheta = " << nSinTheta << ", reflist[0] = " << reflist[0] << endl;
+        cout << "     R0 = " << R0 << ", theta2 = " << theta2 << ", nquartz2 = " << nquartz2 << " beta=" << beta << " theta1=" << theta1 << endl;
+        cout << "     rthetc = " << rthec << endl;
+    }
+    */
     return rthec;
 }
 
@@ -966,7 +979,7 @@ double MyCommonRICH::ReconstructRICHBySolver(MyRICHDetector *det, double irad, d
 
     //1. 假设发光点在中心处，计算phi
     double L = thklist[0];
-    double tbase = det->CalZ0(irad);
+    double tbase = det->GetZ0(irad);
     double thetaExp = det->fThetaCReal[irad];
 
     double z0, z0Prim = 0.52 * L;
@@ -1015,7 +1028,7 @@ void MyCommonRICH::ReconstructRICHDetector(MyRICHDetector *det)
 
     //1. 初始化
     double hypoLambda = 185;
-    det->GetRecMap(1);
+    det->GetRecMap(ReGENERATE);
     det->Gen2DRecRingListForEachRad();
     UpdateThetaCExp(det, hypoLambda);
 
@@ -1027,11 +1040,11 @@ void MyCommonRICH::ReconstructRICHDetector(MyRICHDetector *det)
     double Xr, Yr;
     for (int irad = 0; irad < det->nRadLayer; irad++)
     {
-        double muPhoton = det->fHitMapEachRad[irad]->Integral();
+        double muPhoton = det->GetDetHitMapNph(irad); //det->fHitMapEachRad[irad]->Integral();
         if (muPhoton == 0)
             continue;
 
-        cout << "-->" << det->particle << " mom=" << det->momentum << " theta0=" << det->theta0 << " rad:" << irad << " ph=" << muPhoton << " realTh=" << det->fThetaCReal[irad] << endl;
+        //cout << "-->" << det->particle << " mom=" << det->momentum << " theta0=" << det->theta0 << " rad:" << irad << " ph=" << muPhoton << " realTh=" << det->fThetaCReal[irad] << endl;
 
         thklist.clear();
         reflist.clear();
@@ -1040,8 +1053,11 @@ void MyCommonRICH::ReconstructRICHDetector(MyRICHDetector *det)
         abslist = GetAbsLenList(det, irad, hypoLambda);
 
         //2.1 光子期望值循环
+        double Tstart, Tstop;
         for (int iph = 1; iph < 50; iph++)
         {
+            Tstart = clock();
+            double recavg = 0;
             //2.2 进行NEvent个事例数
             for (int i = 0; i < nEvent; i++)
             {
@@ -1050,7 +1066,7 @@ void MyCommonRICH::ReconstructRICHDetector(MyRICHDetector *det)
                 for (int j = 0; j < iph; j++)
                 {
                     det->fHitMapEachRad[irad]->GetRandom2(Xr, Yr);
-                    //cout<<"Xr, Yr: "<<Xr<<","<<Yr<<" R="<<sqrt(Xr*Xr+Yr*Yr)<<endl;
+                    //cout<<"iph="<<iph<<", ievent="<<i<<", Xr, Yr: "<<Xr<<","<<Yr<<" R="<<sqrt(Xr*Xr+Yr*Yr)<<endl;
                     Xr = round(Xr / det->pixel) * det->pixel + det->pixel / 2;
                     Yr = round(Yr / det->pixel) * det->pixel + det->pixel / 2;
                     //cout<<"Xr, Yr: "<<Xr<<","<<Yr<<" R="<<sqrt(Xr*Xr+Yr*Yr)<<endl;
@@ -1058,9 +1074,18 @@ void MyCommonRICH::ReconstructRICHDetector(MyRICHDetector *det)
                     avgth += theta;
                 }
                 avgth /= iph;
-
-                det->fRecMap->Fill(iph, avgth);
-                det->fRecMapEachRad[irad]->Fill(iph, avgth);
+                recavg += avgth;
+                //det->fRecMap->Fill(iph, avgth);
+                //det->fRecMapEachRad[irad]->Fill(iph, avgth);
+            }
+            Tstop = clock();
+            recavg /= nEvent;
+            double delta = fabs(recavg - det->fThetaCReal[irad]) / det->fThetaCReal[irad];
+            if (delta > 0.1 || std::isnan(delta))
+            {
+                cout << "iph:" << iph << " use " << ((double)(Tstop - Tstart)) / 1000 / 1000 << "s, delta_recavg=" << delta << ", recavg=" << recavg << "/theavg=" << det->fThetaCReal[irad] << endl;
+                //cout << "-->" << det->particle << " mom=" << det->momentum << " theta0=" << det->theta0 << " rad:" << irad << " ph=" << muPhoton << " realTh=" << det->fThetaCReal[irad] << endl;
+                gMyCommonRICH->Log(Form("####> scan %s mom=%f, theta0=%f, rad=%d, ph=%d, realTh=%f, recTh=%f, delta=%f.", det->particle.Data(), det->momentum, det->theta0, irad, iph, det->fThetaCReal[irad], recavg, delta));
             }
         }
     }
@@ -1689,6 +1714,7 @@ int MyCommonRICH::LoadHitFile()
                 T->GetEntry(ientry++);
                 gScanDetList[imom][ithe][ihypo] = new MyRICHDetector(*detector, -1, 1);
                 gScanDetList[imom][ithe][ihypo]->SetDirectory();
+                gScanDetList[imom][ithe][ihypo]->Calculate();
             }
 
         f.Close();
@@ -2005,7 +2031,7 @@ void MyCommonRICH::DrawFCN(int irad)
 {
     /* 
     double beta = Beta(gDet->momentum, gDet->mass);
-    double tbase = gDet->CalZ0(irad);
+    double tbase = gDet->GetZ0(irad);
     double theta0 = gDet->theta0;
 
     // 1. 用beta方法重建光子

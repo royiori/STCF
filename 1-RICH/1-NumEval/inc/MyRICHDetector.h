@@ -9,6 +9,8 @@
 #include "TRandom.h"
 #include "TObject.h"
 
+#define ReGENERATE 1
+
 using namespace std;
 
 class MyRICHDetector : public TObject
@@ -109,6 +111,7 @@ public:
     }
 
     double ztot;
+    double GetZtot() { return ztot; }
     double CalZtot()
     {
         ztot = tTransLayer;
@@ -116,12 +119,21 @@ public:
             ztot += tRadLayer[i];
         return ztot;
     }
+
+    vector<double> z0;
+    double GetZ0(int id) { return (0 <= id && id < nRadLayer) ? z0[id] : 0; }
     double CalZ0(int id)
     {
-        double z0 = 0;
+        double _z0 = 0;
         for (int i = 0; i < id; i++)
-            z0 += tRadLayer[i];
-        return z0;
+            _z0 += tRadLayer[i];
+        return _z0;
+    }
+    void CalZ0()
+    {
+        z0.clear();
+        for(int id = 0; id < nRadLayer; id++)
+            z0.push_back(CalZ0(id));
     }
 
     //---------------
@@ -241,19 +253,28 @@ public:
 
     //   -- 从每个辐射体出射的光子数在阳极上的分布，[nRad]
     vector<TH2F *> fHitMapEachRad;
+    vector<double> fHitMapNPh;
     TH2F *GetDetHitMap(int id) { return (0 <= id && id < nRadLayer) ? fHitMapEachRad[id] : NULL; }
+    double GetDetHitMapNph(int id) { return (0 <= id && id < nRadLayer) ? fHitMapNPh[id] : 0; }
     void Gen2DRingListForEachRad()
     {
         for (int i = 0; i < (int)fHitMapEachRad.size(); i++)
             delete fHitMapEachRad[i];
 
         fHitMapEachRad.clear();
+        fHitMapNPh.clear();
         for (int i = 0; i < nRadLayer; i++)
         {
             fHitMapEachRad.push_back(new TH2F(Form("fHitMapEachRad%d_%d", id, i), Form("Cherenkov Ring for %s @ %.1f GeV from %s", particle.Data(), momentum, sRadLayer[i].c_str()), NXBin, XBinMin, XBinMax, NYBin, YBinMin, YBinMax));
             fHitMapEachRad[i]->GetXaxis()->SetTitle("X[mm]");
             fHitMapEachRad[i]->GetYaxis()->SetTitle("Y[mm]");
+            fHitMapNPh.push_back(0);
         }
+    }
+    void CalDetHitMapNph()
+    {
+        for(int id = 0; id < nRadLayer; id ++)
+            fHitMapNPh[id] = fHitMapEachRad[id]->Integral();
     }
 
     //3.3-- 重建后的结果，X轴：光子数，Y轴：事例中的光子平均后的切伦科夫角, [nRad]
@@ -395,6 +416,12 @@ public:
             fHitMapEachRad[i]->SetDirectory(0);
         for (int i = 0; i < (int)fRecMapEachRad.size(); i++)
             fRecMapEachRad[i]->SetDirectory(0);
+    }
+
+    void Calculate() //计算一些常数
+    {
+        CalZ0();
+        CalDetHitMapNph();
     }
 
     ClassDef(MyRICHDetector, 1)
