@@ -121,7 +121,12 @@ public:
     }
 
     vector<double> z0;
-    double GetZ0(int id) { return (0 <= id && id < nRadLayer) ? z0[id] : 0; }
+    double GetZ0(int id)
+    {
+        if (z0.size() == 0)
+            CalZ0();
+        return (0 <= id && id < nRadLayer) ? z0[id] : 0;
+    }
     double CalZ0(int id)
     {
         double _z0 = 0;
@@ -132,7 +137,7 @@ public:
     void CalZ0()
     {
         z0.clear();
-        for(int id = 0; id < nRadLayer; id++)
+        for (int id = 0; id < nRadLayer; id++)
             z0.push_back(CalZ0(id));
     }
 
@@ -273,7 +278,7 @@ public:
     }
     void CalDetHitMapNph()
     {
-        for(int id = 0; id < nRadLayer; id ++)
+        for (int id = 0; id < nRadLayer; id++)
             fHitMapNPh[id] = fHitMapEachRad[id]->Integral();
     }
 
@@ -287,7 +292,7 @@ public:
 
         if (fRecMap != 0)
             delete fRecMap;
-        fRecMap = new TH2F(Form("fRecMap%d", id), Form("Reconstructed Cherenkov Ring for %s @ [%.1f GeV/c, %.1f#circ]", particle.Data(), momentum, Theta0), NPhoton, 0, NPhoton, 360*4, 0, TMath::Pi() / 3);
+        fRecMap = new TH2F(Form("fRecMap%d", id), Form("Reconstructed Cherenkov Ring for %s @ [%.1f GeV/c, %.1f#circ]", particle.Data(), momentum, Theta0), NPhoton, 0, NPhoton, 360 * 4, 0, TMath::Pi() / 3);
         fRecMap->GetXaxis()->SetTitle("Number of photon");
         fRecMap->GetYaxis()->SetTitle("Reconstructed Theta_c[rad]");
         return fRecMap;
@@ -409,9 +414,12 @@ private:
 public:
     void SetDirectory()
     {
-        if (fHitMap != 0) fHitMap->SetDirectory(0);
-        if (fRecMap != 0) fRecMap->SetDirectory(0);
-        if (fWaveLengthHist != 0) fWaveLengthHist->SetDirectory(0);
+        if (fHitMap != 0)
+            fHitMap->SetDirectory(0);
+        if (fRecMap != 0)
+            fRecMap->SetDirectory(0);
+        if (fWaveLengthHist != 0)
+            fWaveLengthHist->SetDirectory(0);
         for (int i = 0; i < (int)fHitMapEachRad.size(); i++)
             fHitMapEachRad[i]->SetDirectory(0);
         for (int i = 0; i < (int)fRecMapEachRad.size(); i++)

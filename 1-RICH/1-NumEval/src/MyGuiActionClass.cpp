@@ -597,7 +597,7 @@ void MyGuiActionClass::DoLoadTextBuf()
 
 //______________________________________________________________________________
 // 与读取/保存文件相关
-void MyGuiActionClass::DoReadBatchFile(const char *fname, const char *sepoch)
+void MyGuiActionClass::DoReadBatchFile(const char *fname, const char *momIndex, const char *thetaIndex)
 {
     TString rootfile(fname);
     if (!rootfile.EndsWith(".txt"))
@@ -606,13 +606,14 @@ void MyGuiActionClass::DoReadBatchFile(const char *fname, const char *sepoch)
         return;
     }
 
-    gMyCommonRICH->SetEpoch(TString(sepoch).Atoi());
+    gMyCommonRICH->SetMomIndex(TString(momIndex).Atoi());
+    gMyCommonRICH->SetThetaIndex(TString(thetaIndex).Atoi());
 
     if (ReadSettingsText(fname) == -1)
         return;
 
     SetDetectorParameters();
-    if (gMyCommonRICH->GetEpoch() == 0) // detector.root
+    if (gMyCommonRICH->GetMomIndex() == 0 && gMyCommonRICH->GetThetaIndex() == 0) // detector.root
     {
         gMyCommonRICH->GenerateDetRing();
         gMyCommonRICH->GenerateMultiParticleRICHRings();
@@ -620,7 +621,7 @@ void MyGuiActionClass::DoReadBatchFile(const char *fname, const char *sepoch)
 
     rootfile.ReplaceAll(".txt", ".root");
     gMyCommonRICH->SaveRings(rootfile);
-    gMyCommonRICH->SetLogName(sepoch);
+    gMyCommonRICH->SetLogName(momIndex, thetaIndex);
 
     if (gMyCommonRICH->LoadHitFile() == -1) //设定hitmap只生成一次，一般不需要多次生成
     {

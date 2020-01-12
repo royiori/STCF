@@ -40,9 +40,11 @@ public:
     ~MyCommonRICH();
 
     void SetNThread(int nt) { NThread = nt; }
-    void SetEpoch(int ep) { Epoch = ep; }
+    void SetMomIndex(int mi) { MomIndex = mi; }
+    void SetThetaIndex(int ti) { ThetaIndex = ti; }
     int GetNThread() { return NThread; }
-    int GetEpoch() { return Epoch; }
+    int GetMomIndex() { return MomIndex; } 
+    int GetThetaIndex() { return ThetaIndex; }
 
     //----------------------------
     /// Mass & Beta function
@@ -213,7 +215,7 @@ public:
     //----------------------------
     // set functions
     void SetNEvent(int ne) { nEvent = ne; }
-    void SetPrecision(double ep) { epsilon = ep; }
+    void SetPrecision(double eps) { epsilon = eps; }
     void SetDatabase(MyDatabaseClass *d) { gDb = d; }
 
     int GetNevent() { return nEvent; }
@@ -228,9 +230,9 @@ public:
 
     void SaveRings(const char *fname);
     void SaveDetFile();
-    void SaveHitFile(int);
-    void SaveRecFile(int);
-    void SavePidFile(int);
+    void SaveHitFile(int, int);
+    void SaveRecFile(int, int);
+    void SavePidFile(int, int);
 
     //----------------------------
     // calculations
@@ -261,9 +263,9 @@ public:
     double CalPIDProb(MyRICHDetector *det, vector<pair<double, double>> hit, double &chi2, double &ndf);
 
     void DrawFCN(int irad);
-    void SetLogName(const char *epoch)
+    void SetLogName(const char *momInd, const char *theInd)
     {
-        logName = headName + "_" + epoch + ".log";
+        logName = headName + "_" + momInd + "_" + theInd + ".log";
         std::ofstream log;
         log.open(logName, ios_base::app);
 
@@ -304,8 +306,9 @@ private:
     void UpdateThetaCExp(MyRICHDetector *det, double hypolambda);
 
     // variables
-    int NThread;
-    int Epoch;
+    int NThread; //线程数
+    int MomIndex; //在batch模式下，指定只模拟某一个动量
+    int ThetaIndex; //在batch模式下，指定只模拟某一个角度
 
     int nEvent;
     double epsilon;
@@ -517,8 +520,8 @@ private:
         for (int jhypo = 0; jhypo < (int)chilist.size(); jhypo++)
         {
             int ndf = ndflist[jhypo];
-            if (0 < ndf && ndf < 2)
-                fPidChiHist[imom][ithe][ihypo][jhypo][ndf]->Fill(chilist[jhypo]);
+            if (0 < ndf && ndf < 3)
+                fPidChiHist[imom][ithe][ihypo][jhypo][ndf-1]->Fill(chilist[jhypo]);
         }
     }
 };

@@ -84,7 +84,7 @@ public:
     int ReadSettingsText(const char *fname = NULL);
 
     void SetNThread(int nt) { gMyCommonRICH->SetNThread(nt); }
-    void DoReadBatchFile(const char *fname, const char *epoch);
+    void DoReadBatchFile(const char *fname, const char *momIndex, const char *thetaIndex);
     void ExecButtonClick(Long_t bid, const char *cmd);
 
 private:

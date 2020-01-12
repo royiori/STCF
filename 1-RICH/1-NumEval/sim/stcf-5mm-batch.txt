@@ -43,7 +43,7 @@ Momentum: 81 0.0 4.0
 
 
 # Particle to SCAN (N, Min, Max) for theta_0[degree])
-Theta0: 71 0.0 70.0
+Theta0: 51 0.0 50.0
 
 
 # From ShowMom[GeV/c], ShowThe[degree] and photon from ShowRad
@@ -57,16 +57,16 @@ ShowPhoton: 25
 #---------------------------
 
 # Step size for charge particle track[mm]
-trkStep: 0.100000
+trkStep: 1.000000
 
 # Number of Step for phi [0~2pi] * 360
-nPhi: 4
+nPhi: 1
 
 # Solver precision
 Precision: 0.001000
 
 # nEvents for reconstruction the resolution
-nEvent: 10000
+nEvent: 100
 
 #---------------------------
 #    Others
