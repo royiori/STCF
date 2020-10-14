@@ -25,24 +25,15 @@ const char *filetypes[] = {
 
 enum
 {
-    RICHType,
-    AGETType,
-    VMMType
-};
-
-enum
-{
     READFILE
 };
 
 class MyReadRootGUI : public TGMainFrame
 {
 private:
-    int ip = 0; //ped指针
-    int ic = 0; //channel指针
-    int ie = 0; //event指针
-    int iboard = 0, ichip = 0, ichannel = 0;
-    TH1F *fped, *fwav;
+    int ie = 0;       //event指针
+    TGraph *gWave[4]; //最多4个channel的wave
+    TCanvas *c1;
 
     TGHSlider *fHSlider1;
     TGTextButton *fPreButton1;
@@ -56,92 +47,31 @@ private:
     TGTextButton *fCheckButton;
     TGTextButton *fFileButton;
 
-    void DrawPed(int id);
-    void DrawChannel(int id1, int id2);
-    void DrawEvent(int id);
-    void ReadFile(TString);
+    void DrawEvent(int inc);
 
-    TFile *fFile = 0;
-    TTree *fTree = 0;
-    TTree *fTree2 = 0;
-    int type;
+    TFile *fRtFile = 0;
+    TTree *fRtTree = 0;
+    long nEntry = 0; //nEntries;
 
-    TFile *fFile2 = 0;
-
-    //AGET
-    int Event;
-    UShort_t board;
-    UShort_t chip;
-    UShort_t channel;
-    UShort_t bad;
-    long nentries;
-    TBranch *b_Event;
-    TBranch *b_board;
-    TBranch *b_chip;
-    TBranch *b_channel;
-    TBranch *b_data;
-    TBranch *b_bad;
-    vector<double> *data = 0;
-
-    //VMM
-    UShort_t PDO;
-    UShort_t BCID;
-    UShort_t TDO;
-    TBranch *b_PDO;
-    TBranch *b_BCID;
-    TBranch *b_TDO;
-
-    TGraph *gWave = 0;
-    TCanvas *c1;
-
-    vector<int> boardname;
-    vector<int> chipname;
+    double t0[4], ts[4];
+    TBranch *b_data1;
+    TBranch *b_data2;
+    TBranch *b_data3;
+    TBranch *b_data4;
+    vector<float> *data1 = 0;
+    vector<float> *data2 = 0;
+    vector<float> *data3 = 0;
+    vector<float> *data4 = 0;
 
 public:
     MyReadRootGUI();
 
     void CloseWindow();
     void OpenFile();
-    void PrintData();
-    void CheckData();
-
-    //Draw pedstal
-    void DrawSelected()
-    {
-        ip = fHSlider1->GetPosition();
-        DrawPed(ip);
-    }
-    void DrawPre()
-    {
-        ip = (ip - 1 < 0) ? 0 : ip - 1;
-        DrawPed(ip);
-    }
-    void DrawNext()
-    {
-        ip = (ip + 1 >= nentries) ? ip : ip + 1;
-        DrawPed(ip);
-    }
-
-    //Draw channel
-    void DrawSelectedChannel()
-    {
-        ic = fHSlider2->GetPosition();
-        DrawChannel(ic, 0);
-    }
-    void DrawPreChannel()
-    {
-        ic = (ic - 1 < 0) ? 0 : ic - 1;
-        DrawChannel(ic, 0);
-    }
-    void DrawNextChannel()
-    {
-        ic = (ic + 1 >= 1024) ? ic : ic + 1;
-        DrawChannel(ic, 0);
-    }
 
     //Draw Event
-    void DrawPreEvent() { DrawEvent(0); }
-    void DrawNextEvent() { DrawEvent(++ie); }
+    void DrawPreEvent() { DrawEvent(-1); }
+    void DrawNextEvent() { DrawEvent(1); }
 
 private:
     void GUIStatus(int flag);
@@ -149,7 +79,16 @@ private:
 
     void ReadBinFiles(TString fDir);
     void ReadBinToRoot(vector<TString> binLists, TString fName);
-    void ReadRootFile(TString fName) { ; }
+    void ReadRootFile(TString fName);
+
+    void FillGraph(TGraph *g1, double x0, double xs, vector<float> *data)
+    {
+        if (data->size() == 0)
+            return;
+
+        for (int i = 0; i < data->size(); i++)
+            g1->SetPoint(i, x0 + i * xs, data->at(i));
+    }
 
     ClassDef(MyReadRootGUI, 0)
 };
@@ -166,16 +105,16 @@ void MyReadRootGUI::GUIStatus(int flag)
     if (flag == READFILE)
     {
         fFileButton->SetEnabled(kFALSE);
-        fHSlider1->SetEnabled(kTRUE);
-        fPreButton1->SetEnabled(kTRUE);
-        fNextButton1->SetEnabled(kTRUE);
-        fHSlider2->SetEnabled(kTRUE);
-        fPreButton2->SetEnabled(kTRUE);
-        fNextButton2->SetEnabled(kTRUE);
-        fPrintButton->SetEnabled(kTRUE);
-        fCheckButton->SetEnabled(kTRUE);
-        fPreButton3->SetEnabled(kFALSE);
-        fNextButton3->SetEnabled(kFALSE);
+        fHSlider1->SetEnabled(kFALSE);
+        fPreButton1->SetEnabled(kFALSE);
+        fNextButton1->SetEnabled(kFALSE);
+        fHSlider2->SetEnabled(kFALSE);
+        fPreButton2->SetEnabled(kFALSE);
+        fNextButton2->SetEnabled(kFALSE);
+        fPrintButton->SetEnabled(kFALSE);
+        fCheckButton->SetEnabled(kFALSE);
+        fPreButton3->SetEnabled(kTRUE);
+        fNextButton3->SetEnabled(kTRUE);
     }
 }
 
@@ -242,7 +181,6 @@ void MyReadRootGUI::ReadBinFiles(TString fDir)
 
     if (binLists.size() > 0)
     {
-        GUIStatus(READFILE);
         ReadBinToRoot(binLists, fDir + "/combine.root");
     }
     else
@@ -260,21 +198,34 @@ void MyReadRootGUI::ReadBinToRoot(vector<TString> binLists, TString fName)
         return;
 
     //打开root文件
-    double tOrg; //t0
-    double tInc; //tstep
-    UShort_t channel;
-    vector<char> wave;
+    double tOrg[4]; //t0
+    double tInc[4]; //tstep
+    vector<float> wave1;
+    vector<float> wave2;
+    vector<float> wave3;
+    vector<float> wave4;
 
     TFile *fFile = new TFile(fName, "RECREATE");
     if (!fFile->IsOpen())
         return;
-    TTree *fTree1 = new TTree("Vdat", "Vaxis");
-    fTree1->Branch("channel", &channel);
-    fTree1->Branch("wave", &wave);
 
-    TTree *fTree2 = new TTree("Tdat", "Taxis");
-    fTree2->Branch("tOrg", &tOrg);
-    fTree2->Branch("tInc", &tInc);
+    TTree *fTree = new TTree("waveform", "WaveForms");
+    {
+        fTree->Branch("wave1", &wave1);
+        fTree->Branch("wave2", &wave2);
+        fTree->Branch("wave3", &wave3);
+        fTree->Branch("wave4", &wave4);
+
+        fTree->Branch("tOrg1", &tOrg[0], "tOrg1/D");
+        fTree->Branch("tOrg2", &tOrg[1], "tOrg2/D");
+        fTree->Branch("tOrg3", &tOrg[2], "tOrg3/D");
+        fTree->Branch("tOrg4", &tOrg[3], "tOrg4/D");
+
+        fTree->Branch("tInc1", &tInc[0], "tInc1/D");
+        fTree->Branch("tInc2", &tInc[1], "tInc2/D");
+        fTree->Branch("tInc3", &tInc[2], "tInc3/D");
+        fTree->Branch("tInc4", &tInc[3], "tInc4/D");
+    }
 
     // 读取bin文件
     for (int i = 0; i < (int)binLists.size(); i++)
@@ -282,210 +233,198 @@ void MyReadRootGUI::ReadBinToRoot(vector<TString> binLists, TString fName)
         InputFile = fopen(binLists[i], "rb");
         cout << "--> Reading a new bin file-" << i << " : " << binLists[i] << endl;
 
-        fread(&fileHeader, 1, sizeof(FileHeader), InputFile);
-        if ((fileHeader.Cookie[0] != COOKIE[0]) || (fileHeader.Cookie[1] != COOKIE[1]))
+        for (int j = 0; j < 4; j++)
         {
-            cout << "#### Error: This is not DSO9254A waveform data, please check your input file!";
-            return;
+            tOrg[j] = 0;
+            tInc[j] = 0;
         }
-
-        fread(&waveformHeader, 1, sizeof(WaveformHeader), InputFile);
-        if (waveformHeader.WaveformType != PB_NORMAL && waveformHeader.WaveformType != PB_AVERAGE)
-        {
-            cout << "#### Error: This is not the right waveform data type, please check your input file!";
-            return;
-        }
-
-        fread(&waveformDataHeader, 1, sizeof(WaveformDataHeader), InputFile);
-        tInc = waveformHeader.XIncrement;
-        tOrg = waveformHeader.XOrigin;
-        cout << "----> T0: " << tInc << ", Ts: " << tOrg << " BytesPerPoint:" << waveformDataHeader.BytesPerPoint << " " << endl;
 
         size_t BytesRead = 0L;
-        BytesRead = fread((char *)Volts, 1, MAX_LENGTH, InputFile);
+        BytesRead = fread(&fileHeader, 1, 12, InputFile); //sizeof(FileHeader), InputFile);
+        if ((fileHeader.Cookie[0] != COOKIE[0]) || (fileHeader.Cookie[1] != COOKIE[1]) || BytesRead != 12)
+        {
+            cout << "#### Error: The cookie does not fit DSO9254A waveform data, please check your input file! " << BytesRead << endl;
+            return;
+        }
 
-        wave.clear();
+        while (!feof(InputFile))
+        {
+            BytesRead = fread(&waveformHeader, 1, 140, InputFile); //sizeof(WaveformHeader), InputFile);
+            if (BytesRead != 140)
+                continue;
 
-        for (int j = 0; j < (BytesRead); j++)
-            wave.push_back(Volts[i]);
+            if (waveformHeader.WaveformType != PB_NORMAL && waveformHeader.WaveformType != PB_AVERAGE)
+            {
+                cout << "#### Error: This is not the right waveform data type, please check your input file!" << BytesRead << endl;
+                return;
+            }
 
-        fTree1->Fill();
-        fTree2->Fill();
+            double XIncrement = waveformHeader.XIncrement;
+            double XOrigin = waveformHeader.XOrigin;
+            TString fileLabel(waveformHeader.WaveformLabel);
+            fileLabel.ReplaceAll("Channel ", "");
+            int id = fileLabel.Atoi() - 1;
+            if (id < 0 || id > 3)
+            {
+                cout << "#### Error: Channel id is wrong! Read in from " << waveformHeader.WaveformLabel << " to " << id << endl;
+                return;
+            }
+
+            tOrg[id] = XOrigin;
+            tInc[id] = XIncrement;
+
+            cout << "---> * id: " << id << endl;
+            cout << "     * T0: " << tOrg[id] << ", Ts: " << tInc[id] << endl;
+            //cout << "     * NWaveformBuffers:" << waveformHeader.NWaveformBuffers << endl;
+            //cout << "     * Points: " << waveformHeader.Points << " Average_Count: " << waveformHeader.Count << endl;
+            //cout << "     * XUnits:" << waveformHeader.XUnits << " YUnits: " << waveformHeader.YUnits << endl;
+            //cout << "     * Date: " << waveformHeader.Date << " " << waveformHeader.Time << ";  Frame: " << waveformHeader.Frame << ";  WaveformLabel: " << waveformHeader.WaveformLabel << endl;
+            //cout << "     * Timetag:" << waveformHeader.TimeTag << "  SegmentIndex: " << waveformHeader.SegmentIndex << endl;
+
+            BytesRead = fread(&waveformDataHeader, 1, 12, InputFile); //sizeof(WaveformDataHeader), InputFile);
+            //cout << "---> * HeaderSize: " << waveformDataHeader.HeaderSize << endl;
+            cout << "     * BufferType: " << waveformDataHeader.BufferType << " BytesPerPoint:" << waveformDataHeader.BytesPerPoint << " BufferSize: " << waveformDataHeader.BufferSize << endl;
+
+            BytesRead = fread((char *)Volts, 1, waveformDataHeader.BufferSize, InputFile);
+            //cout << "     * Byte to be read: " << BytesRead << endl;
+
+            switch (id)
+            {
+            case 0:
+                wave1.clear();
+                break;
+            case 1:
+                wave2.clear();
+                break;
+            case 2:
+                wave3.clear();
+                break;
+            default:
+                wave4.clear();
+                break;
+            }
+
+            for (int j = 0; j < (BytesRead) / waveformDataHeader.BytesPerPoint; j++)
+            {
+                switch (id)
+                {
+                case 0:
+                    wave1.push_back(Volts[j]);
+                    break;
+                case 1:
+                    wave2.push_back(Volts[j]);
+                    break;
+                case 2:
+                    wave3.push_back(Volts[j]);
+                    break;
+                default:
+                    wave4.push_back(Volts[j]);
+                    break;
+                }
+            }
+        }
+
+        fTree->Fill();
     }
 
-    cout << "--> Total waveforms = " << fTree1->GetEntries() << endl;
-    fTree1->Write();
-    fTree2->Write();
+    cout << "--> Total waveforms = " << fTree->GetEntries() << endl;
+    cout << "--> Binary files have been convert to root-file: " << fName << ".\n\n";
+
+    fTree->Write();
     fFile->Flush();
     fFile->Close();
 
-    cout << "--> Bin files have been convert to root-file: " << fName << ".\n"
-         << endl;
+    ReadRootFile(fName);
 }
 
 //-----------------------------------------------------
-void MyReadRootGUI::DrawPed(int ip)
+// 读取一系列bin文件并保存到root
+void MyReadRootGUI::ReadRootFile(TString fName)
 {
-    Long64_t ii = fTree->LoadTree(ip);
-    if (ii < 0)
+    fRtFile = new TFile(fName);
+    if (!fRtFile->IsOpen())
         return;
-    fTree->GetEntry(ii);
 
-    if (type == VMMType)
-    {
-        PrintData();
-        return;
-    }
+    GUIStatus(READFILE);
 
-    if (gWave != 0)
-        delete gWave;
-    gWave = new TGraph(data->size());
-    for (int i = 0; i < data->size(); i++)
-        gWave->SetPoint(i + 1, i + 1, data->at(i));
-    gWave->SetMarkerStyle(8);
-    gWave->SetMarkerSize(1);
-    gWave->SetMarkerColor(kRed);
-    gWave->SetTitle(Form("Event:%d, Board:%d, Chip:%d, Channel:%d", (int)Event, board, chip, channel));
-    c1->Clear();
-    gWave->Draw("apl");
-    c1->Modified();
-    c1->Update();
+    fRtTree = (TTree *)fRtFile->Get("waveform");
+    fRtTree->SetBranchAddress("wave1", &data1, &b_data1);
+    fRtTree->SetBranchAddress("wave2", &data2, &b_data2);
+    fRtTree->SetBranchAddress("wave3", &data3, &b_data3);
+    fRtTree->SetBranchAddress("wave4", &data4, &b_data4);
+
+    fRtTree->SetBranchAddress("tOrg1", &t0[0]);
+    fRtTree->SetBranchAddress("tOrg2", &t0[1]);
+    fRtTree->SetBranchAddress("tOrg3", &t0[2]);
+    fRtTree->SetBranchAddress("tOrg4", &t0[3]);
+
+    fRtTree->SetBranchAddress("tInc1", &ts[0]);
+    fRtTree->SetBranchAddress("tInc2", &ts[1]);
+    fRtTree->SetBranchAddress("tInc3", &ts[2]);
+    fRtTree->SetBranchAddress("tInc4", &ts[3]);
+
+    nEntry = fRtTree->GetEntries();
+
+    ie = 0;
+    DrawEvent(0);
 }
 
-//id1是通道号的编号，id2是event的编号
-void MyReadRootGUI::DrawChannel(int id1, int id2)
+//-----------------------------------------------------
+void MyReadRootGUI::DrawEvent(int inc)
 {
-    if (fFile2 == 0)
-        return;
+    if (ie + inc < 0)
+        ie = 0;
+    else if (ie + inc >= nEntry)
+        ie = nEntry - 1;
+    else
+        ie = ie + inc;
 
-    iboard = id1 / (chipname.size() * 64);
-    ichip = (id1 - iboard * chipname.size() * 64) / 64;
-    ichannel = id1 - iboard * chipname.size() * 64 - ichip * 64;
-    fped = (TH1F *)fFile2->Get(Form("Ped_%d_%d_%d", boardname[iboard], chipname[ichip], ichannel));
-    fwav = (TH1F *)fFile2->Get(Form("Wave_%d_%d_%d", boardname[iboard], chipname[ichip], ichannel));
-    //fwav->Scale(1. / (fwav->GetEntries() / 512.));
-    cout << "--> Drawing " << id1 << ", " << ichip << ", " << ichannel << ": " << boardname[iboard] << " " << chipname[ichip] << " " << ichannel << endl;
+    fRtTree->GetEntry(ie);
+    cout << "--> Drawing events " << ie << endl;
+
+    FillGraph(gWave[0], t0[0], ts[0], data1);
+    FillGraph(gWave[1], t0[1], ts[1], data2);
+    FillGraph(gWave[2], t0[2], ts[2], data3);
+    FillGraph(gWave[3], t0[3], ts[3], data4);
 
     c1->Clear();
-    c1->Divide(3, 2);
-    if (fped != NULL || fwav != NULL)
+
+    int chstart = -1;
+    for (int i = 0; i < 4; i++)
     {
-        c1->cd(1);
-        if (fped != NULL)
-            fped->Draw();
-        c1->cd(4);
-        if (fwav != NULL)
-            fwav->Draw();
-        c1->Modified();
-        c1->Update();
-    }
-
-    if (type == VMMType)
-        return;
-
-    fPreButton3->SetEnabled(kTRUE);
-    fNextButton3->SetEnabled(kTRUE);
-    DrawEvent(id2);
-}
-
-void MyReadRootGUI::DrawEvent(int id)
-{
-    ie = id;
-
-    int nw = 0;
-    for (int i = 0; i < fTree->GetEntries(); i++)
-    {
-        fTree->GetEntry(i);
-
-        if (Event < ie)
+        if (gWave[i]->GetN() == 0)
             continue;
 
-        if (board == boardname[iboard] && chip == chipname[ichip] && ichannel == channel)
+        if (chstart == -1)
         {
-
-            ie = Event;
-            TGraph *gg = new TGraph(data->size());
-            for (int ii = 0; ii < data->size(); ii++)
-                gg->SetPoint(ii + 1, ii + 1, data->at(ii));
-            gg->SetMarkerStyle(8);
-            gg->SetMarkerSize(1);
-            gg->SetMarkerColor(kRed);
-            gg->SetTitle(Form("Event:%d, Board:%d, Chip:%d, Channel:%d", (int)Event, board, chip, channel));
-            nw++;
-            if (nw == 1)
-                c1->cd(2);
-            if (nw == 2)
-                c1->cd(3);
-            if (nw == 3)
-                c1->cd(5);
-            if (nw == 4)
-                c1->cd(6);
-            gg->Draw("apl");
-            cout << "--> find " << nw << " event = " << Event << endl;
-            if (nw == 4)
-                break;
+            gWave[i]->Draw("apl");
+            chstart = i;
+        }
+        else
+        {
+            gWave[i]->Draw("aplsame");
         }
     }
 
     c1->Modified();
     c1->Update();
-    cout << "-->done.\n\n";
-}
-
-void MyReadRootGUI::PrintData()
-{
-    if (type == AGETType)
-    {
-        cout << "Event: " << (int)Event << " Board:" << board << " Chip:" << chip << " Channel:" << channel << endl
-             << "--\t";
-        /*for(int i=0; i<data->size(); i++)
-    {
-        cout<<data->at(i)<<" ";
-        if((i+1)%8==0) cout<<" -- ";
-        if((i+1)%32==0) cout<<endl<<"--\t";    
-    }
-    */
-        cout << endl;
-    }
-    if (type == VMMType)
-    {
-        cout << "Event: " << (int)Event << " Board:" << board << " Chip:" << chip << " Channel:" << channel;
-        cout << " --  Q: " << PDO << " T_corse:" << BCID << " T_fine:" << TDO << endl;
-        ;
-    }
-}
-
-void MyReadRootGUI::CheckData()
-{
-    //...
-    cout << "checking data..." << endl;
-    int tmp = -1;
-    fTree->GetEntry(0);
-    int trgstart = Event;
-    fTree->GetEntry(nentries - 1);
-    int trgstop = Event;
-
-    int total = 0;
-    for (int i = 0; i < nentries; i++)
-    {
-        Long64_t ii = fTree->LoadTree(i);
-        if (ii < 0)
-            return;
-        fTree->GetEntry(ii);
-        //cout << Event << endl;
-        tmp = (tmp == -1) ? Event : tmp;
-        if (fabs(tmp - Event) > 1)
-            cout << "Warning: Event id jumps from " << tmp << " to " << Event << endl;
-        if (fabs(tmp - Event) != 0)
-            total++;
-        tmp = (tmp == Event) ? tmp : Event;
-    }
-    cout << "--> check is done" << endl;
-    cout << "--> Trig start from " << trgstart << " to " << trgstop << ", total recorded trig number: " << total << endl;
 }
 
 MyReadRootGUI::MyReadRootGUI() : TGMainFrame(gClient->GetRoot(), 10, 10, kHorizontalFrame)
 {
+    int fColor[4] = {kRed, kOrange - 1, kBlue, kGreen + 2};
+
+    for (int i = 0; i < 4; i++)
+    {
+        gWave[i] = new TGraph();
+        gWave[i]->SetName(Form("gWave%d", i));
+        gWave[i]->SetTitle(Form("Waveform for channel %d", i + 1));
+        gWave[i]->GetXaxis()->SetTitle("T");
+        gWave[i]->GetYaxis()->SetTitle("V");
+        gWave[i]->SetLineColor(fColor[i]);
+        gWave[i]->SetMarkerColor(fColor[i]);
+    }
+
     TGLayoutHints *LayoutC = new TGLayoutHints(kLHintsLeft | kLHintsTop, 2, 2, 2, 2);
     TGLayoutHints *LayoutX = new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsExpandX, 2, 2, 2, 2);
     TGLayoutHints *LayoutY = new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsExpandY, 2, 2, 2, 2);
@@ -505,7 +444,7 @@ MyReadRootGUI::MyReadRootGUI() : TGMainFrame(gClient->GetRoot(), 10, 10, kHorizo
             fGroupFrame1->AddFrame(fFileButton, new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsExpandX, 1, 1, 2, 2));
 
             fHSlider1 = new TGHSlider(fGroupFrame1, 200, kSlider1 | kScaleBoth, -1, kHorizontalFrame);
-            fHSlider1->Connect("Released()", "MyReadRootGUI", this, "DrawSelected()");
+            //fHSlider1->Connect("Released()", "MyReadRootGUI", this, "DrawSelected()");
             fHSlider1->SetRange(0, 40);
             fHSlider1->SetPosition(20);
             fGroupFrame1->AddFrame(fHSlider1, new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsExpandX, 2, 2, 2, 2));
@@ -515,23 +454,23 @@ MyReadRootGUI::MyReadRootGUI() : TGMainFrame(gClient->GetRoot(), 10, 10, kHorizo
             fGroupFrame1->AddFrame(fSliderFrame, new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsExpandX, 2, 2, 2, 2));
             {
                 fPreButton1 = new TGTextButton(fSliderFrame, "<", -1, TGTextButton::GetDefaultGC()(), TGTextButton::GetDefaultFontStruct(), kRaisedFrame);
-                fPreButton1->Connect("Clicked()", "MyReadRootGUI", this, "DrawPre()");
+                //fPreButton1->Connect("Clicked()", "MyReadRootGUI", this, "DrawPre()");
                 fSliderFrame->AddFrame(fPreButton1, new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsExpandX, 1, 1, 2, 2));
                 fPreButton1->SetEnabled(kFALSE);
 
                 fNextButton1 = new TGTextButton(fSliderFrame, ">", -1, TGTextButton::GetDefaultGC()(), TGTextButton::GetDefaultFontStruct(), kRaisedFrame);
-                fNextButton1->Connect("Clicked()", "MyReadRootGUI", this, "DrawNext()");
+                //fNextButton1->Connect("Clicked()", "MyReadRootGUI", this, "DrawNext()");
                 fSliderFrame->AddFrame(fNextButton1, new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsExpandX, 1, 1, 2, 2));
                 fNextButton1->SetEnabled(kFALSE);
             }
 
             fPrintButton = new TGTextButton(fGroupFrame1, "Print Data", -1, TGTextButton::GetDefaultGC()(), TGTextButton::GetDefaultFontStruct(), kRaisedFrame);
-            fPrintButton->Connect("Clicked()", "MyReadRootGUI", this, "PrintData()");
+            //fPrintButton->Connect("Clicked()", "MyReadRootGUI", this, "PrintData()");
             fGroupFrame1->AddFrame(fPrintButton, new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsExpandX, 1, 1, 2, 2));
             fPrintButton->SetEnabled(kFALSE);
 
             fCheckButton = new TGTextButton(fGroupFrame1, "Check Data", -1, TGTextButton::GetDefaultGC()(), TGTextButton::GetDefaultFontStruct(), kRaisedFrame);
-            fCheckButton->Connect("Clicked()", "MyReadRootGUI", this, "CheckData()");
+            //fCheckButton->Connect("Clicked()", "MyReadRootGUI", this, "CheckData()");
             fGroupFrame1->AddFrame(fCheckButton, new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsExpandX, 1, 1, 2, 2));
             fCheckButton->SetEnabled(kFALSE);
         }
@@ -541,7 +480,7 @@ MyReadRootGUI::MyReadRootGUI() : TGMainFrame(gClient->GetRoot(), 10, 10, kHorizo
         fGroupFrame2->SetLayoutManager(new TGVerticalLayout(fGroupFrame2));
         {
             fHSlider2 = new TGHSlider(fGroupFrame2, 200, kSlider1 | kScaleBoth, -1, kHorizontalFrame);
-            fHSlider2->Connect("Released()", "MyReadRootGUI", this, "DrawSelectedChannel()");
+            //fHSlider2->Connect("Released()", "MyReadRootGUI", this, "DrawSelectedChannel()");
             fHSlider2->SetRange(0, 1024);
             fHSlider2->SetPosition(0);
             fGroupFrame2->AddFrame(fHSlider2, new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsExpandX, 2, 2, 2, 2));
@@ -552,12 +491,12 @@ MyReadRootGUI::MyReadRootGUI() : TGMainFrame(gClient->GetRoot(), 10, 10, kHorizo
             {
 
                 fPreButton2 = new TGTextButton(fSliderFrame2, "Pre Channel <", -1, TGTextButton::GetDefaultGC()(), TGTextButton::GetDefaultFontStruct(), kRaisedFrame);
-                fPreButton2->Connect("Clicked()", "MyReadRootGUI", this, "DrawPreChannel()");
+                //fPreButton2->Connect("Clicked()", "MyReadRootGUI", this, "DrawPreChannel()");
                 fSliderFrame2->AddFrame(fPreButton2, new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsExpandX, 1, 1, 2, 2));
                 fPreButton2->SetEnabled(kFALSE);
 
                 fNextButton2 = new TGTextButton(fSliderFrame2, "Next Channel >", -1, TGTextButton::GetDefaultGC()(), TGTextButton::GetDefaultFontStruct(), kRaisedFrame);
-                fNextButton2->Connect("Clicked()", "MyReadRootGUI", this, "DrawNextChannel()");
+                //fNextButton2->Connect("Clicked()", "MyReadRootGUI", this, "DrawNextChannel()");
                 fSliderFrame2->AddFrame(fNextButton2, new TGLayoutHints(kLHintsLeft | kLHintsTop | kLHintsExpandX, 1, 1, 2, 2));
                 fNextButton2->SetEnabled(kFALSE);
             }

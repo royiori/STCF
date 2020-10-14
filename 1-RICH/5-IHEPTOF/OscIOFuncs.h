@@ -44,17 +44,17 @@ typedef struct
    int WaveformType;
    int NWaveformBuffers;
    int Points;
-   int Count;
+   int Count; //20
    float XDisplayRange;
    double XDisplayOrigin;
    double XIncrement;
    double XOrigin;
    int XUnits;
-   int YUnits;
+   int YUnits; //56
    char Date[DATE_TIME_STRING_LENGTH];
    char Time[DATE_TIME_STRING_LENGTH];
    char Frame[FRAME_STRING_LENGTH];
-   char WaveformLabel[SIGNAL_STRING_LENGTH];
+   char WaveformLabel[SIGNAL_STRING_LENGTH]; //128
    double TimeTag;
    unsigned int SegmentIndex;
 } WaveformHeader;
@@ -62,7 +62,7 @@ WaveformHeader waveformHeader;
 
 typedef struct
 {
-   int HeaderSize;
+   unsigned int HeaderSize;
    short BufferType;
    short BytesPerPoint;
    int BufferSize;
