@@ -389,11 +389,16 @@ void MyReadRootGUI::DrawEvent(int inc)
 
     c1->Clear();
 
+    TLegend *leg = new TLegend(0.8, 0.9, 1.0, 1.0);
+    leg->SetHeader(Form("Event: %d", ie));
+
     int chstart = -1;
     for (int i = 0; i < 4; i++)
     {
         if (gWave[i]->GetN() == 0)
             continue;
+
+        leg->AddEntry(gWave[i], Form("channel %d", i+1), "l");
 
         if (chstart == -1)
         {
@@ -405,6 +410,10 @@ void MyReadRootGUI::DrawEvent(int inc)
             gWave[i]->Draw("aplsame");
         }
     }
+
+    leg->SetFillColor(0);
+    leg->SetBorderSize(0);
+    leg->Draw("same");
 
     c1->Modified();
     c1->Update();
