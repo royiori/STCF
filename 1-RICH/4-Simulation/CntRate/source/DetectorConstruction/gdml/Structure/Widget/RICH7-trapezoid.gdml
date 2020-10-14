@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<gdml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://service-spi.web.cern.ch/service-spi/app/releases/GDML/schema/gdml.xsd">
+	
+	<!-- C6F14 RICH flat, trapezoid, full barrel -->
+	
+	<define>
+		<!-- Parameters from arrangement-->
+		<variable name="InnerR" value="870" /> <!-- backgrounddata.root give r0 = 865~869 -->
+        <variable name="RICHthick" value="130" />
+        <variable name="r0" value="InnerR + RICHthick/2" />
+		<!-- Aluminum box, trapezoid, tan(15 degree)=0.2679491624 -->
+		<variable name="tanTh" value="0.2679491624" />
+		<variable name="zTot" value="RICHthick" />
+		<variable name="xTot1" value="466" /> <!-- 2*InnerR*tanTh -->
+		<variable name="xTot2" value="xTot1 + 2*zTot*tanTh" />
+		<variable name="yTot1" value="2800" />
+		<variable name="yTot2" value="2800" />
+		<variable name="AlTh" value="0" /> <!-- set to 0 for bg analysis -->
+
+		<!-- Argon box -->
+		<variable name="ArX1" value="xTot1-2*AlTh" />
+		<variable name="ArX2" value="xTot2-2*AlTh" />
+		<variable name="ArY1" value="yTot1-2*AlTh" />
+		<variable name="ArY2" value="yTot2-2*AlTh" />
+		<variable name="ArZ" value="zTot-2*AlTh" />
+
+		<!-- Quartz box -->
+		<variable name="RadTh" value="10" />
+		<variable name="QzTh" value="3" />
+		<variable name="QzZ" value="QzTh + RadTh + QzTh" />
+		<variable name="QzX1" value="xTot1 - 2*AlTh" />
+		<variable name="QzX2" value="QzX1 + 2*QzZ*tanTh" />
+		<variable name="QzY1" value="ArY1" />
+		<variable name="QzY2" value="ArY2" />
+		
+		<!-- Radiator box -->
+		<variable name="RadX1" value="QzX1 + 2*QzTh*tanTh" />
+		<variable name="RadX2" value="QzX1 + 2*(QzTh+RadTh)*tanTh" />
+		<variable name="RadY1" value="QzY1 - 2*QzTh" />
+		<variable name="RadY2" value="QzY2 - 2*QzTh" />
+		<variable name="RadZ" value="RadTh" />
+
+		<!-- Readout box -->
+		<variable name="FR4Th" value="1" />
+		<variable name="FR4X" value="ArX2 - FR4Th" />
+		<variable name="FR4Y" value="ArY2 - FR4Th" />
+		<variable name="FR4Z" value="FR4Th" />
+	</define>
+
+	<solids>
+		<trd lunit="mm" x1="xTot1" x2="xTot2" y1="yTot1" y2="yTot2" z="zTot" name="AluminumBox" /> 
+		<trd lunit="mm" x1="ArX1" x2="ArX2" y1="ArY1" y2="ArY2" z="ArZ" name="ArBox" /> 
+		<trd lunit="mm" x1="QzX1" x2="QzX2" y1="QzY1" y2="QzY2" z="QzZ" name="QuartzBox" />
+		<trd lunit="mm" x1="RadX1" x2="RadX2" y1="RadY1" y2="RadY2" z="RadZ" name="C6F14Box" />
+		<box lunit="mm" name="FR4Box" x="FR4X" y="FR4Y" z="FR4Z" />
+	</solids>
+
+	<structure>
+		<volume name="C6F14BoxVol">
+			<materialref ref="C6F14" />
+			<solidref ref="C6F14Box" />
+		</volume>
+
+		<volume name="QuartzBoxVol">
+			<materialref ref="Quartz" />
+			<solidref ref="QuartzBox" />
+			<physvol>
+				<volumeref ref="C6F14BoxVol" />
+			</physvol>
+		</volume>
+
+		<volume name="FR4BoxVol">
+			<materialref ref="FR4" />
+			<solidref ref="FR4Box" />
+			<auxiliary auxtype="SensDet" auxvalue="RICH" />
+		</volume>
+
+		<volume name="ArBoxVol">
+			<materialref ref="ArGasMix" />
+			<solidref ref="ArBox" />
+			<physvol>
+				<volumeref ref="QuartzBoxVol" />
+				<position x="0" y="0" z="- ArZ/2 + QzZ/2" unit="mm" />
+			</physvol>
+			<physvol>
+				<volumeref ref="FR4BoxVol" />
+				<position x="0" y="0" z="ArZ/2 - FR4Z/2" unit="mm" />
+			</physvol>
+		</volume>
+
+		<volume name="RICH">
+			<materialref ref="G4_Al" />
+			<solidref ref="AluminumBox" />
+			<physvol>
+				<volumeref ref="ArBoxVol" />
+			</physvol>
+		</volume>
+	</structure>
+
+	<setup version="1.0" name="Default">
+		<world ref="RICH" />
+	</setup>
+
+</gdml>

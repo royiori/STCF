@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<gdml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://service-spi.web.cern.ch/service-spi/app/releases/GDML/schema/gdml.xsd">
+<!-- real RICH -->
+
+	<solids>
+	    <box lunit="mm" name="World" x="130.95" y="456" z="1200" />
+		<box lunit="mm" name="AluminumBox" x="115.45" y="456" z="1200" />
+		<box lunit="mm" name="ArBox" x="112.45" y="448" z="1192" />
+		<box lunit="mm" name="QuartzBox" x="16" y="448" z="1192" />
+		<box lunit="mm" name="C6F14Box" x="10" y="440" z="1184" />
+		<box lunit="mm" name="FR4Box" x="0.4" y="448" z="1192" />
+		<box lunit="mm" name="FR4Box2" x="2.5" y="456" z="1200" />
+		<box lunit="mm" name="AirBox3" x="8" y="456" z="1200" />
+		<box lunit="mm" name="FR4Box3" x="5" y="456" z="1200" />
+
+	</solids>
+
+	<structure>
+	    <volume name="C6F14BoxVol">
+			<materialref ref="C6F14" />
+			<solidref ref="C6F14Box" />	
+		</volume>
+
+		<volume name="QuartzBoxVol">
+			<materialref ref="Quartz" />
+			<solidref ref="QuartzBox" />
+		    <physvol>
+			<volumeref ref="C6F14BoxVol" />
+				<position x="0." y="0." z="0." unit="mm" />
+				<rotation x="0." y="0." z="0." unit="deg" />
+			</physvol>
+		</volume>
+
+		<volume name="FR4BoxVol">
+			<materialref ref="FR4" />
+			<solidref ref="FR4Box" />
+			<auxiliary auxtype="SensDet" auxvalue="RICH"/>
+		</volume>	
+
+		<volume name="ArBoxVol">
+			<materialref ref="ArGasMix" />
+			<solidref ref="ArBox" />
+			<physvol>
+			<volumeref ref="QuartzBoxVol" />
+				<position x="-48.225" y="0." z="0." unit="mm" />
+				<rotation x="0." y="0." z="0." unit="deg" />
+			</physvol>
+			<physvol>
+				<volumeref ref="FR4BoxVol" />
+				<position x="53.025" y="0." z="0." unit="mm" />
+				<rotation x="0." y="0." z="0." unit="deg" />
+			</physvol>
+		</volume>
+		
+		<volume name="FR4BoxVol2">
+		    <materialref ref="G4_KAPTON" />
+			<solidref ref="FR4Box2" />
+		</volume>
+		 <volume name="AirBoxVol3">
+			<materialref ref="Air" />
+			<solidref ref="AirBox3" />	
+		</volume>	
+		<volume name="FR4BoxVol3">
+			<materialref ref="G4_KAPTON" />
+			<solidref ref="FR4Box3" />	
+		</volume>
+		<volume name="AluminumBoxVol">
+			<materialref ref="G4_Al" />
+			<solidref ref="AluminumBox" />
+			<physvol>
+			    <volumeref ref="ArBoxVol" />
+				<position x="-1.5" y="0." z="0." unit="mm" />
+				<rotation x="0." y="0." z="0." unit="deg" />
+			</physvol>
+		</volume>
+			<volume name="RICH">
+			<materialref ref="Air" />
+			<solidref ref="World" />
+			<physvol>
+				<volumeref ref="AluminumBoxVol" />
+				<position x="-7.75" y="0." z="0." unit="mm" />
+				<rotation x="0." y="0." z="0." unit="deg" />
+			</physvol>
+			<physvol>
+				<volumeref ref="FR4BoxVol2" />
+				<position x="51.225" y="0." z="0." unit="mm" />
+				<rotation x="0." y="0." z="0." unit="deg" />
+			</physvol>
+			<physvol>
+				<volumeref ref="AirBoxVol3" />
+				<position x="56.475" y="0." z="0." unit="mm" />
+				<rotation x="0." y="0." z="0." unit="deg" />
+			</physvol>
+			<physvol>
+				<volumeref ref="FR4BoxVol3" />
+				<position x="62.795" y="0." z="0." unit="mm" />
+				<rotation x="0." y="0." z="0." unit="deg" />
+			</physvol>
+
+		</volume>
+
+	</structure>
+
+	<setup version="1.0" name="Default">
+		<world ref="RICH" />
+	</setup>
+
+</gdml>

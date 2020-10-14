@@ -1,0 +1,19 @@
+#Quartz Transmission data from https://www.heraeus.com/en/hca/fused_silica_quartz_knowledge_base_1/t_calc_1/transmission_calculator_hca.html
+#
+#    {{150.0, 0.0},   {160.0, 0.00359},{170.0, 0.7282}, 
+#    {180.0, 0.8518}, {190.0, 0.8963}, {200.0, 0.9051}, 
+#    {210.0, 0.9105}, {220.0, 0.9136}, {230.0, 0.9160}} 
+#
+#Then calculate as Absorption length by : Table[{A[[i]][[1]], -1.0/Log[A[[i]][[2]]]}, {i, 1, 15}]
+#The unit is in cm
+#
+#LABEL: Lambda,  Absorption Length[cm]
+150., 0.0620421, 
+160., 0.177632, 
+170., 3.15279, 
+180., 6.23428, 
+190., 9.13408, 
+200., 10.0291, 
+210., 10.6654, 
+220., 11.0665, 
+230., 11.3975,

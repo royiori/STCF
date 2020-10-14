@@ -1,0 +1,9 @@
+UCAS组Geant4分析框架
+
+1. 基于XML/GDML开发
+
+2. 提供ROOT支持
+
+3. 提供Optical光学/TRD穿越辐射物理过程支持
+
+开发联系： liuqian@ucas.ac.cn

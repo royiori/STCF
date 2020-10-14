@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<gdml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://service-spi.web.cern.ch/service-spi/app/releases/GDML/schema/gdml.xsd">
+
+	<!-- cell for transmission test -->
+
+	<define>
+		<!-- Cell box -->
+		<!-- (xTot) is thickness, usually is 50mm or 100mm-->
+		<variable name="xTot" value="50" /> 
+		<variable name="yTot" value="500" />
+		<variable name="zTot" value="500" />
+
+		<!-- Readout box -->
+		<variable name="FR4Th" value="1" />
+		<variable name="FR4X" value="FR4Th" />
+		<variable name="FR4Y" value="yTot" />
+		<variable name="FR4Z" value="zTot" />
+	</define>
+
+	<solids>
+		<box lunit="mm" name="CellBox" x="xTot+FR4Th" y="yTot" z="zTot" /> 
+		<box lunit="mm" name="FR4Box" x="FR4X" y="FR4Y" z="FR4Z" />		
+	</solids>
+
+	<structure>
+		<volume name="FR4BoxVol">
+			<materialref ref="G4_KAPTON" />
+			<solidref ref="FR4Box" />
+			<auxiliary auxtype="SensDet" auxvalue="RICH"/> 
+		</volume>
+
+	    <volume name="CellBoxVol">
+			<!-- change to the material you wanna simulate -->
+			<materialref ref="C6F14" /> 
+			<solidref ref="CellBox" />
+			<physvol>
+				<volumeref ref="FR4BoxVol" />
+					<position x="-(xTot+FR4Th)/2+FR4Th/2" y="0." z="0." unit="mm" />
+					<rotation x="0." y="0." z="0." unit="deg" />
+				</physvol>	
+		</volume>
+	
+	</structure>
+
+	<setup version="1.0" name="Default">
+		<world ref="CellBoxVol" />
+	</setup>
+
+</gdml>

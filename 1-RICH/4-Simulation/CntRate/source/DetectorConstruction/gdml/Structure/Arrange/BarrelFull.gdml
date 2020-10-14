@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+
+<!-- Arrangement as barrel -->
+
+<!DOCTYPE gdml [
+    <!ENTITY Materials SYSTEM "./Material/Material.xml">
+    <!ENTITY Quartz SYSTEM "./Material/Quartz.xml">
+    <!ENTITY C6F14 SYSTEM "./Material/C6F14.xml">
+    <!ENTITY LiF SYSTEM "./Material/LiF.xml">
+    <!ENTITY ArGasMix SYSTEM "./Material/ArGasMix.xml">
+
+    <!ENTITY RICH_Gain SYSTEM "./Structure/Gain.xml">
+]>
+
+<gdml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://service-spi.web.cern.ch/service-spi/app/releases/GDML/schema/gdml.xsd">
+
+    <!--materials-->
+    &Materials;
+    &Quartz;
+    &C6F14;
+    &LiF;
+    &ArGasMix;
+
+    <define>
+        <variable name="InnerR" value="850" />
+        <variable name="RICHthick" value="130" />
+
+        <variable name="r0" value="InnerR + RICHthick/2" />
+    </define>
+
+    <solids>
+        <box lunit="mm" name="WorldBox" x="10000" y="10000" z="10000" />
+    </solids>
+
+    <structure>
+        <volume name="World">
+            <materialref ref="Air" />
+            <solidref ref="WorldBox" />
+
+            <physvol name="RICH_0">
+                <file name="./gdml/Structure/RICH.gdml" />
+                <position x="r0" y="0." z="0" unit="mm" />
+                <rotation x="0" y="0." z="0" unit="deg" />
+            </physvol>
+
+            <physvol name="RICH_1">
+                <file name="./gdml/Structure/RICH.gdml" />
+                <position x="r0*cos(pi/6)" y="r0*sin(pi/6)" z="0" unit="mm" />
+                <rotation x="0" y="0." z="-30" unit="deg" />
+            </physvol>
+
+             <physvol name="RICH_2">
+                <file name="./gdml/Structure/RICH.gdml" />
+                <position x="r0*sin(pi/6)" y="r0*cos(pi/6)" z="0" unit="mm" />
+                <rotation x="0" y="0." z="-60" unit="deg" />
+            </physvol>
+
+            <physvol name="RICH_3">
+                <file name="./gdml/Structure/RICH.gdml" />
+                <position x="0." y="r0" z="0" unit="mm" />
+                <rotation x="0" y="0." z="-90" unit="deg" />
+            </physvol>
+
+            <physvol name="RICH_4">
+                <file name="./gdml/Structure/RICH.gdml" />
+                <position x="-r0*sin(pi/6)" y="r0*cos(pi/6)" z="0" unit="mm" />
+                <rotation x="0" y="0." z="-120" unit="deg" />
+            </physvol>
+
+             <physvol name="RICH_5">
+                <file name="./gdml/Structure/RICH.gdml" />
+                <position x="-r0*cos(pi/6)" y="r0*sin(pi/6)" z="0" unit="mm" />
+                <rotation x="0" y="0." z="-150" unit="deg" />
+            </physvol>
+
+             <physvol name="RICH_6">
+                <file name="./gdml/Structure/RICH.gdml" />
+                <position x="-r0" y="0." z="0" unit="mm" />
+                <rotation x="0" y="0." z="-180" unit="deg" />
+            </physvol>
+
+             <physvol name="RICH_7">
+                <file name="./gdml/Structure/RICH.gdml" />
+                <position x="-r0*cos(pi/6)" y="-r0*sin(pi/6)" z="0" unit="mm" />
+                <rotation x="0" y="0." z="-210" unit="deg" />
+            </physvol>
+
+             <physvol name="RICH_8">
+                <file name="./gdml/Structure/RICH.gdml" />
+                <position x="-r0*sin(pi/6)" y="-r0*cos(pi/6)" z="0" unit="mm" />
+                <rotation x="0" y="0." z="-240" unit="deg" />
+            </physvol>
+
+            <physvol name="RICH_9">
+                <file name="./gdml/Structure/RICH.gdml" />
+                <position x="0." y="-r0" z="0" unit="mm" />
+                <rotation x="0" y="0." z="-270" unit="deg" />
+            </physvol>
+
+            <physvol name="RICH_10">
+                <file name="./gdml/Structure/RICH.gdml" />
+                <position x="r0*sin(pi/6)" y="-r0*cos(pi/6)" z="0" unit="mm" />
+                <rotation x="0" y="0." z="-300" unit="deg" />
+            </physvol>
+
+            <physvol name="RICH_11">
+                <file name="./gdml/Structure/RICH.gdml" />
+                <position x="r0*cos(pi/6)" y="-r0*sin(pi/6)" z="0" unit="mm" />
+                <rotation x="0" y="0." z="-330" unit="deg" />
+            </physvol>
+        </volume>
+    </structure>
+
+    <setup name="Default" version="1.0">
+        <world ref="World" />
+    </setup>
+</gdml>

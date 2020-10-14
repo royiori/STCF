@@ -1215,8 +1215,8 @@ void DrawReconstruction(TString cname, int target)
 // 主函数
 void checkCMBRoot()
 {
-    TFile froot("./beamtest_hist.root");
-    fhmap = (TH2D *)froot.Get("fHitMap0");
+    //TFile froot("./beamtest_hist.root");
+    //fhmap = (TH2D *)froot.Get("fHitMap0");
 
     //--------------------------
     // 读取combine-dst.root

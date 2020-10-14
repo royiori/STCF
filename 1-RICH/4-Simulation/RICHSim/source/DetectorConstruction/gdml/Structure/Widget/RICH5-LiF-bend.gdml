@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<gdml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://service-spi.web.cern.ch/service-spi/app/releases/GDML/schema/gdml.xsd">
+	
+	<!-- LiF RICH bend -->
+	
+	<define>
+		<!-- Aluminum box -->
+		<variable name="xTot" value="130" />
+		<variable name="yTot" value="450" />
+		<variable name="zTot" value="1400" />
+		<variable name="AlTh" value="2" />
+
+		<!-- Argon box -->
+		<variable name="ArX" value="xTot-2*AlTh" />
+		<variable name="ArY" value="yTot-2*AlTh" />
+		<variable name="ArZ" value="zTot-2*AlTh" />
+
+		<!-- Readout box -->
+		<variable name="FR4Th" value="1" />
+		<variable name="FR4X" value="FR4Th" />
+		<variable name="FR4Y" value="ArY" />
+		<variable name="FR4Z" value="ArZ" />
+
+		<!-- LiF box 1 -->
+		<variable name="RadTh" value="10" />
+		<variable name="Rad1X" value="RadTh" />
+		<variable name="Rad1Y" value="ArY" />
+		<variable name="Rad1Z" value="600" />
+
+		<!-- LiF box 2 (rotate 10)-->
+		<variable name="Rad2X" value="RadTh" />
+		<variable name="Rad2Y" value="ArY" />
+		<variable name="Rad2Z" value="203" />
+
+		<!-- LiF box 3 (rotate 20)-->
+		<variable name="Rad3X" value="RadTh" />
+		<variable name="Rad3Y" value="ArY" />
+		<variable name="Rad3Z" value="213" />
+
+		<!-- LiF box 4 (rotate -10)-->
+		<variable name="Rad4X" value="RadTh" />
+		<variable name="Rad4Y" value="ArY" />
+		<variable name="Rad4Z" value="203" />
+
+		<!-- LiF box 5 (rotate -20)-->
+		<variable name="Rad5X" value="RadTh" />
+		<variable name="Rad5Y" value="ArY" />
+		<variable name="Rad5Z" value="213" />
+	</define>
+
+	<solids>
+		<box lunit="mm" name="AluminumBox" x="xTot" y="yTot" z="zTot" />
+		<box lunit="mm" name="ArBox" x="ArX" y="ArY" z="ArZ" />
+		<box lunit="mm" name="FR4Box" x="FR4X" y="FR4Y" z="FR4Z" />
+		<box lunit="mm" name="LiFBox1" x="Rad1X" y="Rad1Y" z="Rad1Z" />
+		<box lunit="mm" name="LiFBox2" x="Rad2X" y="Rad2Y" z="Rad2Z" />
+		<box lunit="mm" name="LiFBox3" x="Rad3X" y="Rad3Y" z="Rad3Z" />
+		<box lunit="mm" name="LiFBox4" x="Rad4X" y="Rad4Y" z="Rad4Z" />
+		<box lunit="mm" name="LiFBox5" x="Rad5X" y="Rad5Y" z="Rad5Z" />
+	</solids>
+
+	<structure>
+		<volume name="LiFBox1Vol">
+			<materialref ref="LiF" />
+			<solidref ref="LiFBox1" />
+		</volume>
+
+		<volume name="LiFBox2Vol">
+			<materialref ref="LiF" />
+			<solidref ref="LiFBox2" />
+		</volume>
+
+		<volume name="LiFBox3Vol">
+			<materialref ref="LiF" />
+			<solidref ref="LiFBox3" />
+		</volume>
+
+		<volume name="LiFBox4Vol">
+			<materialref ref="LiF" />
+			<solidref ref="LiFBox4" />
+		</volume>
+
+		<volume name="LiFBox5Vol">
+			<materialref ref="LiF" />
+			<solidref ref="LiFBox5" />
+		</volume>
+
+		<volume name="FR4BoxVol">
+			<materialref ref="FR4" />
+			<solidref ref="FR4Box" />
+			<auxiliary auxtype="SensDet" auxvalue="RICH" />
+		</volume>
+
+		<volume name="ArBoxVol">
+			<materialref ref="ArGasMix" />
+			<solidref ref="ArBox" />
+			<physvol>
+				<volumeref ref="LiFBox1Vol" />
+				<position x="- ArX/2 + Rad1X/2" y="0" z="0" unit="mm" />
+			</physvol>
+			<physvol>
+				<volumeref ref="LiFBox2Vol" />
+				<position x="- ArX/2 + Rad2X/2" y="0" z="Rad1Z/2 + Rad2Z/2" unit="mm" />
+				<rotation x="0" y="10/180*3.1415926" z="0" />
+			</physvol>
+			<physvol>
+				<volumeref ref="LiFBox3Vol" />
+				<position x="- ArX/2 + Rad3X/2" y="0" z="Rad1Z/2 + Rad2Z + Rad3Z/2" unit="mm" />
+				<rotation x="0" y="20/180*3.1415926" z="0" />
+			</physvol>
+			<physvol>
+				<volumeref ref="LiFBox4Vol" />
+				<position x="- ArX/2 + Rad2X/2" y="0" z="- Rad1Z/2 - Rad2Z/2" unit="mm" />
+				<rotation x="0" y="-10/180*3.1415926" z="0" />
+			</physvol>
+			<physvol>
+				<volumeref ref="LiFBox5Vol" />
+				<position x="- ArX/2 + Rad3X/2" y="0" z=" - Rad1Z/2 - Rad2Z - Rad3Z/2" unit="mm" />
+				<rotation x="0" y="-20/180*3.1415926" z="0" />
+			</physvol>
+			<physvol>
+				<volumeref ref="FR4BoxVol" />
+				<position x="ArX/2 - FR4X/2" y="0" z="0" unit="mm" />
+			</physvol>
+		</volume>
+
+		<volume name="RICH">
+			<materialref ref="G4_Al" />
+			<solidref ref="AluminumBox" />
+			<physvol>
+				<volumeref ref="ArBoxVol" />
+			</physvol>
+		</volume>
+
+	</structure>
+
+	<setup version="1.0" name="Default">
+		<world ref="RICH" />
+	</setup>
+
+</gdml>

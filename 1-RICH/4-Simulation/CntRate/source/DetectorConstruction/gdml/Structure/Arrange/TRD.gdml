@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<!-- Arrangement as barrel -->
+
+<!DOCTYPE gdml [
+    <!ENTITY Materials SYSTEM "./Material/Material.xml">
+    <!ENTITY ArGasMix SYSTEM "./Material/ArGasMix.xml">
+]>
+
+<gdml_simple_extension xmlns:gdml_simple_extension="http://www.example.org"
+                       xmlns:xs="http://www.w3.org/2001/XMLSchema-instance"          
+                       xs:noNamespaceSchemaLocation="./SimpleExtensionSchema/SimpleExtension.xsd">
+
+    <extension>
+      <color name="RadiatorColor"  R="0"  G="1"  B="1"  A="1.0" />
+      <color name="DetectorColor"  R="1"  G="0"  B="0"  A="1.0" />
+    </extension>
+
+    <!--materials-->
+    &Materials;
+    &ArGasMix;
+
+    <define>
+        <variable name="i" value="0"/>
+
+        <variable name="FoilThickness" value="0.006" />
+        <variable name="GasThickness" value="0.020" />
+        <variable name="FoilNumber" value="200" />
+
+        <variable name="nDetector" value="64"/>
+        <variable name="DetThickness" value="0.08"/>
+
+        <variable name="radiatorThickness" value="(FoilThickness+GasThickness)*FoilNumber" />
+        <variable name="DetectorThickness" value="nDetector*DetThickness" />
+
+        <variable name="XY" value="1"/>
+    </define>
+
+    <solids>
+        <box lunit="mm" name="WorldBox" x="10000" y="10000" z="10000" />
+        <box lunit="mm" name="Radiator" x="XY" y="XY" z="radiatorThickness" />
+        <box lunit="mm" name="Detector" x="XY" y="XY" z="DetThickness" />
+    </solids>
+
+    <structure>
+        <volume name="RadiatorVolume">
+            <solidref ref="Radiator"/>
+            <colorref ref="RadiatorColor"/>
+        </volume>
+
+        <volume name="DetectorVolume">
+            <materialref ref="Air"/>
+            <solidref ref="Detector"/>
+            <colorref ref="DetectorColor"/>
+            <auxiliary auxtype="setName" auxvalue="g4learning"/>
+        </volume>
+
+        <volume name="World">
+            <materialref ref="Air" />
+            <solidref ref="WorldBox" />
+            
+            <physvol name="RICH_11">
+                <volumeref ref="RadiatorVolume"/>
+                <position x="0" y="0" z="-radiatorThickness/2" unit="mm" />
+            </physvol>
+
+            <loop for="i" from="1" to="nDetector" step="1">
+                <physvol name="Det[i]">
+                    <volumeref ref="DetectorVolume"/>
+                    <position x="0" y="0" z="(i-1/2)*DetThickness" unit="mm" />
+                </physvol>
+            </loop>
+        </volume>
+    </structure>
+
+    <userinfo>
+        <auxiliary auxtype="Region" auxvalue="DefaultRegionForTheWorld">
+            <auxiliary auxtype="volume" auxvalue="World"/>
+            <auxiliary auxtype="gamcut" auxunit="mm" auxvalue="0.7"/> 
+            <auxiliary auxtype="ecut" auxunit="mm" auxvalue="0.7"/> 
+            <auxiliary auxtype="poscut" auxunit="mm" auxvalue="0.7"/> 
+            <auxiliary auxtype="pcut" auxunit="mm" auxvalue="0.7"/>
+        </auxiliary>
+
+        <auxiliary auxtype="FoilThickness" auxvalue="FoilThickness">
+            <auxiliary auxtype="GasThickness" auxvalue="GasThickness"/>
+            <auxiliary auxtype="FoilNumber" auxvalue="FoilNumber"/>
+        
+        </auxiliary>
+
+    </userinfo>
+
+    <setup name="Default" version="1.0">
+        <world ref="World" />
+    </setup>
+</gdml>

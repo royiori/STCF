@@ -1,0 +1,36 @@
+#
+/control/verbose 0
+/run/verbose 0
+/vis/verbose 0
+/process/verbose 0
+/tracking/verbose 0
+#
+/globalField/setValue 1.0 0 0 tesla
+#
+#
+##############
+# 分析结果保存方法
+#   1. 用G4自带的ntuple保存(G4Based)
+#   2. 用root+自定义类的方式保存(RootBased)
+#-----
+/MyRun/SetG4BasedFileName result.root
+/MyRun/SetRootBasedFileName output.root
+/MyRun/ActiveG4BasedManager
+/MyRun/DeactiveRootBasedManager
+#
+##############
+# 粒子枪选择： 
+#  1. 使用Gun： 用G4Gun，或者用root文件的数据
+/MyGun/SimpleGun
+#/MyGun/SetGunBGFile background.root
+#
+#  2. 使用GPS： 用G4GPS
+#
+##############
+/run/initialize
+#/process/eLoss/verbose 0
+#
+/gun/particle mu-
+/gun/direction 1 0 0
+/gun/energy 1 GeV
+/run/beamOn 10

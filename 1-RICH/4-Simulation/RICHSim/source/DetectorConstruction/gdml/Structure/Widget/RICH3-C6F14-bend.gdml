@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<gdml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://service-spi.web.cern.ch/service-spi/app/releases/GDML/schema/gdml.xsd">
+	
+	<!-- C6F14 RICH bend, a whole piece for barrel -->
+	
+	<define>
+		<!-- Aluminum box -->
+		<variable name="xTot" value="130" />
+		<variable name="yTot" value="450" />
+		<variable name="zTot" value="2800" />
+		<variable name="AlTh" value="2" />
+
+		<!-- Argon box -->
+		<variable name="ArX" value="xTot-2*AlTh" />
+		<variable name="ArY" value="yTot-2*AlTh" />
+		<variable name="ArZ" value="zTot-2*AlTh" />
+
+		<!-- Quartz box parameters -->
+		<variable name="RadTh" value="10" />
+		<variable name="QzTh" value="3" />
+		
+		<!-- Quartz box 1 -->
+		<variable name="QzX1" value="RadTh+2*QzTh" />
+		<variable name="QzY1" value="ArY" />
+		<variable name="QzZ1" value="1800" />
+		<!-- Radiator box 1-->
+		<variable name="RadX1" value="RadTh" />
+		<variable name="RadY1" value="QzY1-2*QzTh" />
+		<variable name="RadZ1" value="QzZ1-2*QzTh" />
+
+		<!-- Quartz box 2 (rotate 10) -->
+		<variable name="QzX2" value="RadTh+2*QzTh" />
+		<variable name="QzY2" value="ArY" />
+		<variable name="QzZ2" value="253" />
+		<!-- Radiator box 2 (rotate 10)-->
+		<variable name="RadX2" value="RadTh" />
+		<variable name="RadY2" value="QzY2-2*QzTh" />
+		<variable name="RadZ2" value="QzZ2-2*QzTh" />
+
+		<!-- Quartz box 3 (rotate -10) -->
+		<variable name="QzX3" value="RadTh+2*QzTh" />
+		<variable name="QzY3" value="ArY" />
+		<variable name="QzZ3" value="253" />
+		<!-- Radiator box 3 (rotate -10)-->
+		<variable name="RadX3" value="RadTh" />
+		<variable name="RadY3" value="QzY3-2*QzTh" />
+		<variable name="RadZ3" value="QzZ3-2*QzTh" />
+
+		<!-- Quartz box 4 (rotate 20) -->
+		<variable name="QzX4" value="RadTh+2*QzTh" />
+		<variable name="QzY4" value="ArY" />
+		<variable name="QzZ4" value="266" />
+		<!-- Radiator box 4 (rotate 20)-->
+		<variable name="RadX4" value="RadTh" />
+		<variable name="RadY4" value="QzY4-2*QzTh" />
+		<variable name="RadZ4" value="QzZ4-2*QzTh" />
+
+		<!-- Quartz box 5 (rotate -20) -->
+		<variable name="QzX5" value="RadTh+2*QzTh" />
+		<variable name="QzY5" value="ArY" />
+		<variable name="QzZ5" value="266" />
+		<!-- Radiator box 5 (rotate -20)-->
+		<variable name="RadX5" value="RadTh" />
+		<variable name="RadY5" value="QzY5-2*QzTh" />
+		<variable name="RadZ5" value="QzZ5-2*QzTh" />
+		
+		<!-- Readout box -->
+		<variable name="FR4Th" value="1" />
+		<variable name="FR4X" value="FR4Th" />
+		<variable name="FR4Y" value="ArY" />
+		<variable name="FR4Z" value="ArZ" />
+	</define>
+
+	<solids>
+		<box lunit="mm" name="AluminumBox" x="xTot" y="yTot" z="zTot" />
+		<box lunit="mm" name="ArBox" x="ArX" y="ArY" z="ArZ" />
+		<box lunit="mm" name="QuartzBox1" x="QzX1" y="QzY1" z="QzZ1" />
+		<box lunit="mm" name="C6F14Box1" x="RadX1" y="RadY1" z="RadZ1" />
+		<box lunit="mm" name="QuartzBox2" x="QzX2" y="QzY2" z="QzZ2" />
+		<box lunit="mm" name="C6F14Box2" x="RadX2" y="RadY2" z="RadZ2" />
+		<box lunit="mm" name="QuartzBox3" x="QzX3" y="QzY3" z="QzZ3" />
+		<box lunit="mm" name="C6F14Box3" x="RadX3" y="RadY3" z="RadZ3" />
+		<box lunit="mm" name="QuartzBox4" x="QzX4" y="QzY4" z="QzZ4" />
+		<box lunit="mm" name="C6F14Box4" x="RadX4" y="RadY4" z="RadZ4" />
+		<box lunit="mm" name="QuartzBox5" x="QzX5" y="QzY5" z="QzZ5" />
+		<box lunit="mm" name="C6F14Box5" x="RadX5" y="RadY5" z="RadZ5" />
+		<box lunit="mm" name="FR4Box" x="FR4X" y="FR4Y" z="FR4Z" />
+	</solids>
+
+	<structure>
+		<volume name="C6F14Box1Vol">
+			<materialref ref="C6F14" />
+			<solidref ref="C6F14Box1" />
+		</volume>
+
+		<volume name="QuartzBox1Vol">
+			<materialref ref="Quartz" />
+			<solidref ref="QuartzBox1" />
+			<physvol>
+				<volumeref ref="C6F14Box1Vol" />
+			</physvol>
+		</volume>
+
+		<volume name="C6F14Box2Vol">
+			<materialref ref="C6F14" />
+			<solidref ref="C6F14Box2" />
+		</volume>
+
+		<volume name="QuartzBox2Vol">
+			<materialref ref="Quartz" />
+			<solidref ref="QuartzBox2" />
+			<physvol>
+				<volumeref ref="C6F14Box2Vol" />
+			</physvol>
+		</volume>
+
+		<volume name="C6F14Box3Vol">
+			<materialref ref="C6F14" />
+			<solidref ref="C6F14Box3" />
+		</volume>
+
+		<volume name="QuartzBox3Vol">
+			<materialref ref="Quartz" />
+			<solidref ref="QuartzBox3" />
+			<physvol>
+				<volumeref ref="C6F14Box3Vol" />
+			</physvol>
+		</volume>
+
+		<volume name="C6F14Box4Vol">
+			<materialref ref="C6F14" />
+			<solidref ref="C6F14Box4" />
+		</volume>
+
+		<volume name="QuartzBox4Vol">
+			<materialref ref="Quartz" />
+			<solidref ref="QuartzBox4" />
+			<physvol>
+				<volumeref ref="C6F14Box4Vol" />
+			</physvol>
+		</volume>
+
+		<volume name="C6F14Box5Vol">
+			<materialref ref="C6F14" />
+			<solidref ref="C6F14Box5" />
+		</volume>
+
+		<volume name="QuartzBox5Vol">
+			<materialref ref="Quartz" />
+			<solidref ref="QuartzBox5" />
+			<physvol>
+				<volumeref ref="C6F14Box5Vol" />
+			</physvol>
+		</volume>
+
+
+
+		<volume name="FR4BoxVol">
+			<materialref ref="FR4" />
+			<solidref ref="FR4Box" />
+			<auxiliary auxtype="SensDet" auxvalue="RICH" />
+		</volume>
+
+		<volume name="ArBoxVol">
+			<materialref ref="ArGasMix" />
+			<solidref ref="ArBox" />
+			<physvol>
+				<volumeref ref="FR4BoxVol" />
+				<position x="ArX/2 - FR4X/2" y="0" z="0" unit="mm" />
+			</physvol>
+			<physvol>
+				<volumeref ref="QuartzBox1Vol" />
+				<position x="- ArX/2 + QzX1/2" y="0" z="0" unit="mm" />
+			</physvol>
+			<physvol>
+				<volumeref ref="QuartzBox2Vol" />
+				<position x="- ArX/2 + QzX2/2" y="0" z="QzZ1/2 + QzZ2/2" unit="mm" />
+				<rotation x="0" y="10/180*3.1415926" z="0" />
+			</physvol>
+			<physvol>
+				<volumeref ref="QuartzBox3Vol" />
+				<position x="- ArX/2 + QzX3/2" y="0" z="- QzZ1/2 - QzZ3/2" unit="mm" />
+				<rotation x="0" y="-10/180*3.1415926" z="0" />
+			</physvol>
+			<physvol>
+				<volumeref ref="QuartzBox4Vol" />
+				<position x="- ArX/2 + QzX4/2" y="0" z="QzZ1/2 + QzZ2 + QzZ4/2" unit="mm" />
+				<rotation x="0" y="20/180*3.1415926" z="0" />
+			</physvol>
+			<physvol>
+				<volumeref ref="QuartzBox5Vol" />
+				<position x="- ArX/2 + QzX5/2" y="0" z="- QzZ1/2 - QzZ3 - QzZ5/2" unit="mm" />
+				<rotation x="0" y="-20/180*3.1415926" z="0" />
+			</physvol>
+		</volume>
+
+		<volume name="RICH">
+			<materialref ref="G4_Al" />
+			<solidref ref="AluminumBox" />
+			<physvol>
+				<volumeref ref="ArBoxVol" />
+			</physvol>
+		</volume>
+
+	</structure>
+
+	<setup version="1.0" name="Default">
+		<world ref="RICH" />
+	</setup>
+
+</gdml>
