@@ -44,7 +44,7 @@ void MyGuiBeamTest::StoreEnv()
 }
 
 //______________________________________________________________________________
-// 
+//
 void MyGuiBeamTest::DrawConfig()
 {
     if (geom != NULL)
@@ -135,7 +135,6 @@ TString MyGuiBeamTest::GenerateSettingText()
     settings += Form("DSPath: %s\n", fDSPath.Data());
     settings += Form("STPath: %s\n", fSTPath.Data());
 
-    
     settings += "\n\n#---------------------------";
     settings += "\n# RICH parameters: (in mm & degrees) \n";
     settings += Form("NRICH: %d\n", NRICH);
@@ -185,7 +184,7 @@ void MyGuiBeamTest::ReadSettingsText()
         {
             for (int i = 0; i < NRICH; i++)
             {
-                if(line.BeginsWith(Form("RICH%d", i)))
+                if (line.BeginsWith(Form("RICH%d", i)))
                     vRICH[i]->SetParameters(line, cont);
             }
         }
@@ -203,7 +202,7 @@ void MyGuiBeamTest::ReadSettingsText()
         {
             for (int i = 0; i < NTrkAGT; i++)
             {
-                if(line.BeginsWith(Form("TrkAGET%d", i)))
+                if (line.BeginsWith(Form("TrkAGET%d", i)))
                     vTrkAGT[i]->SetParameters(line, cont);
             }
         }
@@ -212,8 +211,8 @@ void MyGuiBeamTest::ReadSettingsText()
     //reset id:
     for (int i = 0; i < NRICH; i++)
         vRICH[i]->SetDetID(i);
-    for (int i = NRICH; i < NRICH+NTrkAGT; i++)
-        vTrkAGT[i]->SetDetID(i);
+    for (int i = NRICH; i < NRICH + NTrkAGT; i++)
+        vTrkAGT[i - NRICH]->SetDetID(i);
 
     //read mapping:
     for (int i = 0; i < NRICH; i++)
@@ -223,7 +222,7 @@ void MyGuiBeamTest::ReadSettingsText()
 }
 
 //___1.2 设置路径 & 查找配置文件
-// 
+//
 void MyGuiBeamTest::SetDSPath(const char *fileName)
 {
     fDSPath = TString(fileName);
@@ -324,7 +323,7 @@ void MyGuiBeamTest::GetFileList(TString filePath, TString filePattern, vector<TS
 }
 
 //___1.3 读取二进制并转换为raw.root & ped.root 文件
-// 
+//
 void MyGuiBeamTest::ConvtBinaryToRawRoot()
 {
     TString fileDir = fDSPath;
@@ -355,7 +354,7 @@ void MyGuiBeamTest::ConvtBinaryToRawRoot()
         delete _trk1;
     }
 
-    cout<<"-->> All binary data has been converted to raw.root. <<--"<<endl;
+    cout << "-->> All binary data has been converted to raw.root. <<--" << endl;
 }
 
 //___2. 生成&检查 dst.root______________________
@@ -368,7 +367,7 @@ void MyGuiBeamTest::ConvtRawToDstRoot()
     MyBeamTestTrackAGET *_trk1 = new MyBeamTestTrackAGET(-1);
     _trk1->ReadRaw2DstRoot(GenPath(TrackerAGET, RAW), GenPath(TrackerAGET, PED), GenPath(TrackerAGET, DST), GetTrackAGET(), SaveWaveFlag);
 
-    cout<<"-->> All raw.root data has been converted to dst.root. <<--"<<endl;
+    cout << "-->> All raw.root data has been converted to dst.root. <<--" << endl;
 }
 
 //___3. 生成&检查 combine.root______________________
@@ -383,16 +382,17 @@ void MyGuiBeamTest::CombineDSTRoot(const char *fileName)
 
     //
     //设定扫描trig的区间
+    int nMin = 0;
     int nMax = 0;
     for (int i = 0; i < (int)vRICH.size(); i++)
     {
         int nEntries = vRICH[i]->GetEntries();
-        int tmin = vRICH[i]->GetFirstTrig();
-        int tmax = vRICH[i]->GetLastTrig();
         if (nEntries == 0)
             continue;
-        nMax = (nMax < nEntries) ? nEntries : nMax;
-        cout << "--> " << vRICH[i]->GetName() << " Events: " << nEntries << ", tigger range: " << tmin << " " << tmax << endl;
+        nMin = vRICH[i]->GetFirstTrig();
+        nMax = vRICH[i]->GetLastTrig();
+        //nMax = (nMax < nEntries) ? nEntries : nMax;
+        cout << "--> " << vRICH[i]->GetName() << " Events: " << nEntries << ", tigger range: " << nMin << " " << nMax << endl;
     }
 
     for (int i = 0; i < (int)vTrkAGT.size(); i++)
@@ -402,11 +402,12 @@ void MyGuiBeamTest::CombineDSTRoot(const char *fileName)
         int tmax = vTrkAGT[i]->GetLastTrig();
         if (nEntries == 0)
             continue;
-        nMax = (nMax < nEntries) ? nEntries : nMax;
+        nMin = (nMin > tmin) ? tmin : nMin;
+        nMax = (nMax < tmax) ? tmax : nMax;
         cout << "--> " << vTrkAGT[i]->GetName() << " Events: " << nEntries << ", tigger range: " << tmin << " " << tmax << endl;
     }
 
-    cout << "--> Searching trigger from " << 0 << " to " << nMax << endl;
+    cout << "--> Searching trigger from " << nMin << " to " << nMax << endl;
 
     //
     //定义全部组合后的数据结构
@@ -422,18 +423,21 @@ void MyGuiBeamTest::CombineDSTRoot(const char *fileName)
 
     //
     //扫描trig来合并事例
-    for (int trig = 0; trig < nMax; trig++)
+    for (int trig = nMin; trig < nMax; trig++)
     {
         if (trig % 100 == 0)
             cout << "--> Searching trigger = " << trig << endl;
 
         fEventList->Init(trig);
+        int effective = 0;
         for (int i = 0; i < (int)vRICH.size(); i++)
-            vRICH[i]->SearchTrigID(trig, fEventList);
+            effective += vRICH[i]->SearchTrigID(trig, fEventList);
 
         for (int i = 0; i < (int)vTrkAGT.size(); i++)
-            vTrkAGT[i]->SearchTrigID(trig, fEventList);
+            effective += vTrkAGT[i]->SearchTrigID(trig, fEventList);
 
+        if (effective == 0)
+            continue;
         fTree->Fill();
     }
     cout << "--> " << fTree->GetEntries() << " events are stored." << endl;
@@ -533,9 +537,6 @@ void MyGuiBeamTest::DrawDSTHit(int entry)
     if (entry < 0 || entry > DSTNEntries - 1)
         return;
 
-    ptext->Clear();
-    ptext->AddText(Form("Event: %d", entry));
-
     //remove existing hits
     for (int i = 0; i < geohits->GetNdaughters(); i++)
     {
@@ -543,6 +544,9 @@ void MyGuiBeamTest::DrawDSTHit(int entry)
     }
 
     fDSTTree->GetEntry(entry);
+    ptext->Clear();
+    ptext->AddText(Form("Event: %d", fDSTEvent->event));
+
     for (int i = 0; i < NRICH; i++)
         vRICH[i]->DrawHits(geom, geohits, media, fDSTEvent);
     for (int i = 0; i < NTrkAGT; i++)

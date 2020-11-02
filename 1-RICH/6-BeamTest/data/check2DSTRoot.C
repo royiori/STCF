@@ -90,7 +90,7 @@ public:
     }
     void DrawPre()
     {
-        ip = (ip - 1 < 0) ? 0 : ip;
+        ip = (ip - 1 < 0) ? 0 : ip - 1;
         DrawEvent(ip);
     }
     void DrawNext()

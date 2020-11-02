@@ -45,7 +45,7 @@ void MyBeamTestTrackAGET::ReadMapFile()
 {
     fstream mapFp;
 
-    TString mapfile = gSystem->WorkingDirectory() + TString("/") + mapping;
+    TString mapfile = mapping;
     mapFp.open(mapfile.Data(), ios::in);
     if (!mapFp.is_open())
         cout << "Track-AGET Detector Map Open Failed: " << mapfile << "." << endl;

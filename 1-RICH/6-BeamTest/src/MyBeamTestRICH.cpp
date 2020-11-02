@@ -41,7 +41,7 @@ void MyBeamTestRICH::ResizeMap()
 void MyBeamTestRICH::ReadMapFile()
 {
     fstream mapFp;
-    TString mapfile = gSystem->WorkingDirectory() + TString("/") + mapping;
+    TString mapfile = mapping;
     mapFp.open(mapfile.Data(), ios::in);
     if (!mapFp.is_open())
         cout << "RICH Detector Map Open Failed: " << mapfile << "." << endl;
@@ -817,7 +817,7 @@ void MyBeamTestRICH::DrawHits(TGeoManager *geom, TGeoVolume *top, TGeoMedium *me
         {
             AbsPosition(eventList->detector[i]->hit[j], absPos);
             geoPos = GeoPosition(absPos);
-            //cout << name << "-" << i << ": GEOM:[" << geoPos[0] << "," << geoPos[1] << "," << geoPos[2] << "] for ABS:[" << absPos[0] << "," << absPos[1] << "," << absPos[2] << "]"<<endl;
+            cout << name << "-" << i << ": GEOM:[" << geoPos[0] << "," << geoPos[1] << "," << geoPos[2] << "] for ABS:[" << absPos[0] << "," << absPos[1] << "," << absPos[2] << "]"<<endl;
             TGeoTranslation *gtr = new TGeoTranslation(geoPos[0], geoPos[1], geoPos[2]);
             top->AddNode(pad, ncopy++, gtr);
         }
