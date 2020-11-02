@@ -1,0 +1,53 @@
+#---------------------------
+# RICH parameters: (in mm & degrees) 
+NRICH: 1
+RICH0-Name: RICH0
+RICH0-FullSize: 160.00 160.00 90.00
+RICH0-Position: 0.00 1.00 425.00
+RICH0-Rotation: 45.00 0.00
+RICH0-NX-NY: 32 32
+RICH0-WX-WY: 5.00 5.00 30.00
+RICH0-Mapping: ./data/BES/Map/RICH_Map.txt
+RICH0-NBoard: 4
+RICH0-Boards: 2 10 5 4
+RICH0-NChips: 4
+RICH0-Chips: 10 11 12 13
+
+#---------------------------
+# Tracker with AGET parameters: (in mm & degrees) 
+NTrkAGET: 3
+TrkAGET0-Name: T02
+TrkAGET0-FullSize: 150.00 150.00 10.00
+TrkAGET0-Position: 0.00 -10.00 0.00
+TrkAGET0-Rotation: 90.00 0.00
+TrkAGET0-NX-NY: 128 128
+TrkAGET0-WX-WY: 0.40 0.40 0.00
+TrkAGET0-Mapping: ./data/BES/Map/Tracker_AGET_Map.txt
+TrkAGET0-NBoard: 1
+TrkAGET0-Boards: 3
+TrkAGET0-NChips: 4
+TrkAGET0-Chips: 10 11 12 13
+
+TrkAGET1-Name: T03
+TrkAGET1-FullSize: 150.00 150.00 10.00
+TrkAGET1-Position: 0.00 -10.00 97.00
+TrkAGET1-Rotation: 90.00 0.00
+TrkAGET1-NX-NY: 128 128
+TrkAGET1-WX-WY: 0.40 0.40 0.00
+TrkAGET1-Mapping: ./data/BES/Map/Tracker_AGET_Map.txt
+TrkAGET1-NBoard: 1
+TrkAGET1-Boards: 7
+TrkAGET1-NChips: 4
+TrkAGET1-Chips: 10 11 12 13
+
+TrkAGET2-Name: T06
+TrkAGET2-FullSize: 150.00 150.00 10.00
+TrkAGET2-Position: 0.00 -10.00 875.00
+TrkAGET2-Rotation: 90.00 0.00
+TrkAGET2-NX-NY: 128 128
+TrkAGET2-WX-WY: 0.40 0.40 0.00
+TrkAGET2-Mapping: ./data/BES/Map/Tracker_AGET_Map.txt
+TrkAGET2-NBoard: 1
+TrkAGET2-Boards: 11
+TrkAGET2-NChips: 4
+TrkAGET2-Chips: 10 11 12 13

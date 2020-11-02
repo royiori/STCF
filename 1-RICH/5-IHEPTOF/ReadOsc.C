@@ -273,8 +273,8 @@ void MyReadRootGUI::ReadBinToRoot(vector<TString> binLists, TString fName)
             tOrg[id] = XOrigin;
             tInc[id] = XIncrement;
 
-            cout << "---> * id: " << id << endl;
-            cout << "     * T0: " << tOrg[id] << ", Ts: " << tInc[id] << endl;
+            //cout << "---> * id: " << id << endl;
+            //cout << "     * T0: " << tOrg[id] << ", Ts: " << tInc[id] << endl;
             //cout << "     * NWaveformBuffers:" << waveformHeader.NWaveformBuffers << endl;
             //cout << "     * Points: " << waveformHeader.Points << " Average_Count: " << waveformHeader.Count << endl;
             //cout << "     * XUnits:" << waveformHeader.XUnits << " YUnits: " << waveformHeader.YUnits << endl;
@@ -283,7 +283,7 @@ void MyReadRootGUI::ReadBinToRoot(vector<TString> binLists, TString fName)
 
             BytesRead = fread(&waveformDataHeader, 1, 12, InputFile); //sizeof(WaveformDataHeader), InputFile);
             //cout << "---> * HeaderSize: " << waveformDataHeader.HeaderSize << endl;
-            cout << "     * BufferType: " << waveformDataHeader.BufferType << " BytesPerPoint:" << waveformDataHeader.BytesPerPoint << " BufferSize: " << waveformDataHeader.BufferSize << endl;
+            //cout << "     * BufferType: " << waveformDataHeader.BufferType << " BytesPerPoint:" << waveformDataHeader.BytesPerPoint << " BufferSize: " << waveformDataHeader.BufferSize << endl;
 
             BytesRead = fread((char *)Volts, 1, waveformDataHeader.BufferSize, InputFile);
             //cout << "     * Byte to be read: " << BytesRead << endl;
@@ -419,6 +419,7 @@ void MyReadRootGUI::DrawEvent(int inc)
     c1->Update();
 }
 
+//-----------------------------------------------------
 MyReadRootGUI::MyReadRootGUI() : TGMainFrame(gClient->GetRoot(), 10, 10, kHorizontalFrame)
 {
     int fColor[4] = {kRed, kOrange - 1, kBlue, kGreen + 2};
@@ -537,6 +538,7 @@ MyReadRootGUI::MyReadRootGUI() : TGMainFrame(gClient->GetRoot(), 10, 10, kHorizo
     MapWindow();
 }
 
+//-----------------------------------------------------
 void ReadOsc()
 {
     new MyReadRootGUI();

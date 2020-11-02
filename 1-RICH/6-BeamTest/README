@@ -1,0 +1,36 @@
+          使 用 说 明
+                    liuqian@ucas.ac.cn  刘倩
+
+1. 本软件是用于STCF的RICH束流实验
+2. 可在本软件基础上进行开发，以适用于其他束流实验
+3. 使用注意事项：
+    3.1 数据请按照以下逻辑来进行存放，例如：
+        BES_Beamtest/settings.txt   #保存探测器，电子学，mapping等相关设置量
+                    /Run1/          #保存数据到对应的文件夹里
+                    /Run2/
+                    /Run3/
+                    /Run3/idle.dat  #一个空文件作为锚点
+                         /Tracker/  #Tracker的原始数据
+                         /RICH/     #RICH的原始数据
+                         /Combine/  #分析后的数据：
+                                 /RICH-raw.root     #RICH的原始数据转换为的root文件，包含所有的raw原始信息
+                                 /RICH-ped.root     #RICH的ped分析结果
+                                 /Tracker-raw.root  #类似RICH
+                                 /Tracker-ped.root  #类似RICH
+                                 /RICH-dst.root
+                                 /T02-dst.root
+                                 /T03-dst.root
+                                 /T04-dst.root      #将raw文件进行分包，按不同探测器的数据进行重新打包输出
+                                 /Combined-dst.root #将RICH,T02,T03,T04，按照TrigID触发号进行event打包
+    
+    3.2 注意程序会自动去数据当前目录往上寻找三级深度的文件列表，遍历查找setting.txt，并优先使用最靠近数据的setting.txt。
+        例如：
+        BES_Beamtest/Batch1/settings.txt   
+                           /Run1
+                           /Run...
+                           /Run88  #这一批Run会使用/Batch1/下的settings.txt
+
+                    /Batch2/settings.txt
+                           /Run89
+                           /Run...
+                           /Run104 #这一批Run会使用/Batch2/下的settings.txt
