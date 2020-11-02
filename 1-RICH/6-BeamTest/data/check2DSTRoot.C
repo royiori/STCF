@@ -354,7 +354,7 @@ void MyReadRootGUI::DrawRICHEvent(int ip)
 
     fHit->Reset();
     for (int j = 0; j < (int)fEvent->hit.size(); j++)
-        fHit->Fill(fEvent->hit[j].first, fEvent->hit[j].second, fEvent->charge[j]);
+        fHit->Fill(fEvent->hit[j].first, fEvent->hit[j].second, fEvent->time[j]); // fEvent->charge[j]);
 
     for (int j = 0; j < (int)fEvent->branch.size(); j++)
     {
@@ -370,7 +370,7 @@ void MyReadRootGUI::DrawRICHEvent(int ip)
     c1->Clear();
     c1->Divide(2, 1);
     c1->cd(1);
-    fHit->Draw("colz");
+    fHit->Draw("lego2");
     c1->cd(2);
     fCluster[0]->Draw("ap");
     for (int i = 1; i < (int)fCluster.size(); i++)
