@@ -234,11 +234,25 @@ void MyReadRootGUI::ReadFile(TString fName)
     if (!fFile->IsOpen())
         return;
 
+    boardname.clear();
+    chipname.clear();
+    vector<int> *bdlist = 0;
+    vector<int> *chlist = 0;
     fTree = (TTree *)fFile->Get("tree");
     fTree2 = (TTree *)fFile->Get("tree2");
     fTree2->SetBranchAddress("type", &type);
+    fTree2->SetBranchAddress("bdlist", &bdlist);
+    fTree2->SetBranchAddress("chlist", &chlist);
     fTree2->GetEntry(0);
-    cout << "This file belongs to " << TYPE[type] << endl;
+
+    for(int i=0; i<bdlist->size(); i++)
+        boardname.push_back(bdlist->at(i));
+    for(int i=0; i<chlist->size(); i++)
+        chipname.push_back(chlist->at(i));
+
+    cout << "This file belongs to " << TYPE[type] << "." << boardname.size() << " " << chipname.size() << endl;;
+    cout << "The board: " << boardname[0] << " " << boardname[1] << "...";
+    cout << "The chip: " << chipname[0] << " " << chipname[1] << "..." << endl;
 
     if (type == RICHType || type == AGETType)
     {
@@ -280,40 +294,6 @@ void MyReadRootGUI::ReadFile(TString fName)
             fNextButton3->SetEnabled(kFALSE);
         }
         cout << "Pedestal file opened: " << fName << endl;
-    }
-
-    boardname.clear();
-    chipname.clear();
-    if (type == RICHType)
-    {
-        boardname.push_back(2);
-        boardname.push_back(10);
-        boardname.push_back(5);
-        boardname.push_back(7);
-        chipname.push_back(10);
-        chipname.push_back(11);
-        chipname.push_back(12);
-        chipname.push_back(13);
-    }
-
-    if (type == AGETType)
-    {
-        boardname.push_back(6);
-        boardname.push_back(9);
-        boardname.push_back(1);
-        chipname.push_back(10);
-        chipname.push_back(11);
-        chipname.push_back(12);
-        chipname.push_back(13);
-    }
-    if (type == VMMType)
-    {
-        boardname.push_back(0);
-        boardname.push_back(1);
-        boardname.push_back(2);
-        boardname.push_back(3);
-        chipname.push_back(0);
-        chipname.push_back(1);
     }
 }
 

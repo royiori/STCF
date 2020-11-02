@@ -1,6 +1,6 @@
 //----------
 //分析数据控制参数
-TString fName("RUN86"); //./DESY-BeamTest/RUN**/Combine/Combined-dst.root
+TString fName("Run6"); //./DESY-BeamTest/RUN**/Combine/Combined-dst.root
 int processControl = 1; //1: 用hitmapReal的直方图去做Offset，运行几遍直到输出的offset不怎么变化，同时检查二维直方图，确保束流信号在0，0位置，！！！需要手动更新offset数据！！！
                         //2: 用T02/T03去看其他tracker，然后更新offset。运行几遍直到输出的offset不怎么变化，同时检查残差分布图， ！！！需要手动更新offset数据！！！
                         //3: 看RICH的hitmap及其他相关的分布, 这里会cut选择束流击中位置，从而来做RICH的offset修正，因此需要调整一下在IsRICHClusterEffective里的参数，并运行几遍 ！！！需要手动更新offset数据！！！

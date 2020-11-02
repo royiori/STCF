@@ -44,9 +44,11 @@ void MyBeamTestTrackAGET::ResizeMap()
 void MyBeamTestTrackAGET::ReadMapFile()
 {
     fstream mapFp;
-    mapFp.open(mapping.Data(), ios::in);
+
+    TString mapfile = gSystem->WorkingDirectory() + TString("/") + mapping;
+    mapFp.open(mapfile.Data(), ios::in);
     if (!mapFp.is_open())
-        cout << "Track-AGET Detector Map Open Failed: " << mapping << "." << endl;
+        cout << "Track-AGET Detector Map Open Failed: " << mapfile << "." << endl;
 
     string a;
     int board, chip, channel, connector, pos;
@@ -70,16 +72,15 @@ void MyBeamTestTrackAGET::ReadMapFile()
 
 //___ 1. 读取bin数据并转换为raw.root文件 ___
 //
-void MyBeamTestTrackAGET::ReadData2RawRoot(vector<TString> datList, TString fRawName, int force)
+void MyBeamTestTrackAGET::ReadData2RawRoot(vector<TString> datList, TString fRawName, vector<MyBeamTestTrackAGET *> vTrkAGET, int force)
 {
-     if (datList.size() == 0)
+    if (datList.size() == 0)
         return;
 
     int length = sizeof(unsigned short);
     unsigned short memblock;
     int boardstart = 0;
     int chipstart = 0;
-    int type;
     //bool headerFlag;
     //bool trailerFlag;
     double counting = 0;
@@ -109,9 +110,27 @@ void MyBeamTestTrackAGET::ReadData2RawRoot(vector<TString> datList, TString fRaw
     fTree->Branch("channel", &channel);
     fTree->Branch("wave", &wave);
 
+    int type;
+    vector<int> bdlist;
+    vector<int> chlist;
     TTree *fTree2 = new TTree("tree2", "tree2");
     fTree2->Branch("type", &type);
+    fTree2->Branch("bdlist", &bdlist);
+    fTree2->Branch("chlist", &chlist);
     type = TrackerAGET;
+    bdlist.clear();
+    chlist.clear();
+    for (int i = 0; i < (int)vTrkAGET.size(); i++)
+    {
+        for (int j = 0; j < (int)vTrkAGET[i]->boardList.size(); j++)
+        {
+            bdlist.push_back(vTrkAGET[i]->boardList.at(j));
+        }
+    }
+    for (int j = 0; j < (int)vTrkAGET[0]->chipList.size(); j++)
+    {
+        chlist.push_back(vTrkAGET[0]->chipList.at(j));
+    } //#### Tracker的chip都是一样的
     fTree2->Fill();
     fTree2->Write();
 
@@ -224,7 +243,7 @@ void MyBeamTestTrackAGET::ReadData2RawRoot(vector<TString> datList, TString fRaw
 
 void MyBeamTestTrackAGET::AnalysisPedestal(TString fRawName, TString fPedName, vector<int> boardName, vector<int> chipName, int force)
 {
-   if (force != 1)
+    if (force != 1)
     {
         FileStat_t fStat;
         gSystem->GetPathInfo(fPedName, fStat);
@@ -450,7 +469,7 @@ bool MyBeamTestTrackAGET::ReadPedestal(TString fPedName, vector<MyBeamTestTrackA
 //
 bool MyBeamTestTrackAGET::ReadRaw2DstRoot(TString fRawName, TString fPedName, TString fDstPath, vector<MyBeamTestTrackAGET *> vTrkAGT, bool SaveWaveFlag)
 {
-   // 确认Raw-ROOT路径及文件存在
+    // 确认Raw-ROOT路径及文件存在
     TFile *fFile = new TFile(fRawName);
     if (!fFile->IsOpen())
         return false;
@@ -748,7 +767,7 @@ void MyBeamTestTrackAGET::AnalysisCluster(MyBeamTestData *fEvent)
 }
 
 //___ 3. 读取dst数据并合并为combine.root文件 ___
-// 
+//
 void MyBeamTestTrackAGET::ReadDSTRoot(TString fPath)
 {
     cout << "\n\n--> Reading Track-AGET DST-root file:" << endl;

@@ -209,6 +209,13 @@ void MyGuiBeamTest::ReadSettingsText()
         }
     }
 
+    //reset id:
+    for (int i = 0; i < NRICH; i++)
+        vRICH[i]->SetDetID(i);
+    for (int i = NRICH; i < NRICH+NTrkAGT; i++)
+        vTrkAGT[i]->SetDetID(i);
+
+    //read mapping:
     for (int i = 0; i < NRICH; i++)
         vRICH[i]->ReadMapFile();
     for (int i = 0; i < NTrkAGT; i++)
@@ -325,20 +332,17 @@ void MyGuiBeamTest::ConvtBinaryToRawRoot()
 
     TString fileDir1 = GenPath(RICH, BIN);
     TString fileDir2 = GenPath(TrackerAGET, BIN);
-    TString fileDir3 = GenPath(TrackerVMM, BIN);
 
     vector<TString> datList1;
     vector<TString> datList2;
-    vector<TString> datList3;
 
     GetFileList(fileDir1, ".dat", datList1);
     GetFileList(fileDir2, ".dat", datList2);
-    GetFileList(fileDir3, ".bin", datList3);
 
     if (datList1.size() > 0)
     {
         MyBeamTestRICH *_rich = new MyBeamTestRICH(-1);
-        _rich->ReadData2RawRoot(datList1, GenPath(RICH, RAW), 0);
+        _rich->ReadData2RawRoot(datList1, GenPath(RICH, RAW), GetRICHDet(), 1);
         _rich->AnalysisPedestal(GenPath(RICH, RAW), GenPath(RICH, PED), GetRICHDet());
         delete _rich;
     }
@@ -346,7 +350,7 @@ void MyGuiBeamTest::ConvtBinaryToRawRoot()
     if (datList2.size() > 0)
     {
         MyBeamTestTrackAGET *_trk1 = new MyBeamTestTrackAGET(-1);
-        _trk1->ReadData2RawRoot(datList2, GenPath(TrackerAGET, RAW), 0);
+        _trk1->ReadData2RawRoot(datList2, GenPath(TrackerAGET, RAW), GetTrackAGET(), 1);
         _trk1->AnalysisPedestal(GenPath(TrackerAGET, RAW), GenPath(TrackerAGET, PED), GetTrackAGET());
         delete _trk1;
     }
@@ -488,14 +492,14 @@ void MyGuiBeamTest::LoadDSTRoot(const char *fileName)
         //计算效率
         for (int i = 0; i < NTOT; i++)
         {
-            bool temp = 1;
+            int temp = 1;
             for (int ii = 0; ii < NTOT; ii++)
                 temp *= ((ii == i) ? 1 : hitList[ii]);
             if (temp == 1)
                 NHitList[i]++;
         }
 
-        bool temp = 1;
+        int temp = 1;
         for (int i = 0; i < (int)hitList.size(); i++)
             temp *= hitList[i];
         if (temp == 1)

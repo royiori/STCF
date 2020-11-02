@@ -22,7 +22,7 @@ public:
     virtual ~MyBeamTestTrackAGET();
 
     //读取 BIN 数据并生成 RAW.root 文件
-    void ReadData2RawRoot(vector<TString> datList, TString fRawName, int force = 1);
+    void ReadData2RawRoot(vector<TString> datList, TString fRawName, vector<MyBeamTestTrackAGET *> vTrkAGET, int force = 1);
     void AnalysisPedestal(TString fRawName, TString fPedName, vector<MyBeamTestTrackAGET *> vTrkAGET);
     void AnalysisPedestal(TString fRawName, TString fPedName, vector<int> boardName, vector<int> chipName, int force = 1);
     bool ReadPedestal(TString fPedName, vector<MyBeamTestTrackAGET *> vTrkAGET);

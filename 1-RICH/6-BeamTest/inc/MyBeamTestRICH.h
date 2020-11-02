@@ -20,7 +20,7 @@ public:
     virtual ~MyBeamTestRICH();
 
     //读取 BIN 数据并生成 RAW.root 文件
-    bool ReadData2RawRoot(vector<TString> datList, TString fRawName, int force = 1);
+    bool ReadData2RawRoot(vector<TString> datList, TString fRawName, vector<MyBeamTestRICH *> vRICH, int force = 1);
     void AnalysisPedestal(TString fRawName, TString fPedName, vector<MyBeamTestRICH *> vRICH);
     void AnalysisPedestal(TString fRawName, TString fPedName, vector<int> boardName, vector<int> chipName, int force = 1);
     bool ReadPedestal(TString fPedName, vector<MyBeamTestRICH *> vRICH);

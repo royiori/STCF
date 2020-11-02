@@ -24,7 +24,6 @@
 #include "../inc/MyBeamTestRICH.h"
 #include "../inc/MyBeamTestTrackAGET.h"
 #include "checkCMBRoot.h"
-#include "checkCMBRootMisc.h"
 
 //#include "/usr/local/include/eigen3/Eigen/Eigen"
 //#include "/Users/chad/Work/src/source/GeneralBrokenLines/cpp/include/GblTrajectory.h"
@@ -1221,7 +1220,7 @@ void checkCMBRoot()
 
     //--------------------------
     // 读取combine-dst.root
-    TString fileName = "./DESY-BeamTest/" + fName + "/Combine/Combined-dst.root";
+    TString fileName = "./BES/" + fName + "/Combine/Combined-dst.root";
 
     TFile *fDSTFile = new TFile(fileName);
     if (!fDSTFile->IsOpen())

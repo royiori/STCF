@@ -41,9 +41,10 @@ void MyBeamTestRICH::ResizeMap()
 void MyBeamTestRICH::ReadMapFile()
 {
     fstream mapFp;
-    mapFp.open(mapping.Data(), ios::in);
+    TString mapfile = gSystem->WorkingDirectory() + TString("/") + mapping;
+    mapFp.open(mapfile.Data(), ios::in);
     if (!mapFp.is_open())
-        cout << "RICH Detector Map Open Failed: " << mapping << "." << endl;
+        cout << "RICH Detector Map Open Failed: " << mapfile << "." << endl;
 
     string a;
     int board, chip, channel, posx, posy;
@@ -68,7 +69,7 @@ void MyBeamTestRICH::ReadMapFile()
 
 //___ 1. 读取bin数据并转换为raw.root文件 ___
 //
-bool MyBeamTestRICH::ReadData2RawRoot(vector<TString> datList, TString fRawName, int force)
+bool MyBeamTestRICH::ReadData2RawRoot(vector<TString> datList, TString fRawName, vector<MyBeamTestRICH *> vRICH, int force)
 {
     if (datList.size() == 0)
         return false;
@@ -77,7 +78,7 @@ bool MyBeamTestRICH::ReadData2RawRoot(vector<TString> datList, TString fRawName,
     unsigned short memblock;
     int boardstart = 0;
     int chipstart = 0;
-    int type;
+
     //bool headerFlag;
     //bool trailerFlag;
     double counting = 0;
@@ -107,9 +108,28 @@ bool MyBeamTestRICH::ReadData2RawRoot(vector<TString> datList, TString fRawName,
     fTree->Branch("channel", &channel);
     fTree->Branch("wave", &wave);
 
+    int type;
+    vector<int> bdlist;
+    vector<int> chlist;
     TTree *fTree2 = new TTree("tree2", "tree2");
     fTree2->Branch("type", &type);
+    fTree2->Branch("bdlist", &bdlist);
+    fTree2->Branch("chlist", &chlist);
     type = RICH;
+    bdlist.clear();
+    chlist.clear();
+    for(int i=0; i<(int)vRICH.size(); i++)
+    {
+        for(int j=0; j<(int)vRICH[i]->boardList.size(); j++)
+        {
+            bdlist.push_back(vRICH[i]->boardList.at(j));
+        }
+
+        for(int j=0; j<(int)vRICH[i]->chipList.size(); j++)
+        {
+            chlist.push_back(vRICH[i]->chipList.at(j));
+        }
+    }
     fTree2->Fill();
     fTree2->Write();
 
