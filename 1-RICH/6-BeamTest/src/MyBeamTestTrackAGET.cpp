@@ -550,7 +550,7 @@ bool MyBeamTestTrackAGET::ReadRaw2DstRoot(TString fRawName, TString fPedName, TS
         {
             //cout<<"Store a new event: "<<fEventList[id]->event<<endl;
             fFileList[id]->cd();
-            fEventList[id]->Analysis(0, 150, 200, 300);   //计算Q/T
+            fEventList[id]->Analysis(0, 150, 250, 400);   //计算Q/T
             vTrkAGT[id]->AnalysisCluster(fEventList[id]); //分析cluster
 
             if (!SaveWaveFlag) //如果不保存波形数据，则清空波形数组

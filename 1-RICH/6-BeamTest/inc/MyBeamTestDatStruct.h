@@ -118,7 +118,7 @@ public:
                     time[i] = j;
                 }
             double max_charge = charge[i] + pedstal;
-            charge[i] = wave[i][0] - pedstal;
+            //charge[i] = wave[i][0] - pedstal;
             for (int j = sigRangeMin; j < sigRangeMax; j++)
             {
                 if ((wave[i][j] - pedstal) > 0.15 * (max_charge - pedstal))

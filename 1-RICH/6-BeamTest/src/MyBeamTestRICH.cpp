@@ -532,7 +532,7 @@ bool MyBeamTestRICH::ReadRaw2DstRoot(TString fRawName, TString fPedName, TString
             fEventList[id]->event = (fEventList[id]->event == -1) ? event : fEventList[id]->event;
 
             fFileList[id]->cd();
-            fEventList[id]->Analysis(0, 150, 200, 300); //计算Q/T, 参数为ped和charge的计算所用的范围
+            fEventList[id]->Analysis(0, 150, 200, 450); //计算Q/T, 参数为ped和charge的计算所用的范围
             vRICH[id]->AnalysisCluster(fEventList[id]); //分析cluster
 
             if (!SaveWaveFlag) //如果不保存波形数据，则清空波形数组

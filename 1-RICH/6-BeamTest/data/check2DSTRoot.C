@@ -370,6 +370,7 @@ void MyReadRootGUI::DrawRICHEvent(int ip)
     c1->Clear();
     c1->Divide(2, 1);
     c1->cd(1);
+    fHit->SetMinimum(350);
     fHit->Draw("lego2");
     c1->cd(2);
     fCluster[0]->Draw("ap");
